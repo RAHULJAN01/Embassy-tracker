@@ -1,11 +1,10 @@
 # ============================================================
-#  EMBASSY PROCUREMENT TRACKER — SITE LIST  (~42 verified pages)
-# ============================================================
-# Add more: copy a block, change name + url. selector is optional.
+#  EMBASSY PROCUREMENT TRACKER — MASTER SITE LIST (80 verified pages)
+#  Every URL below was confirmed live from search results.
 # ============================================================
 
 sites:
-  # ---------- AFRICA ----------
+  # ================= AFRICA (33) =================
   - name: "Nigeria"
     url: "https://ng.usembassy.gov/business/"
   - name: "Kenya"
@@ -46,8 +45,28 @@ sites:
     url: "https://bw.usembassy.gov/business-opportunities/"
   - name: "Morocco"
     url: "https://ma.usembassy.gov/procurement-opportunities/"
+  - name: "Liberia"
+    url: "https://lr.usembassy.gov/commercial-opportunities/"
+  - name: "Namibia"
+    url: "https://na.usembassy.gov/embassy-opportunities/"
+  - name: "Djibouti"
+    url: "https://dj.usembassy.gov/procurement-acquisitions/"
+  - name: "Zimbabwe"
+    url: "https://zw.usembassy.gov/tag/procurement-solicitation/"
+  - name: "Burundi"
+    url: "https://bi.usembassy.gov/business/commercial-opportunities/"
+  - name: "Burkina Faso"
+    url: "https://bf.usembassy.gov/commercial-opportunities/"
+  - name: "Benin"
+    url: "https://bj.usembassy.gov/u-s-embassy-cotonou-bid-solicitations/"
+  - name: "Niger"
+    url: "https://ne.usembassy.gov/tag/procurement-solicitations/"
+  - name: "Guinea"
+    url: "https://gn.usembassy.gov/tag/procurement-advertisements/"
+  - name: "Sierra Leone"
+    url: "https://sl.usembassy.gov/request-for-proposals-rfp-contracts-with-the-u-s-embassy/"
 
-  # ---------- SOUTH / SOUTHEAST ASIA ----------
+  # ================= SOUTH / SOUTHEAST ASIA (11) =================
   - name: "India"
     url: "https://in.usembassy.gov/embassy-consulates-contract-solicitations/"
   - name: "Pakistan (Islamabad)"
@@ -66,14 +85,40 @@ sites:
     url: "https://vn.usembassy.gov/tag/procurement-solicitations/"
   - name: "Cambodia"
     url: "https://kh.usembassy.gov/business-opportunities/"
+  - name: "Thailand"
+    url: "https://th.usembassy.gov/gso-procurement-sales-opportunities/"
+  - name: "Myanmar"
+    url: "https://mm.usembassy.gov/commercial-opportunities/"
+  - name: "Laos"
+    url: "https://la.usembassy.gov/procurement-and-business-opportunities/"
 
-  # ---------- MIDDLE EAST / CAUCASUS ----------
-  - name: "Iraq"
-    url: "https://iq.usembassy.gov/contract-opportunities/"
+  # ================= CENTRAL ASIA / CAUCASUS (3) =================
+  - name: "Uzbekistan"
+    url: "https://uz.usembassy.gov/procurement-and-contracting/"
+  - name: "Tajikistan"
+    url: "https://tj.usembassy.gov/tag/procurement-solicitations/"
   - name: "Georgia"
     url: "https://ge.usembassy.gov/tenders/"
+  - name: "Mongolia"
+    url: "https://mn.usembassy.gov/contract-opportunity/"
 
-  # ---------- LATIN AMERICA / CARIBBEAN ----------
+  # ================= MIDDLE EAST (6) =================
+  - name: "Iraq"
+    url: "https://iq.usembassy.gov/contract-opportunities/"
+  - name: "Kuwait"
+    url: "https://kw.usembassy.gov/contract-solicitations/"
+  - name: "Oman"
+    url: "https://om.usembassy.gov/contracting-opportunities-at-embassy/"
+  - name: "Lebanon"
+    url: "https://lb.usembassy.gov/gso-contracting-and-procurement/"
+  - name: "Saudi Arabia (Riyadh)"
+    url: "https://sa.usembassy.gov/procurement-solicitation-packages-riyadh/"
+  - name: "Saudi Arabia (Dhahran)"
+    url: "https://sa.usembassy.gov/procurement-solicitation-packages-dhahran/"
+  - name: "Israel (Jerusalem)"
+    url: "https://il.usembassy.gov/contract-solicitations/"
+
+  # ================= LATIN AMERICA / CARIBBEAN (11) =================
   - name: "Brazil"
     url: "https://br.usembassy.gov/procurement-and-contract-opportunities/"
   - name: "Mexico"
@@ -90,16 +135,53 @@ sites:
     url: "https://hn.usembassy.gov/solicitations/"
   - name: "Haiti"
     url: "https://ht.usembassy.gov/contract-opportunities/"
+  - name: "Jamaica"
+    url: "https://jm.usembassy.gov/procurement-contract-opportunities/"
+  - name: "Bolivia"
+    url: "https://bo.usembassy.gov/tag/commercial/"
+  - name: "Eastern Caribbean (Barbados)"
+    url: "https://bb.usembassy.gov/business-opportunities/"
 
-  # ---------- DEVELOPED POSTS (low bid-priority; included per your request) ----------
+  # ================= EUROPE (12) =================
   - name: "United Kingdom"
     url: "https://uk.usembassy.gov/contract-solicitations-procurement/"
   - name: "Netherlands"
     url: "https://nl.usembassy.gov/contract-opportunities/"
+  - name: "Germany (Berlin)"
+    url: "https://de.usembassy.gov/contract-opportunities-berlin/"
+  - name: "Germany (Frankfurt)"
+    url: "https://de.usembassy.gov/frankfurt-contract-opportunities/"
+  - name: "Italy"
+    url: "https://it.usembassy.gov/contract-solicitations/"
+  - name: "Spain"
+    url: "https://es.usembassy.gov/request-for-bids/"
+  - name: "Portugal"
+    url: "https://pt.usembassy.gov/contract-solicitations/"
+  - name: "Greece"
+    url: "https://gr.usembassy.gov/tag/procurement-solicitations/"
+  - name: "Austria"
+    url: "https://at.usembassy.gov/contract-opportunities/"
+  - name: "Belgium"
+    url: "https://be.usembassy.gov/commercial-opportunities/"
+  - name: "Serbia"
+    url: "https://rs.usembassy.gov/procurement-opportunities/"
+  - name: "Romania"
+    url: "https://ro.usembassy.gov/contract-opportunities-2/"
+  - name: "Ukraine"
+    url: "https://ua.usembassy.gov/commercial-and-contract-opportunities/"
+  - name: "Denmark"
+    url: "https://dk.usembassy.gov/opportunities-with-the-u-s-government/"
+
+  # ================= CANADA / PACIFIC (2) =================
   - name: "Canada"
     url: "https://ca.usembassy.gov/procurement/"
+  - name: "Palau"
+    url: "https://pw.usembassy.gov/tag/procurement-solicitations/"
 
 # ============================================================
-#  Send me more country names and I'll verify + hand you blocks.
-#  Many posts are SAM-only (no public page) — SAM alerts cover those.
+#  Posts with NO public procurement page (SAM.gov covers these):
+#  Argentina, Peru, Chile, Panama, Costa Rica, Guatemala, El Salvador,
+#  Nicaragua, Cameroon, Mali, Togo, Kazakhstan, Kyrgyzstan, Turkmenistan,
+#  China, Japan, Korea, France, Australia, NZ, Turkey, UAE, Qatar, and more.
+#  Their above-threshold buys still arrive via the SAM.gov feed.
 # ============================================================

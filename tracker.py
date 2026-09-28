@@ -149,6 +149,34 @@ def days_until(deadline):
         return None
 
 
+def days_since(date_str):
+    try:
+        d = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+        return (datetime.now(timezone.utc).date() - d).days
+    except Exception:
+        return None
+
+
+def stamp_first_seen(items, prev_items, today):
+    pf = {(i["text"].lower(), i["href"]): i.get("first_seen") for i in (prev_items or [])}
+    for it in items:
+        it["first_seen"] = pf.get((it["text"].lower(), it["href"])) or today
+    return items
+
+
+def eff_status(it, max_age):
+    """active / closed (deadline passed) / stale (no date, too old on page)."""
+    dl = (it.get("deadline") or "").strip()
+    today = datetime.now(timezone.utc).date().isoformat()
+    if dl:
+        return "closed" if dl < today else "active"
+    fs = it.get("first_seen") or it.get("posted") or ""
+    age = days_since(fs)
+    if age is not None and age > max_age:
+        return "stale"
+    return "active"
+
+
 def bidfit_key(it):
     # Your winnable universe (full-and-open AND not a trap) floats to the very top,
     # ordered by Goods/COTS then soonest deadline. Set-asides and traps sink below.
@@ -186,7 +214,8 @@ def pull_sam():
     if not key:
         return [], {}, "SAM skipped — no SAM_API_KEY set."
     org = os.getenv("SAM_ORG", "STATE, DEPARTMENT OF")
-    days = int(os.getenv("SAM_DAYS", "14"))
+    days = int(os.getenv("SAM_INDEX_DAYS", "90"))       # wide pull → active inventory + date index
+    report_days = int(os.getenv("SAM_REPORT_DAYS", "3"))  # only this recent counts as "new/changed"
     now = datetime.now(timezone.utc)
     params = {"api_key": key, "organizationName": org,
               "postedFrom": (now - timedelta(days=days)).strftime("%m/%d/%Y"),
@@ -230,11 +259,14 @@ def pull_sam():
                 continue
             if nid in seen and seen[nid] == posted:
                 continue  # unchanged — already reported
+            recent = days_since(pd)
+            if recent is None or recent > report_days:
+                continue  # older notice: it's indexed for the active list, but not "new"
             cat = "amendment" if nid in seen else "new"
             if CANCEL_RE.search(title): cat = "cancelled"
             out.append({"name": f"SAM · {country}", "text": title[:180], "sol": sol,
                         "href": rec.get("uiLink", "https://sam.gov"), "cat": cat,
-                        "source": "SAM", "posted": pd, "deadline": dl,
+                        "source": "SAM", "posted": pd, "deadline": dl, "first_seen": pd,
                         "setaside": sa, "psc": psc, "naics": naics})
             seen[nid] = posted
         os.makedirs(STATE_DIR, exist_ok=True)
@@ -249,8 +281,9 @@ def pull_sam():
 def main():
     cfg = yaml.safe_load(open(SITES_FILE))
     sites = cfg.get("sites", [])
-    site_items, errors, baseline_rows, gso_emails = [], [], [], {}
+    site_items, errors, baseline_rows, gso_emails, current_site = [], [], [], {}, []
     checked, is_baseline = 0, False
+    today = datetime.now(timezone.utc).date().isoformat()
 
     for site in sites:
         name, url, selector = site["name"], site["url"], site.get("selector")
@@ -262,6 +295,12 @@ def main():
         checked += 1
         if fp["emails"]: gso_emails[name] = fp["emails"]
         prev = load_json(os.path.join(STATE_DIR, f"{s}.json"), None)
+        stamp_first_seen(fp["items"], (prev or {}).get("items", []), today)
+        for it in fp["items"]:  # every item currently on the page → active inventory
+            current_site.append({"name": name, "text": it["text"], "href": it["href"],
+                                 "sol": solnum(it["text"], it["href"]), "source": "Site",
+                                 "posted": it.get("date", ""), "first_seen": it.get("first_seen", today),
+                                 "deadline": "", "setaside": "", "psc": "", "naics": ""})
         if prev is None:
             is_baseline = True
             baseline_rows.append({"name": name, "count": len(fp["items"]), "url": url})
@@ -270,18 +309,19 @@ def main():
         for it in added:
             site_items.append({"name": name, "text": it["text"], "sol": solnum(it["text"], it["href"]),
                                "href": it["href"], "cat": classify(it["text"]), "source": "Site",
-                               "posted": it.get("date", ""), "deadline": "",
-                               "setaside": "", "psc": "", "naics": ""})
+                               "posted": it.get("date", ""), "first_seen": it.get("first_seen", today),
+                               "deadline": "", "setaside": "", "psc": "", "naics": ""})
         for it in removed:
             site_items.append({"name": name, "text": it["text"] + " (removed from page)",
                                "sol": solnum(it["text"], it["href"]), "href": it["href"],
                                "cat": "cancelled", "source": "Site",
-                               "posted": it.get("date", ""), "deadline": "",
-                               "setaside": "", "psc": "", "naics": ""})
+                               "posted": it.get("date", ""), "first_seen": it.get("first_seen", today),
+                               "deadline": "", "setaside": "", "psc": "", "naics": ""})
         if not added and not removed and prev.get("text_hash") != fp["text_hash"]:
             site_items.append({"name": name, "text": "Page content changed (check listing)",
                                "sol": "", "href": url, "cat": "updated", "source": "Site",
-                               "posted": "", "deadline": "", "setaside": "", "psc": "", "naics": ""})
+                               "posted": "", "first_seen": today, "deadline": "",
+                               "setaside": "", "psc": "", "naics": ""})
         save_state(s, {"url": url, **fp})
 
     if is_baseline:
@@ -318,23 +358,55 @@ def main():
 
     counts = {k: len(v) for k, v in buckets.items()}
     total = sum(counts.values())
-    html = build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline, sam_note, len(sam_items))
-    # Weekly winnable CSV (default Mondays; set WEEKLY_DAY to Mon/Tue/... or OFF)
-    attachments, weekly_n = [], 0
-    weekly_day = os.getenv("WEEKLY_DAY", "Mon")
-    if not is_baseline and weekly_day != "OFF" and datetime.now(timezone.utc).strftime("%a") == weekly_day:
-        csv_bytes, weekly_n = build_weekly_csv(sam_index)
-        if weekly_n:
-            attachments.append((f"winnable_this_week_{datetime.now(timezone.utc).date()}.csv", csv_bytes, "text/csv"))
-            sam_note += f" · weekly CSV attached ({weekly_n} winnable)"
+
+    # ---------- ACTIVE INVENTORY (everything currently open) ----------
+    max_age = int(os.getenv("MAX_AGE_DAYS", "90"))
+    active = {}
+    if not is_baseline:
+        for it in current_site:  # embassy items on pages now, enriched from SAM
+            sol = (it.get("sol") or "").upper()
+            if sol and sol in sam_index:
+                rec = sam_index[sol]
+                if not it.get("posted"): it["posted"] = rec.get("posted", "")
+                it["deadline"] = it.get("deadline") or rec.get("deadline", "")
+                it["setaside"] = it.get("setaside") or rec.get("setaside", "")
+                it["psc"] = it.get("psc") or rec.get("psc", "")
+                it["naics"] = it.get("naics") or rec.get("naics", "")
+                it["source"] = "Site+SAM"
+            if eff_status(it, max_age) == "active":
+                active[sol or ("_" + it["href"])] = it
+        for sol, d in sam_index.items():  # SAM-only open items (from the wide index)
+            if sol in active:
+                active[sol]["source"] = "Site+SAM"; continue
+            it = {"name": f"SAM · {d.get('country', '—')}", "text": (d.get("title", "") or "")[:180],
+                  "sol": sol, "href": d.get("href", "https://sam.gov"), "source": "SAM",
+                  "posted": d.get("posted", ""), "first_seen": d.get("posted", ""),
+                  "deadline": d.get("deadline", ""), "setaside": d.get("setaside", ""),
+                  "psc": d.get("psc", ""), "naics": d.get("naics", "")}
+            if eff_status(it, max_age) == "active":
+                active[sol] = it
+    active_list = sorted(active.values(), key=bidfit_key)
+    winnable = [it for it in active_list if is_fit(it)]
+    closing_soon = sorted([it for it in active_list if it.get("deadline")
+                           and days_until(it["deadline"]) is not None and 0 <= days_until(it["deadline"]) <= 7],
+                          key=lambda it: it.get("deadline") or "9999")
+
+    html = build_html(buckets, counts, errors, checked, baseline_rows, gso_emails,
+                      is_baseline, sam_note, len(sam_items),
+                      len(active_list), len(winnable), closing_soon)
+
+    attachments = []
+    if not is_baseline and active_list:  # full active list attached to EVERY digest
+        attachments.append((f"active_solicitations_{today}.csv", build_active_csv(active_list), "text/csv"))
+        sam_note += f" · {len(active_list)} active ({len(winnable)} winnable) CSV attached"
 
     send = bool(total or errors or is_baseline or attachments) or os.getenv("SEND_DAILY_DIGEST") == "1"
     subject = build_subject(counts, errors, is_baseline)
-    if attachments and "all clear" in subject:
-        subject = subject.replace("all clear", f"weekly winnable list ({weekly_n})")
+    if not is_baseline and closing_soon:
+        subject = f"[{len(closing_soon)} closing ≤7d] " + subject
     if send: send_email(subject, html, attachments); print("EMAIL SENT:", subject)
     else: print("No changes — no email.")
-    print(f"site_changes={len(site_items)} sam={len(sam_items)} errors={len(errors)} | {sam_note}")
+    print(f"site_changes={len(site_items)} sam_new={len(sam_items)} active={len(active_list)} errors={len(errors)} | {sam_note}")
 
 
 def build_subject(counts, errors, baseline):
@@ -418,7 +490,9 @@ def _rows(items):
     return "".join(out)
 
 
-def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline, sam_note, sam_count):
+def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline, sam_note, sam_count,
+               active_count=0, winnable_count=0, closing_soon=None):
+    closing_soon = closing_soon or []
     now = datetime.now(timezone.utc)
     label = "Morning" if now.hour < 12 else "Evening"
     stamp = now.strftime("%A, %d %b %Y · %H:%M UTC")
@@ -449,6 +523,25 @@ def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_b
         S.append('</tr></table>')
         S.append(f'<p style="font-size:12px;color:#64748b;margin:0 4px 10px">{checked} embassy pages checked · '
                  f'{sam_count} items from SAM.gov · Source tag shows Site / SAM / both.</p>')
+
+        # active inventory banner
+        S.append(f'<div style="background:#0f766e;color:#fff;border-radius:8px;padding:10px 14px;margin:0 0 6px">'
+                 f'<b style="font-size:15px">📋 {active_count} solicitations currently ACTIVE</b> '
+                 f'<span style="color:#99f6e4">· {winnable_count} winnable (Open + Goods/COTS)</span>'
+                 f'<div style="font-size:11px;color:#99f6e4;margin-top:3px">Full list attached as CSV — with the date each appeared + its deadline.</div></div>')
+
+        # CLOSING THIS WEEK — pinned at top
+        if closing_soon:
+            S.append('<div style="margin-top:10px;background:#b91c1c;color:#fff;padding:8px 12px;'
+                     'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">⏰ CLOSING THIS WEEK (≤7 days) — '
+                     f'{len(closing_soon)}</div>')
+            S.append('<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">'
+                     '<tr style="background:#fee2e2"><td style="padding:6px 10px;font-size:11px;color:#991b1b">EMBASSY / SRC</td>'
+                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">ITEM</td>'
+                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">SOL #</td>'
+                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">DATES</td></tr>')
+            S.append(_rows(closing_soon[:25])); S.append('</table>')
+
         for cat in ["new", "amendment", "cancelled", "updated"]:
             if not buckets[cat]: continue
             title, color = CAT_STYLE[cat]
@@ -504,6 +597,21 @@ def build_weekly_csv(index):
     w.writerow(["Post/Country", "Title", "Solicitation #", "PSC", "NAICS", "Posted", "Deadline", "Link"])
     w.writerows(rows)
     return buf.getvalue().encode("utf-8"), len(rows)
+
+
+def build_active_csv(items):
+    """Full list of currently-open solicitations with the date each appeared + deadline."""
+    buf = io.StringIO(); w = csv.writer(buf)
+    w.writerow(["Post/Country", "Title", "Solicitation #", "Source", "Set-Aside (blank=Open)",
+                "Type", "Trap?", "PSC", "NAICS", "First Seen / Posted", "Deadline", "Winnable"])
+    for it in items:
+        typ = "Goods/COTS" if is_goods(it) else ("Service" if it.get("psc") else "")
+        w.writerow([it.get("name", ""), it.get("text", ""), it.get("sol", ""), it.get("source", ""),
+                    it.get("setaside", ""), typ, "TRAP" if is_trap(it) else "",
+                    it.get("psc", ""), it.get("naics", ""),
+                    it.get("posted", "") or it.get("first_seen", ""), it.get("deadline", ""),
+                    "YES" if is_fit(it) else ""])
+    return buf.getvalue().encode("utf-8")
 
 
 def send_email(subject, html, attachments=None):
