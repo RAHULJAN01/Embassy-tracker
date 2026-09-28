@@ -50,6 +50,9 @@ JUNK = re.compile(r"(manage options|manage services|manage \{?vendor|view prefer
                   r"|read more|cookie|^twitter|^facebook|privacy policy|^overview$|^notice$|^requirements$"
                   r"|^housing$|^current items$|^attachment$|^the attachment$|^q&a$|^next|^\d+$)", re.I)
 EMAIL_RE = re.compile(r"[\w.\-]+@[\w.\-]+\.\w{2,}")
+DATE_RE = re.compile(r"(\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+20\d{2}\b"
+                     r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+20\d{2}\b"
+                     r"|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/20\d{2}\b)", re.I)
 CANCEL_RE = re.compile(r"(cancel|withdrawn|no longer available)", re.I)
 AMEND_RE = re.compile(r"(amendment|modif|\bsf-?30\b|extension|revised|addendum|response to quer|\bp0000\d\b|q&a)", re.I)
 
@@ -92,7 +95,14 @@ def extract(html, base_url, selector=None):
         if EMAIL_RE.fullmatch(text) or JUNK.search(text): continue
         if not (STRONG.search(text) or SOLNUM.search(text) or SOLNUM.search(href)): continue
         key = (text.lower(), href)
-        if key not in seen: seen.add(key); items.append({"text": text[:180], "href": href})
+        if key in seen: continue
+        seen.add(key)
+        d = ""
+        par = a.find_parent(["li", "tr", "p"])
+        if par:
+            md = DATE_RE.search(par.get_text(" ", strip=True))
+            if md: d = md.group(0)
+        items.append({"text": text[:180], "href": href, "date": d})
     visible = " ".join(scope.get_text(" ", strip=True).split())
     return {"items": items, "text_hash": hashlib.sha256(visible.encode("utf-8", "ignore")).hexdigest(),
             "emails": sorted(emails)}
@@ -172,7 +182,8 @@ def pull_sam():
                         "sol": (rec.get("solicitationNumber") or nid or "").upper(),
                         "href": rec.get("uiLink", "https://sam.gov"),
                         "cat": cat, "source": "SAM",
-                        "deadline": rec.get("responseDeadLine", "")})
+                        "posted": (posted or "")[:10],
+                        "deadline": (rec.get("responseDeadLine", "") or "")[:10]})
             seen[nid] = posted
         os.makedirs(STATE_DIR, exist_ok=True)
         with open(SAM_SEEN, "w") as f:
@@ -206,17 +217,20 @@ def main():
         added, removed = diff_items(prev.get("items", []), fp["items"])
         for it in added:
             site_items.append({"name": name, "text": it["text"], "sol": solnum(it["text"], it["href"]),
-                               "href": it["href"], "cat": classify(it["text"]), "source": "Site"})
+                               "href": it["href"], "cat": classify(it["text"]), "source": "Site",
+                               "posted": it.get("date", ""), "deadline": ""})
         for it in removed:
             site_items.append({"name": name, "text": it["text"] + " (removed from page)",
                                "sol": solnum(it["text"], it["href"]), "href": it["href"],
-                               "cat": "cancelled", "source": "Site"})
+                               "cat": "cancelled", "source": "Site",
+                               "posted": it.get("date", ""), "deadline": ""})
         if not added and not removed and prev.get("text_hash") != fp["text_hash"]:
             site_items.append({"name": name, "text": "Page content changed (check listing)",
-                               "sol": "", "href": url, "cat": "updated", "source": "Site"})
+                               "sol": "", "href": url, "cat": "updated", "source": "Site",
+                               "posted": "", "deadline": ""})
         save_state(s, {"url": url, **fp})
 
-    sam_items, sam_note = pull_sam()
+    sam_items, sam_note = (([], "SAM skipped on baseline run") if is_baseline else pull_sam())
 
     # merge Site + SAM by solicitation number
     buckets = {"new": [], "amendment": [], "cancelled": [], "updated": []}
@@ -268,15 +282,22 @@ def _rows(items):
     out = []
     for it in items:
         src = it.get("source", "Site"); c = SRC_COLOR.get(src, "#475569")
+        posted = it.get("posted", ""); deadline = it.get("deadline", "")
+        dc = []
+        if deadline: dc.append(f'<b style="color:#dc2626">⏰ Due {deadline}</b>')
+        if posted: dc.append(f'<span style="color:#475569">🗓 {posted}</span>')
+        datecell = "<br>".join(dc) if dc else "—"
         out.append(
-            f'<tr><td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;'
-            f'font-weight:600;white-space:nowrap">{it["name"]}</td>'
+            f'<tr>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;white-space:nowrap">'
+            f'<div style="font-weight:600">{it["name"]}</div>'
+            f'<span style="background:{c};color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">{src}</span></td>'
             f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px">'
             f'<a href="{it["href"]}" style="color:#1d4ed8;text-decoration:none">{it["text"]}</a></td>'
             f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;'
             f'color:#555;white-space:nowrap">{it.get("sol") or "—"}</td>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee"><span style="background:{c};color:#fff;'
-            f'font-family:Arial;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap">{src}</span></td></tr>')
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:12px;'
+            f'white-space:nowrap">{datecell}</td></tr>')
     return "".join(out)
 
 
@@ -317,10 +338,10 @@ def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_b
             S.append(f'<div style="margin-top:14px;background:{color};color:#fff;padding:8px 12px;'
                      f'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">{title} ({counts[cat]})</div>')
             S.append('<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">'
-                     '<tr style="background:#f1f5f9"><td style="padding:6px 10px;font-size:11px;color:#475569">EMBASSY / SOURCE</td>'
+                     '<tr style="background:#f1f5f9"><td style="padding:6px 10px;font-size:11px;color:#475569">EMBASSY / SRC</td>'
                      '<td style="padding:6px 10px;font-size:11px;color:#475569">ITEM</td>'
                      '<td style="padding:6px 10px;font-size:11px;color:#475569">SOL #</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#475569">SRC</td></tr>')
+                     '<td style="padding:6px 10px;font-size:11px;color:#475569">DATES</td></tr>')
             S.append(_rows(buckets[cat])); S.append('</table>')
         if not any(buckets.values()) and not errors:
             S.append('<p style="font-size:14px;color:#16a34a;padding:10px 4px">✓ All quiet — no changes.</p>')
