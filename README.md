@@ -45,6 +45,15 @@ In the repo: **Settings** → **Secrets and variables** → **Actions** →
 | `GMAIL_USER` | the Gmail address that sends the alert, e.g. `you@gmail.com` |
 | `GMAIL_APP_PASSWORD` | the 16-letter password from Step 1 (no spaces) |
 | `ALERT_TO` | where alerts go (can be the same address; commas for more than one) |
+| `SAM_API_KEY` | **(recommended)** free SAM.gov key — turns on the all-embassies SAM feed. See below. |
+
+### STEP 4b — Get your free SAM.gov API key (covers ALL embassies)
+This is what pulls every Department-of-State solicitation worldwide into the digest.
+1. Sign in at **https://sam.gov** (make a free account if needed).
+2. Top-right → your name → **Account Details**.
+3. Find **"API Key"** → **Generate/Request** a Public API Key. Copy it.
+4. Add it as the secret **`SAM_API_KEY`** (Step 4).
+Without this key the tracker still works — it just watches the embassy pages only.
 
 ### STEP 5 — Turn it on and test it now
 1. Open the **Actions** tab. If it asks, click **“I understand… enable workflows.”**

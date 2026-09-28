@@ -137,25 +137,28 @@ def diff_items(old, new):
 
 # ---------------- SAM.gov API ----------------
 def pull_sam():
-    """Return (items, note). Never raises — SAM problems must not break page scraping."""
+    """Return (report_items, sol_index, note). Never raises.
+    report_items = new/changed State Dept notices to show.
+    sol_index    = {SOLNUM: {posted, deadline, href}} for ALL pulled notices,
+                   used to stamp dates onto embassy items found by sol-number."""
     key = os.getenv("SAM_API_KEY")
     if not key:
-        return [], "SAM skipped — no SAM_API_KEY set."
+        return [], {}, "SAM skipped — no SAM_API_KEY set."
     org = os.getenv("SAM_ORG", "STATE, DEPARTMENT OF")
-    days = int(os.getenv("SAM_DAYS", "2"))
+    days = int(os.getenv("SAM_DAYS", "14"))
     now = datetime.now(timezone.utc)
     params = {"api_key": key, "organizationName": org,
               "postedFrom": (now - timedelta(days=days)).strftime("%m/%d/%Y"),
               "postedTo": now.strftime("%m/%d/%Y"), "limit": 1000, "offset": 0}
     seen = load_json(SAM_SEEN, {})
-    out = []
+    out, index = [], {}
     try:
         records, offset, pages = [], 0, 0
-        while pages < 6:
+        while pages < 8:
             params["offset"] = offset
             r = requests.get(SAM_URL, params=params, timeout=45)
             if r.status_code != 200:
-                return [], f"SAM API HTTP {r.status_code}: {r.text[:120]}"
+                return [], {}, f"SAM API HTTP {r.status_code}: {r.text[:120]}"
             data = r.json()
             batch = data.get("opportunitiesData", []) or []
             records += batch
@@ -166,31 +169,33 @@ def pull_sam():
             path = (rec.get("fullParentPathName") or "").upper()
             if "STATE, DEPARTMENT OF" not in path and org.upper() not in path:
                 continue
-            ttype = rec.get("type", "")
-            if ttype in SAM_SKIP_TYPES: continue
             nid = rec.get("noticeId", "")
             posted = rec.get("postedDate", "")
             title = rec.get("title", "") or "(untitled)"
+            sol = (rec.get("solicitationNumber") or nid or "").upper()
+            pd = (posted or "")[:10]
+            dl = (rec.get("responseDeadLine", "") or "")[:10]
+            if sol:  # index EVERY notice (even already-seen) so embassy items can borrow its dates
+                index[sol] = {"posted": pd, "deadline": dl, "href": rec.get("uiLink", "")}
+            if rec.get("type", "") in SAM_SKIP_TYPES:
+                continue
             if nid in seen and seen[nid] == posted:
-                continue  # unchanged, already reported
+                continue  # unchanged — already reported
             cat = "amendment" if nid in seen else "new"
             if CANCEL_RE.search(title): cat = "cancelled"
             pop = rec.get("placeOfPerformance") or {}
             country = ((pop.get("country") or {}).get("name")
                        or (pop.get("country") or {}).get("code") or "—")
-            out.append({"name": f"SAM · {country}", "text": title[:180],
-                        "sol": (rec.get("solicitationNumber") or nid or "").upper(),
-                        "href": rec.get("uiLink", "https://sam.gov"),
-                        "cat": cat, "source": "SAM",
-                        "posted": (posted or "")[:10],
-                        "deadline": (rec.get("responseDeadLine", "") or "")[:10]})
+            out.append({"name": f"SAM · {country}", "text": title[:180], "sol": sol,
+                        "href": rec.get("uiLink", "https://sam.gov"), "cat": cat,
+                        "source": "SAM", "posted": pd, "deadline": dl})
             seen[nid] = posted
         os.makedirs(STATE_DIR, exist_ok=True)
         with open(SAM_SEEN, "w") as f:
             json.dump(seen, f)
-        return out, f"SAM ok — {len(out)} new/changed of {len(records)} pulled."
+        return out, index, f"SAM ok — {len(out)} new/changed, {len(index)} indexed of {len(records)} pulled."
     except Exception as e:
-        return [], f"SAM error: {str(e)[:140]}"
+        return [], {}, f"SAM error: {str(e)[:140]}"
 
 
 # ---------------- MAIN ----------------
@@ -230,7 +235,18 @@ def main():
                                "posted": "", "deadline": ""})
         save_state(s, {"url": url, **fp})
 
-    sam_items, sam_note = (([], "SAM skipped on baseline run") if is_baseline else pull_sam())
+    if is_baseline:
+        sam_items, sam_index, sam_note = [], {}, "SAM skipped on baseline run"
+    else:
+        sam_items, sam_index, sam_note = pull_sam()
+
+    # stamp SAM dates onto embassy items that share a solicitation number
+    for it in site_items:
+        s = (it.get("sol") or "").upper()
+        if s and s in sam_index:
+            if not it.get("posted"): it["posted"] = sam_index[s]["posted"]
+            if not it.get("deadline"): it["deadline"] = sam_index[s]["deadline"]
+            if it["source"] == "Site": it["source"] = "Site+SAM"
 
     # merge Site + SAM by solicitation number
     buckets = {"new": [], "amendment": [], "cancelled": [], "updated": []}
