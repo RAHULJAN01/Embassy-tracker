@@ -1,0 +1,88 @@
+# ============================================================
+#  EMBASSY PROCUREMENT TRACKER — SITE LIST
+# ============================================================
+# One block per page. To add more: copy a block, change name + url.
+#   - name:     label you'll see in the email
+#   - url:      the embassy's procurement / solicitations page
+#   - selector: (OPTIONAL) CSS selector for the listing area; usually not needed
+#
+# All URLs below were verified live. Grouped by your strategy:
+# developing-country target posts first (your golden win-rate geography).
+# ============================================================
+
+sites:
+  # ---------- AFRICA (high US-win developing posts) ----------
+  - name: "Nigeria (Abuja/Lagos)"
+    url: "https://ng.usembassy.gov/business/"
+  - name: "Kenya (Nairobi)"
+    url: "https://ke.usembassy.gov/commercial-opportunities/"
+  - name: "Ghana (Accra)"
+    url: "https://gh.usembassy.gov/business/contract-opportunities/"
+  - name: "South Africa (Pretoria)"
+    url: "https://za.usembassy.gov/commercial-opportunities/"
+  - name: "Cote d'Ivoire (Abidjan)"
+    url: "https://ci.usembassy.gov/tag/procurement-solicitations/"
+  - name: "DR Congo (Kinshasa)"
+    url: "https://cd.usembassy.gov/contract-solicitations/"
+  - name: "Ethiopia (Addis Ababa)"
+    url: "https://et.usembassy.gov/procurement-opportunities/"
+  - name: "Uganda (Kampala)"
+    url: "https://ug.usembassy.gov/tag/procurement-solicitations/"
+  - name: "Tanzania (Dar es Salaam)"
+    url: "https://tz.usembassy.gov/contract-opportunities/"
+  - name: "Senegal (Dakar)"
+    url: "https://sn.usembassy.gov/business-opportunities/"
+  - name: "Mozambique (Maputo)"
+    url: "https://mz.usembassy.gov/tag/procurement-solicitations/"
+  - name: "Zambia (Lusaka)"
+    url: "https://zm.usembassy.gov/procurement-and-contracting-opportunities/"
+  - name: "Gabon (Libreville)"
+    url: "https://ga.usembassy.gov/tag/procurement-solicitations/"
+  - name: "Eswatini (Mbabane)"
+    url: "https://sz.usembassy.gov/procurement-2/"
+  - name: "Egypt (Cairo)"
+    url: "https://eg.usembassy.gov/u-s-embassy-cairo/contract-solicitations/"
+
+  # ---------- SOUTH / SOUTHEAST ASIA ----------
+  - name: "India (Embassy + Consulates)"
+    url: "https://in.usembassy.gov/embassy-consulates-contract-solicitations/"
+  - name: "Pakistan (Karachi)"
+    url: "https://pk.usembassy.gov/embassy-consulates/karachi/contract-solicitations/"
+  - name: "Pakistan (Islamabad packages)"
+    url: "https://pk.usembassy.gov/procurement-solicitation-packages/"
+  - name: "Bangladesh (Dhaka)"
+    url: "https://bd.usembassy.gov/grants-and-procurement-opportunities/"
+  - name: "Nepal (Kathmandu)"
+    url: "https://np.usembassy.gov/contract-grant-opportunities/"
+  - name: "Philippines (Manila)"
+    url: "https://ph.usembassy.gov/local-contracts-and-procurement/"
+  - name: "Indonesia (Jakarta)"
+    url: "https://id.usembassy.gov/jakarta-gso-procurement-contract-opportunities/"
+  - name: "Vietnam (Hanoi/HCMC)"
+    url: "https://vn.usembassy.gov/tag/procurement-solicitations/"
+
+  # ---------- LATIN AMERICA / CARIBBEAN ----------
+  - name: "Brazil (Embassy + Consulates)"
+    url: "https://br.usembassy.gov/procurement-and-contract-opportunities/"
+  - name: "Mexico (Embassy + Consulates)"
+    url: "https://mx.usembassy.gov/tag/contract-and-procurement-opportunities/"
+  - name: "Colombia (Bogota)"
+    url: "https://co.usembassy.gov/solicitation-contracting/"
+  - name: "Venezuela (Caracas)"
+    url: "https://ve.usembassy.gov/solicitation-contracting/"
+  - name: "Guyana (Georgetown)"
+    url: "https://gy.usembassy.gov/contract-solicitation-and-procurement/"
+
+  # ---------- DEVELOPED POSTS (low bid-priority, but you wanted all) ----------
+  - name: "United Kingdom (London)"
+    url: "https://uk.usembassy.gov/contract-solicitations-procurement/"
+  - name: "Netherlands (The Hague)"
+    url: "https://nl.usembassy.gov/contract-opportunities/"
+
+# ============================================================
+#  TO ADD NEXT (tell me and I'll verify + hand you the blocks):
+#  Rwanda, Haiti, Argentina, Peru, Guatemala, Cameroon, Burkina Faso,
+#  Madagascar, Dominican Republic, Morocco, Jordan, Angola, Cambodia,
+#  Sri Lanka, and the rest of the 200+. Many post ONLY to SAM.gov and
+#  have no public page — those don't need a line here.
+# ============================================================
