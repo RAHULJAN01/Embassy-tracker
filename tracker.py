@@ -20,7 +20,8 @@ Optional env:
     SEND_DAILY_DIGEST=1
 """
 
-import os, re, sys, json, time, hashlib, smtplib
+import os, re, sys, json, time, hashlib, smtplib, csv, io
+from email.mime.application import MIMEApplication
 from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -136,6 +137,18 @@ def is_trap(it):
     return (it.get("psc") or "")[:1].upper() == "Y"
 
 
+def is_fit(it):
+    return is_open(it) and is_goods(it) and not is_trap(it)
+
+
+def days_until(deadline):
+    try:
+        d = datetime.strptime(deadline[:10], "%Y-%m-%d").date()
+        return (d - datetime.now(timezone.utc).date()).days
+    except Exception:
+        return None
+
+
 def bidfit_key(it):
     # Your winnable universe (full-and-open AND not a trap) floats to the very top,
     # ordered by Goods/COTS then soonest deadline. Set-asides and traps sink below.
@@ -206,18 +219,19 @@ def pull_sam():
             sa = (rec.get("typeOfSetAsideDescription") or rec.get("typeOfSetAside") or "").strip()
             psc = (rec.get("classificationCode") or "").strip()
             naics = (rec.get("naicsCode") or "").strip()
+            pop = rec.get("placeOfPerformance") or {}
+            country = ((pop.get("country") or {}).get("name")
+                       or (pop.get("country") or {}).get("code") or "—")
             if sol:  # index EVERY notice (even already-seen) so embassy items can borrow its data
                 index[sol] = {"posted": pd, "deadline": dl, "href": rec.get("uiLink", ""),
-                              "setaside": sa, "psc": psc, "naics": naics}
+                              "setaside": sa, "psc": psc, "naics": naics,
+                              "title": title, "country": country}
             if rec.get("type", "") in SAM_SKIP_TYPES:
                 continue
             if nid in seen and seen[nid] == posted:
                 continue  # unchanged — already reported
             cat = "amendment" if nid in seen else "new"
             if CANCEL_RE.search(title): cat = "cancelled"
-            pop = rec.get("placeOfPerformance") or {}
-            country = ((pop.get("country") or {}).get("name")
-                       or (pop.get("country") or {}).get("code") or "—")
             out.append({"name": f"SAM · {country}", "text": title[:180], "sol": sol,
                         "href": rec.get("uiLink", "https://sam.gov"), "cat": cat,
                         "source": "SAM", "posted": pd, "deadline": dl,
@@ -305,9 +319,20 @@ def main():
     counts = {k: len(v) for k, v in buckets.items()}
     total = sum(counts.values())
     html = build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline, sam_note, len(sam_items))
-    send = bool(total or errors or is_baseline) or os.getenv("SEND_DAILY_DIGEST") == "1"
+    # Weekly winnable CSV (default Mondays; set WEEKLY_DAY to Mon/Tue/... or OFF)
+    attachments, weekly_n = [], 0
+    weekly_day = os.getenv("WEEKLY_DAY", "Mon")
+    if not is_baseline and weekly_day != "OFF" and datetime.now(timezone.utc).strftime("%a") == weekly_day:
+        csv_bytes, weekly_n = build_weekly_csv(sam_index)
+        if weekly_n:
+            attachments.append((f"winnable_this_week_{datetime.now(timezone.utc).date()}.csv", csv_bytes, "text/csv"))
+            sam_note += f" · weekly CSV attached ({weekly_n} winnable)"
+
+    send = bool(total or errors or is_baseline or attachments) or os.getenv("SEND_DAILY_DIGEST") == "1"
     subject = build_subject(counts, errors, is_baseline)
-    if send: send_email(subject, html); print("EMAIL SENT:", subject)
+    if attachments and "all clear" in subject:
+        subject = subject.replace("all clear", f"weekly winnable list ({weekly_n})")
+    if send: send_email(subject, html, attachments); print("EMAIL SENT:", subject)
     else: print("No changes — no email.")
     print(f"site_changes={len(site_items)} sam={len(sam_items)} errors={len(errors)} | {sam_note}")
 
@@ -342,6 +367,8 @@ def _pill(text, bg, fg):
 
 def _badges(it):
     b = []
+    if is_fit(it):
+        b.append(_pill("⭐ FIT", "#fef08a", "#854d0e"))
     if is_open(it):
         b.append(_pill("OPEN", "#dcfce7", "#166534"))
     else:
@@ -365,7 +392,15 @@ def _rows(items):
         src = it.get("source", "Site"); c = SRC_COLOR.get(src, "#475569")
         posted = it.get("posted", ""); deadline = it.get("deadline", "")
         dc = []
-        if deadline: dc.append(f'<b style="color:#dc2626">⏰ Due {deadline}</b>')
+        if deadline:
+            n = days_until(deadline)
+            if n is not None and n < 0:
+                dc.append(f'<span style="color:#94a3b8">✖ closed {deadline}</span>')
+            elif n is not None and n <= 5:
+                dc.append(f'<b style="background:#dc2626;color:#fff;padding:1px 5px;border-radius:4px">🔴 CLOSES IN {n}d</b><br>'
+                          f'<span style="color:#dc2626">⏰ {deadline}</span>')
+            else:
+                dc.append(f'<b style="color:#dc2626">⏰ Due {deadline}</b>')
         if posted: dc.append(f'<span style="color:#475569">🗓 {posted}</span>')
         datecell = "<br>".join(dc) if dc else "—"
         out.append(
@@ -451,18 +486,44 @@ def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_b
     return "".join(S)
 
 
-def send_email(subject, html):
+def build_weekly_csv(index):
+    """CSV of currently-open WINNABLE opportunities (Open + Goods/COTS + non-trap, not closed)."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    rows = []
+    for sol, d in index.items():
+        it = {"setaside": d.get("setaside", ""), "psc": d.get("psc", ""), "text": d.get("title", "")}
+        if not is_fit(it):
+            continue
+        dl = d.get("deadline", "")
+        if dl and dl < today:
+            continue  # closed
+        rows.append([d.get("country", ""), d.get("title", ""), sol, d.get("psc", ""),
+                     d.get("naics", ""), d.get("posted", ""), dl, d.get("href", "")])
+    rows.sort(key=lambda r: r[6] or "9999-12-31")
+    buf = io.StringIO(); w = csv.writer(buf)
+    w.writerow(["Post/Country", "Title", "Solicitation #", "PSC", "NAICS", "Posted", "Deadline", "Link"])
+    w.writerows(rows)
+    return buf.getvalue().encode("utf-8"), len(rows)
+
+
+def send_email(subject, html, attachments=None):
     user, pw = os.getenv("GMAIL_USER"), os.getenv("GMAIL_APP_PASSWORD")
     to = os.getenv("ALERT_TO") or user
     if not (user and pw and to):
         print("!! Email not sent: missing secrets", file=sys.stderr); return
-    msg = MIMEMultipart("alternative")
-    msg["Subject"], msg["From"], msg["To"], msg["Date"] = subject, user, to, formatdate(localtime=True)
-    msg.attach(MIMEText("Open in an HTML-capable mail client to view the digest.", "plain"))
-    msg.attach(MIMEText(html, "html", "utf-8"))
+    outer = MIMEMultipart("mixed")
+    outer["Subject"], outer["From"], outer["To"], outer["Date"] = subject, user, to, formatdate(localtime=True)
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText("Open in an HTML-capable mail client to view the digest.", "plain"))
+    alt.attach(MIMEText(html, "html", "utf-8"))
+    outer.attach(alt)
+    for fname, data, mime in (attachments or []):
+        part = MIMEApplication(data, _subtype=mime.split("/")[-1])
+        part.add_header("Content-Disposition", "attachment", filename=fname)
+        outer.attach(part)
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(user, pw)
-        server.sendmail(user, [x.strip() for x in to.split(",")], msg.as_string())
+        server.sendmail(user, [x.strip() for x in to.split(",")], outer.as_string())
 
 
 if __name__ == "__main__":
