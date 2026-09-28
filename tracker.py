@@ -55,6 +55,9 @@ DATE_RE = re.compile(r"(\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|N
                      r"|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/20\d{2}\b)", re.I)
 CANCEL_RE = re.compile(r"(cancel|withdrawn|no longer available)", re.I)
 AMEND_RE = re.compile(r"(amendment|modif|\bsf-?30\b|extension|revised|addendum|response to quer|\bp0000\d\b|q&a)", re.I)
+TRAP_RE = re.compile(r"(oil|gas|fuel|petroleum|weapon|ammun|firearm|\barms\b|ship repair|aircraft|aviation"
+                     r"|\bmilitary\b|guard service|security guard|staffing|personal services|janitor|catering"
+                     r"|perishable|construction|renovat|refurb|make ?ready|demolition|roofing|paving|excavat)", re.I)
 
 SAM_SKIP_TYPES = {"Award Notice", "Justification", "Justification and Approval (J&A)",
                   "Sale of Surplus Property", "Intent to Bundle Requirements (DoD-Funded)"}
@@ -119,6 +122,31 @@ def classify(text):
     return "new"
 
 
+def is_open(it):
+    return not (it.get("setaside") or "").strip()
+
+
+def is_goods(it):
+    psc = (it.get("psc") or "").strip()
+    return bool(psc) and psc[0].isdigit()
+
+
+def is_trap(it):
+    if TRAP_RE.search(it.get("text", "")): return True
+    return (it.get("psc") or "")[:1].upper() == "Y"
+
+
+def bidfit_key(it):
+    # Your winnable universe (full-and-open AND not a trap) floats to the very top,
+    # ordered by Goods/COTS then soonest deadline. Set-asides and traps sink below.
+    biddable = is_open(it) and not is_trap(it)
+    return (0 if biddable else 1,
+            0 if is_goods(it) else 1,
+            it.get("deadline") or "9999-12-31",
+            0 if is_open(it) else 1,
+            1 if is_trap(it) else 0)
+
+
 def load_json(p, default):
     try: return json.load(open(p))
     except Exception: return default
@@ -175,8 +203,12 @@ def pull_sam():
             sol = (rec.get("solicitationNumber") or nid or "").upper()
             pd = (posted or "")[:10]
             dl = (rec.get("responseDeadLine", "") or "")[:10]
-            if sol:  # index EVERY notice (even already-seen) so embassy items can borrow its dates
-                index[sol] = {"posted": pd, "deadline": dl, "href": rec.get("uiLink", "")}
+            sa = (rec.get("typeOfSetAsideDescription") or rec.get("typeOfSetAside") or "").strip()
+            psc = (rec.get("classificationCode") or "").strip()
+            naics = (rec.get("naicsCode") or "").strip()
+            if sol:  # index EVERY notice (even already-seen) so embassy items can borrow its data
+                index[sol] = {"posted": pd, "deadline": dl, "href": rec.get("uiLink", ""),
+                              "setaside": sa, "psc": psc, "naics": naics}
             if rec.get("type", "") in SAM_SKIP_TYPES:
                 continue
             if nid in seen and seen[nid] == posted:
@@ -188,7 +220,8 @@ def pull_sam():
                        or (pop.get("country") or {}).get("code") or "—")
             out.append({"name": f"SAM · {country}", "text": title[:180], "sol": sol,
                         "href": rec.get("uiLink", "https://sam.gov"), "cat": cat,
-                        "source": "SAM", "posted": pd, "deadline": dl})
+                        "source": "SAM", "posted": pd, "deadline": dl,
+                        "setaside": sa, "psc": psc, "naics": naics})
             seen[nid] = posted
         os.makedirs(STATE_DIR, exist_ok=True)
         with open(SAM_SEEN, "w") as f:
@@ -223,16 +256,18 @@ def main():
         for it in added:
             site_items.append({"name": name, "text": it["text"], "sol": solnum(it["text"], it["href"]),
                                "href": it["href"], "cat": classify(it["text"]), "source": "Site",
-                               "posted": it.get("date", ""), "deadline": ""})
+                               "posted": it.get("date", ""), "deadline": "",
+                               "setaside": "", "psc": "", "naics": ""})
         for it in removed:
             site_items.append({"name": name, "text": it["text"] + " (removed from page)",
                                "sol": solnum(it["text"], it["href"]), "href": it["href"],
                                "cat": "cancelled", "source": "Site",
-                               "posted": it.get("date", ""), "deadline": ""})
+                               "posted": it.get("date", ""), "deadline": "",
+                               "setaside": "", "psc": "", "naics": ""})
         if not added and not removed and prev.get("text_hash") != fp["text_hash"]:
             site_items.append({"name": name, "text": "Page content changed (check listing)",
                                "sol": "", "href": url, "cat": "updated", "source": "Site",
-                               "posted": "", "deadline": ""})
+                               "posted": "", "deadline": "", "setaside": "", "psc": "", "naics": ""})
         save_state(s, {"url": url, **fp})
 
     if is_baseline:
@@ -240,12 +275,16 @@ def main():
     else:
         sam_items, sam_index, sam_note = pull_sam()
 
-    # stamp SAM dates onto embassy items that share a solicitation number
+    # stamp SAM data (dates, set-aside, PSC/NAICS) onto embassy items sharing a solicitation number
     for it in site_items:
         s = (it.get("sol") or "").upper()
         if s and s in sam_index:
-            if not it.get("posted"): it["posted"] = sam_index[s]["posted"]
-            if not it.get("deadline"): it["deadline"] = sam_index[s]["deadline"]
+            rec = sam_index[s]
+            if not it.get("posted"): it["posted"] = rec["posted"]
+            if not it.get("deadline"): it["deadline"] = rec["deadline"]
+            it["setaside"] = it.get("setaside") or rec.get("setaside", "")
+            it["psc"] = it.get("psc") or rec.get("psc", "")
+            it["naics"] = it.get("naics") or rec.get("naics", "")
             if it["source"] == "Site": it["source"] = "Site+SAM"
 
     # merge Site + SAM by solicitation number
@@ -260,6 +299,8 @@ def main():
                 merged[k] = it; order.append(k)
         for k in order:
             buckets[merged[k]["cat"]].append(merged[k])
+        for b in buckets.values():
+            b.sort(key=bidfit_key)  # Open + Goods/COTS + soonest deadline float to top; traps sink
 
     counts = {k: len(v) for k, v in buckets.items()}
     total = sum(counts.values())
@@ -294,6 +335,30 @@ def _tile(label, value, color):
             f'<div style="font-size:10px;letter-spacing:.5px;margin-top:3px">{label}</div></td>')
 
 
+def _pill(text, bg, fg):
+    return (f'<span style="background:{bg};color:{fg};font-size:9px;padding:1px 5px;'
+            f'border-radius:4px;margin-right:3px;white-space:nowrap">{text}</span>')
+
+
+def _badges(it):
+    b = []
+    if is_open(it):
+        b.append(_pill("OPEN", "#dcfce7", "#166534"))
+    else:
+        b.append(_pill("SET-ASIDE: " + (it.get("setaside", "")[:22] or "yes"), "#ffedd5", "#9a3412"))
+    if is_goods(it):
+        b.append(_pill("GOODS/COTS", "#dbeafe", "#1e40af"))
+    elif it.get("psc"):
+        b.append(_pill("SERVICE", "#f1f5f9", "#475569"))
+    if is_trap(it):
+        b.append(_pill("⚠ TRAP", "#fee2e2", "#991b1b"))
+    meta = []
+    if it.get("psc"): meta.append("PSC " + it["psc"])
+    if it.get("naics"): meta.append("NAICS " + it["naics"])
+    m = (' <span style="color:#94a3b8;font-size:10px">' + " · ".join(meta) + '</span>') if meta else ''
+    return '<div style="margin-top:4px">' + "".join(b) + m + '</div>'
+
+
 def _rows(items):
     out = []
     for it in items:
@@ -305,15 +370,16 @@ def _rows(items):
         datecell = "<br>".join(dc) if dc else "—"
         out.append(
             f'<tr>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;white-space:nowrap">'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;white-space:nowrap;vertical-align:top">'
             f'<div style="font-weight:600">{it["name"]}</div>'
             f'<span style="background:{c};color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">{src}</span></td>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px">'
-            f'<a href="{it["href"]}" style="color:#1d4ed8;text-decoration:none">{it["text"]}</a></td>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;vertical-align:top">'
+            f'<a href="{it["href"]}" style="color:#1d4ed8;text-decoration:none">{it["text"]}</a>'
+            f'{_badges(it)}</td>'
             f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;'
-            f'color:#555;white-space:nowrap">{it.get("sol") or "—"}</td>'
+            f'color:#555;white-space:nowrap;vertical-align:top">{it.get("sol") or "—"}</td>'
             f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:12px;'
-            f'white-space:nowrap">{datecell}</td></tr>')
+            f'white-space:nowrap;vertical-align:top">{datecell}</td></tr>')
     return "".join(out)
 
 
