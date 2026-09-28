@@ -22,6 +22,7 @@ Optional env:
 
 import os, re, sys, json, time, hashlib, smtplib, csv, io
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -410,52 +411,67 @@ def main():
 
 
 def build_subject(counts, errors, baseline):
-    d = datetime.now(timezone.utc).strftime("%d %b")
-    if baseline: return f"Embassy Digest — baseline captured ({d})"
+    d = datetime.now(timezone.utc).strftime("%d %b %Y")
+    if baseline:
+        return f"Overseas Procurement Monitoring — Initial Baseline Established ({d})"
     bits = []
-    if counts["new"]: bits.append(f"{counts['new']} new")
-    if counts["amendment"]: bits.append(f"{counts['amendment']} amend")
-    if counts["cancelled"]: bits.append(f"{counts['cancelled']} cancel")
-    if counts["updated"]: bits.append(f"{counts['updated']} upd")
-    if errors: bits.append(f"{len(errors)} down")
-    return "Embassy Digest — " + (", ".join(bits) if bits else "all clear") + f" ({d})"
+    if counts["new"]: bits.append(f"{counts['new']} New")
+    if counts["amendment"]: bits.append(f"{counts['amendment']} Amended")
+    if counts["cancelled"]: bits.append(f"{counts['cancelled']} Closed")
+    if counts["updated"]: bits.append(f"{counts['updated']} Updated")
+    if errors: bits.append(f"{len(errors)} Unreachable")
+    body = "; ".join(bits) if bits else "No New Procurement Actions"
+    return f"Overseas Procurement Report — {body} ({d})"
 
 
-CAT_STYLE = {"new": ("NEW SOLICITATIONS", "#16a34a"), "amendment": ("AMENDMENTS", "#d97706"),
-             "cancelled": ("CANCELLED / CLOSED", "#dc2626"), "updated": ("UPDATED", "#2563eb")}
-SRC_COLOR = {"Site": "#475569", "SAM": "#7c3aed", "Site+SAM": "#0f766e"}
+CAT_STYLE = {"new": ("I. NEW SOLICITATIONS", "#14532d"),
+             "amendment": ("II. AMENDMENTS &amp; MODIFICATIONS", "#7c5e10"),
+             "cancelled": ("III. CANCELLATIONS &amp; CLOSURES", "#7f1d1d"),
+             "updated": ("IV. UPDATED POSTINGS", "#1e3a5f")}
+SRC_COLOR = {"Site": "#475569", "SAM": "#3730a3", "Site+SAM": "#0f766e"}
 
 
 def _tile(label, value, color):
-    return (f'<td align="center" style="padding:12px 6px;background:{color};border-radius:8px;color:#fff;'
-            f'font-family:Arial">' f'<div style="font-size:24px;font-weight:700">{value}</div>'
-            f'<div style="font-size:10px;letter-spacing:.5px;margin-top:3px">{label}</div></td>')
+    return (f'<td align="center" style="padding:14px 6px;background:#fff;border:1px solid #e5e7eb;'
+            f'border-top:3px solid {color};font-family:Georgia,serif">'
+            f'<div style="font-size:26px;font-weight:700;color:{color}">{value}</div>'
+            f'<div style="font-size:9px;letter-spacing:.6px;margin-top:4px;color:#475569;'
+            f'font-family:Arial;text-transform:uppercase">{label}</div></td>')
 
 
 def _pill(text, bg, fg):
-    return (f'<span style="background:{bg};color:{fg};font-size:9px;padding:1px 5px;'
-            f'border-radius:4px;margin-right:3px;white-space:nowrap">{text}</span>')
+    return (f'<span style="background:{bg};color:{fg};font-size:9px;padding:2px 6px;'
+            f'border-radius:3px;margin-right:4px;white-space:nowrap;font-family:Arial;'
+            f'letter-spacing:.3px;text-transform:uppercase">{text}</span>')
 
 
 def _badges(it):
     b = []
     if is_fit(it):
-        b.append(_pill("⭐ FIT", "#fef08a", "#854d0e"))
+        b.append(_pill("★ Priority", "#fef3c7", "#854d0e"))
     if is_open(it):
-        b.append(_pill("OPEN", "#dcfce7", "#166534"))
+        b.append(_pill("Full &amp; Open", "#dcfce7", "#166534"))
     else:
-        b.append(_pill("SET-ASIDE: " + (it.get("setaside", "")[:22] or "yes"), "#ffedd5", "#9a3412"))
+        b.append(_pill("Set-Aside · " + (it.get("setaside", "")[:22] or "Restricted"), "#ffedd5", "#9a3412"))
     if is_goods(it):
-        b.append(_pill("GOODS/COTS", "#dbeafe", "#1e40af"))
+        b.append(_pill("Commercial Goods", "#dbeafe", "#1e40af"))
     elif it.get("psc"):
-        b.append(_pill("SERVICE", "#f1f5f9", "#475569"))
+        b.append(_pill("Services", "#f1f5f9", "#475569"))
     if is_trap(it):
-        b.append(_pill("⚠ TRAP", "#fee2e2", "#991b1b"))
+        b.append(_pill("Out of Scope", "#fee2e2", "#991b1b"))
     meta = []
     if it.get("psc"): meta.append("PSC " + it["psc"])
     if it.get("naics"): meta.append("NAICS " + it["naics"])
-    m = (' <span style="color:#94a3b8;font-size:10px">' + " · ".join(meta) + '</span>') if meta else ''
-    return '<div style="margin-top:4px">' + "".join(b) + m + '</div>'
+    m = (' <span style="color:#94a3b8;font-size:10px;font-family:Arial">' + " · ".join(meta) + '</span>') if meta else ''
+    return '<div style="margin-top:5px">' + "".join(b) + m + '</div>'
+
+
+def _table_head():
+    cols = "U.S. MISSION / SOURCE", "SOLICITATION", "REF. NO.", "DATES", "ACTION"
+    th = "".join(f'<td style="padding:7px 10px;font-size:10px;color:#475569;font-family:Arial;'
+                 f'letter-spacing:.5px">{c}</td>' for c in cols)
+    return ('<table width="100%" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-top:none">'
+            f'<tr style="background:#eef2f7">{th}</tr>')
 
 
 def _rows(items):
@@ -467,26 +483,30 @@ def _rows(items):
         if deadline:
             n = days_until(deadline)
             if n is not None and n < 0:
-                dc.append(f'<span style="color:#94a3b8">✖ closed {deadline}</span>')
+                dc.append(f'<span style="color:#94a3b8">Closed {deadline}</span>')
             elif n is not None and n <= 5:
-                dc.append(f'<b style="background:#dc2626;color:#fff;padding:1px 5px;border-radius:4px">🔴 CLOSES IN {n}d</b><br>'
-                          f'<span style="color:#dc2626">⏰ {deadline}</span>')
+                dc.append(f'<span style="background:#9b1c1c;color:#fff;padding:2px 6px;border-radius:3px;'
+                          f'font-weight:700">Closes in {n} day{"s" if n != 1 else ""}</span>'
+                          f'<br><span style="color:#9b1c1c">Due {deadline}</span>')
             else:
-                dc.append(f'<b style="color:#dc2626">⏰ Due {deadline}</b>')
-        if posted: dc.append(f'<span style="color:#475569">🗓 {posted}</span>')
+                dc.append(f'<span style="color:#9b1c1c;font-weight:700">Due {deadline}</span>')
+        if posted: dc.append(f'<span style="color:#475569">Posted {posted}</span>')
         datecell = "<br>".join(dc) if dc else "—"
+        view = (f'<a href="{it["href"]}" style="display:inline-block;background:#0a2342;color:#fff;'
+                f'font-family:Arial;font-size:11px;padding:6px 12px;border-radius:4px;text-decoration:none;'
+                f'white-space:nowrap">View &#8599;</a>')
         out.append(
             f'<tr>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;white-space:nowrap;vertical-align:top">'
-            f'<div style="font-weight:600">{it["name"]}</div>'
-            f'<span style="background:{c};color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">{src}</span></td>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;vertical-align:top">'
-            f'<a href="{it["href"]}" style="color:#1d4ed8;text-decoration:none">{it["text"]}</a>'
-            f'{_badges(it)}</td>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;'
-            f'color:#555;white-space:nowrap;vertical-align:top">{it.get("sol") or "—"}</td>'
-            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:12px;'
-            f'white-space:nowrap;vertical-align:top">{datecell}</td></tr>')
+            f'<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-family:Arial;font-size:13px;white-space:nowrap;vertical-align:top">'
+            f'<div style="font-weight:700;color:#0a2342">{it["name"]}</div>'
+            f'<span style="background:{c};color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">{src}</span></td>'
+            f'<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-family:Georgia,serif;font-size:13px;color:#1f2937;vertical-align:top">'
+            f'{it["text"]}{_badges(it)}</td>'
+            f'<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:12px;'
+            f'color:#475569;white-space:nowrap;vertical-align:top">{it.get("sol") or "—"}</td>'
+            f'<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-family:Arial;font-size:12px;'
+            f'white-space:nowrap;vertical-align:top">{datecell}</td>'
+            f'<td style="padding:10px;border-bottom:1px solid #e5e7eb;vertical-align:top">{view}</td></tr>')
     return "".join(out)
 
 
@@ -494,88 +514,103 @@ def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_b
                active_count=0, winnable_count=0, closing_soon=None):
     closing_soon = closing_soon or []
     now = datetime.now(timezone.utc)
-    label = "Morning" if now.hour < 12 else "Evening"
-    stamp = now.strftime("%A, %d %b %Y · %H:%M UTC")
-    S = ['<div style="max-width:760px;margin:0 auto;background:#f6f7f9;padding:18px;font-family:Arial,sans-serif">']
-    S.append('<div style="background:#0f172a;border-radius:10px;padding:18px 20px;color:#fff">'
-             '<div style="font-size:18px;font-weight:700">🏛️ Madison &amp; Main — Embassy Procurement Digest</div>'
-             f'<div style="font-size:12px;color:#94a3b8;margin-top:4px">{label} run · {stamp}</div>'
-             f'<div style="font-size:11px;color:#64748b;margin-top:6px">Sources: {checked} embassy pages + SAM.gov API</div></div>')
+    ref = "MM-OPR-" + now.strftime("%Y%m%d-%H%M")
+    period = now.strftime("%A, %d %B %Y · %H:%M UTC")
+
+    S = ['<div style="max-width:800px;margin:0 auto;background:#f3f4f6;font-family:Arial,sans-serif">']
+    # ---- Masthead ----
+    S.append('<table width="100%" cellspacing="0" cellpadding="0" style="background:#0a2342"><tr>'
+             '<td width="90" style="padding:16px 0 16px 24px" valign="middle">'
+             '<img src="cid:mmlogo" alt="Madison &amp; Main LLC" height="66" style="display:block"></td>'
+             '<td style="padding:16px 24px;text-align:right" valign="middle">'
+             '<div style="color:#fff;font-family:Georgia,serif;font-size:21px;font-weight:700;letter-spacing:1px">MADISON &amp; MAIN LLC</div>'
+             '<div style="color:#b8860b;font-family:Arial;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:3px">Overseas Procurement Monitoring</div>'
+             '</td></tr></table>')
+    S.append('<div style="height:3px;background:#b8860b"></div>')
+    # ---- Report metadata ----
+    S.append(f'<table width="100%" cellspacing="0" style="background:#fff;border-bottom:1px solid #e5e7eb"><tr>'
+             f'<td style="padding:13px 24px;font-family:Arial;font-size:11px;color:#475569;line-height:1.6">'
+             f'<span style="color:#0a2342;font-size:13px;font-family:Georgia,serif;font-weight:700">PROCUREMENT INTELLIGENCE REPORT</span><br>'
+             f'Report Reference: <b>{ref}</b> &nbsp;|&nbsp; Reporting Period: {period}<br>'
+             f'Sources Monitored: {checked} U.S. mission procurement portals + SAM.gov (Governmentwide Point of Entry)'
+             f'</td></tr></table>')
+    S.append('<div style="padding:0 24px 4px">')
 
     if is_baseline:
-        S.append('<p style="font-size:13px;color:#334155;margin:14px 4px">First run — <b>baseline</b> of what is '
-                 'currently open on embassy pages. From next run you get only changes, plus SAM.gov feed.</p>')
-        S.append('<table width="100%" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden">'
-                 '<tr style="background:#0f172a;color:#fff"><td style="padding:8px 10px;font-size:12px">EMBASSY</td>'
-                 '<td style="padding:8px 10px;font-size:12px">OPEN ITEMS</td></tr>')
+        S.append('<p style="font-family:Georgia,serif;font-size:13px;color:#1f2937;line-height:1.6;margin:18px 0">'
+                 'This transmission establishes the <b>initial baseline</b> of active solicitations across the monitored '
+                 'U.S. mission portals. Subsequent reports will identify only new, amended, closed, or modified actions, '
+                 'accompanied by the complete active inventory and the SAM.gov feed.</p>')
+        S.append('<table width="100%" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb">'
+                 '<tr style="background:#0a2342;color:#fff"><td style="padding:9px 12px;font-size:11px;font-family:Arial;letter-spacing:.5px">U.S. MISSION</td>'
+                 '<td style="padding:9px 12px;font-size:11px;font-family:Arial;letter-spacing:.5px">ACTIVE POSTINGS</td></tr>')
         for r in sorted(baseline_rows, key=lambda x: -x["count"]):
-            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">'
-                     f'<a href="{r["url"]}" style="color:#1d4ed8;text-decoration:none">{r["name"]}</a></td>'
-                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">{r["count"]}</td></tr>')
+            S.append(f'<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;font-family:Arial">'
+                     f'<b style="color:#0a2342">{r["name"]}</b></td>'
+                     f'<td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;font-family:Arial">{r["count"]}</td></tr>')
         S.append('</table>')
     else:
-        S.append('<table width="100%" cellspacing="6" style="margin:14px 0"><tr>')
-        S.append(_tile("NEW", counts["new"], "#16a34a"))
-        S.append(_tile("AMEND", counts["amendment"], "#d97706"))
-        S.append(_tile("CANCELLED", counts["cancelled"], "#dc2626"))
-        S.append(_tile("UPDATED", counts["updated"], "#2563eb"))
-        S.append(_tile("SITE DOWN", len(errors), "#64748b"))
+        S.append('<div style="font-family:Georgia,serif;font-size:13px;color:#0a2342;font-weight:700;'
+                 'margin:20px 0 8px;text-transform:uppercase;letter-spacing:.6px">Executive Summary</div>')
+        S.append('<table width="100%" cellspacing="6"><tr>')
+        S.append(_tile("New", counts["new"], "#14532d"))
+        S.append(_tile("Amended", counts["amendment"], "#7c5e10"))
+        S.append(_tile("Closed", counts["cancelled"], "#7f1d1d"))
+        S.append(_tile("Updated", counts["updated"], "#1e3a5f"))
+        S.append(_tile("Unreachable", len(errors), "#475569"))
         S.append('</tr></table>')
-        S.append(f'<p style="font-size:12px;color:#64748b;margin:0 4px 10px">{checked} embassy pages checked · '
-                 f'{sam_count} items from SAM.gov · Source tag shows Site / SAM / both.</p>')
-
-        # active inventory banner
-        S.append(f'<div style="background:#0f766e;color:#fff;border-radius:8px;padding:10px 14px;margin:0 0 6px">'
-                 f'<b style="font-size:15px">📋 {active_count} solicitations currently ACTIVE</b> '
-                 f'<span style="color:#99f6e4">· {winnable_count} winnable (Open + Goods/COTS)</span>'
-                 f'<div style="font-size:11px;color:#99f6e4;margin-top:3px">Full list attached as CSV — with the date each appeared + its deadline.</div></div>')
-
-        # CLOSING THIS WEEK — pinned at top
+        S.append(f'<table width="100%" cellspacing="0" style="margin-top:14px;background:#0a2342;border-radius:4px"><tr>'
+                 f'<td style="padding:15px 18px;color:#fff;font-family:Arial">'
+                 f'<span style="font-family:Georgia,serif;font-size:16px;font-weight:700">{active_count} solicitations currently active</span>'
+                 f'<span style="color:#b8860b;font-size:13px"> &nbsp;·&nbsp; {winnable_count} meet priority criteria (full-and-open, commercial goods)</span>'
+                 f'<div style="font-size:11px;color:#9fb3c8;margin-top:5px;line-height:1.5">A complete active inventory — recording the date each posting '
+                 f'was first identified and its response deadline — is attached to this report as a CSV file.</div>'
+                 f'</td></tr></table>')
         if closing_soon:
-            S.append('<div style="margin-top:10px;background:#b91c1c;color:#fff;padding:8px 12px;'
-                     'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">⏰ CLOSING THIS WEEK (≤7 days) — '
-                     f'{len(closing_soon)}</div>')
-            S.append('<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">'
-                     '<tr style="background:#fee2e2"><td style="padding:6px 10px;font-size:11px;color:#991b1b">EMBASSY / SRC</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">ITEM</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">SOL #</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#991b1b">DATES</td></tr>')
-            S.append(_rows(closing_soon[:25])); S.append('</table>')
-
+            S.append('<div style="margin-top:20px;background:#9b1c1c;color:#fff;padding:10px 14px;'
+                     'font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.5px">'
+                     f'RESPONSE DEADLINE IMMINENT — CLOSING WITHIN 7 DAYS ({len(closing_soon)})</div>')
+            S.append(_table_head()); S.append(_rows(closing_soon[:25])); S.append('</table>')
         for cat in ["new", "amendment", "cancelled", "updated"]:
             if not buckets[cat]: continue
             title, color = CAT_STYLE[cat]
-            S.append(f'<div style="margin-top:14px;background:{color};color:#fff;padding:8px 12px;'
-                     f'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">{title} ({counts[cat]})</div>')
-            S.append('<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">'
-                     '<tr style="background:#f1f5f9"><td style="padding:6px 10px;font-size:11px;color:#475569">EMBASSY / SRC</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#475569">ITEM</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#475569">SOL #</td>'
-                     '<td style="padding:6px 10px;font-size:11px;color:#475569">DATES</td></tr>')
-            S.append(_rows(buckets[cat])); S.append('</table>')
+            S.append(f'<div style="margin-top:20px;background:{color};color:#fff;padding:9px 14px;'
+                     f'font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.5px">{title} ({counts[cat]})</div>')
+            S.append(_table_head()); S.append(_rows(buckets[cat])); S.append('</table>')
         if not any(buckets.values()) and not errors:
-            S.append('<p style="font-size:14px;color:#16a34a;padding:10px 4px">✓ All quiet — no changes.</p>')
+            S.append('<p style="font-family:Georgia,serif;font-size:14px;color:#14532d;padding:16px 0;line-height:1.6">'
+                     'No new procurement actions were identified during this reporting cycle. '
+                     'The active inventory (attached) remains current.</p>')
 
     if errors:
-        S.append('<div style="margin-top:16px;background:#64748b;color:#fff;padding:8px 12px;border-radius:8px 8px 0 0;'
-                 'font-size:13px;font-weight:700">⚠️ NOT RESPONDING — check by hand</div>'
-                 '<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">')
+        S.append('<div style="margin-top:20px;background:#475569;color:#fff;padding:9px 14px;'
+                 'font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.5px">'
+                 'SOURCES UNREACHABLE — MANUAL VERIFICATION REQUIRED</div>'
+                 '<table width="100%" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb">')
         for e in errors:
-            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;font-weight:600">{e["name"]}</td>'
-                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;color:#64748b">{e["err"]}</td></tr>')
+            S.append(f'<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;font-family:Arial;font-weight:700;color:#0a2342">{e["name"]}</td>'
+                     f'<td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:12px;font-family:Arial;color:#475569">{e["err"]}</td>'
+                     f'<td style="padding:8px 12px;border-bottom:1px solid #eee"><a href="{e["url"]}" style="background:#0a2342;color:#fff;font-family:Arial;font-size:11px;padding:6px 12px;border-radius:4px;text-decoration:none">Open &#8599;</a></td></tr>')
         S.append('</table>')
 
     if is_baseline and gso_emails:
-        S.append('<div style="margin-top:16px;background:#0f766e;color:#fff;padding:8px 12px;border-radius:8px 8px 0 0;'
-                 'font-size:13px;font-weight:700">📇 GSO VENDOR EMAILS FOUND</div>'
-                 '<table width="100%" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">')
+        S.append('<div style="margin-top:20px;background:#0f766e;color:#fff;padding:9px 14px;'
+                 'font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:.5px">MISSION PROCUREMENT CONTACTS IDENTIFIED</div>'
+                 '<table width="100%" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb">')
         for name, addrs in gso_emails.items():
-            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;font-weight:600">{name}</td>'
-                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;color:#0f766e">{", ".join(addrs)}</td></tr>')
+            S.append(f'<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;font-family:Arial;font-weight:700;color:#0a2342">{name}</td>'
+                     f'<td style="padding:8px 12px;border-bottom:1px solid #eee;font-size:12px;font-family:Arial;color:#0f766e">{", ".join(addrs)}</td></tr>')
         S.append('</table>')
 
-    S.append(f'<p style="font-size:11px;color:#94a3b8;margin:16px 4px 0">{sam_note} · '
-             'public embassy pages + SAM.gov · email-only tenders still need GSO vendor-list signup.</p></div>')
+    S.append('</div>')  # end body
+    S.append(f'<div style="background:#0a2342;padding:18px 24px;font-family:Arial;font-size:10px;color:#9fb3c8;line-height:1.6">'
+             f'<b style="color:#fff;letter-spacing:.5px">MADISON &amp; MAIN LLC</b> &mdash; Overseas Procurement Monitoring System<br>'
+             f'This report is compiled from public U.S. Government procurement postings (SAM.gov) and official U.S. diplomatic '
+             f'mission websites. It is prepared for the internal use of Madison &amp; Main LLC. Postings without a published '
+             f'response deadline are retained for a maximum of 90 days from first identification, after which they are '
+             f'presumed closed pending manual verification.<br>'
+             f'<span style="color:#5a7089">System status: {sam_note}</span></div>')
+    S.append('</div>')
     return "".join(S)
 
 
@@ -619,19 +654,29 @@ def send_email(subject, html, attachments=None):
     to = os.getenv("ALERT_TO") or user
     if not (user and pw and to):
         print("!! Email not sent: missing secrets", file=sys.stderr); return
-    outer = MIMEMultipart("mixed")
-    outer["Subject"], outer["From"], outer["To"], outer["Date"] = subject, user, to, formatdate(localtime=True)
+    root = MIMEMultipart("related")
+    root["Subject"], root["From"], root["To"], root["Date"] = subject, user, to, formatdate(localtime=True)
     alt = MIMEMultipart("alternative")
-    alt.attach(MIMEText("Open in an HTML-capable mail client to view the digest.", "plain"))
+    alt.attach(MIMEText("This report is best viewed in an HTML-capable mail client.", "plain"))
     alt.attach(MIMEText(html, "html", "utf-8"))
-    outer.attach(alt)
+    root.attach(alt)
+    logo = os.path.join(HERE, "mm_logo.png")
+    if os.path.exists(logo):
+        try:
+            with open(logo, "rb") as f:
+                img = MIMEImage(f.read())
+            img.add_header("Content-ID", "<mmlogo>")
+            img.add_header("Content-Disposition", "inline", filename="mm_logo.png")
+            root.attach(img)
+        except Exception:
+            pass
     for fname, data, mime in (attachments or []):
         part = MIMEApplication(data, _subtype=mime.split("/")[-1])
         part.add_header("Content-Disposition", "attachment", filename=fname)
-        outer.attach(part)
+        root.attach(part)
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(user, pw)
-        server.sendmail(user, [x.strip() for x in to.split(",")], outer.as_string())
+        server.sendmail(user, [x.strip() for x in to.split(",")], root.as_string())
 
 
 if __name__ == "__main__":
