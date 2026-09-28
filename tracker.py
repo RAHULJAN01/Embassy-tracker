@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-Embassy Procurement Tracker
----------------------------
-Checks a list of US-embassy procurement pages once per run, detects NEW
-solicitations and CHANGES/AMENDMENTS to existing ones, and emails a single
-summary only when something changed (or a site failed to load).
+Embassy Procurement Tracker  (v2 — HTML digest)
+-----------------------------------------------
+Runs on a schedule, checks embassy procurement pages, and emails a clean,
+colour-coded digest grouped into: NEW, AMENDMENT, CANCELLED/CLOSED, UPDATED,
+plus a NOT-RESPONDING table. Each row shows its solicitation number so you can
+instantly tell if the same one appears in your SAM.gov alerts (no double work).
 
-State (what each page looked like last time) is stored as JSON in state/ and
-committed back to the repo by the GitHub Action, so nothing is lost between runs.
+Only emails when there is something to report (or a site failed) — unless
+SEND_DAILY_DIGEST=1.
 
-Reads credentials from environment variables (set as GitHub Secrets):
-    GMAIL_USER          the Gmail address that sends the alert
-    GMAIL_APP_PASSWORD  a Gmail App Password (NOT your normal password)
-    ALERT_TO            where to send alerts (can be the same address)
-Optional:
-    SEND_DAILY_DIGEST=1 also email on quiet days ("all clear") so you know it ran
+Secrets (GitHub → Settings → Secrets and variables → Actions):
+    GMAIL_USER, GMAIL_APP_PASSWORD, ALERT_TO
+Optional env:
+    SEND_DAILY_DIGEST=1   email even on quiet runs
 """
 
 import os
@@ -24,9 +23,11 @@ import json
 import time
 import hashlib
 import smtplib
+from datetime import datetime, timezone
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 import yaml
@@ -37,21 +38,29 @@ STATE_DIR = os.path.join(HERE, "state")
 SITES_FILE = os.path.join(HERE, "sites.yaml")
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-# Words that mark a link as procurement-relevant (used to focus the diff)
-KEYWORDS = re.compile(
-    r"(solicitation|procurement|rfq|rfp|rfi|request for (quotation|proposal|information)"
-    r"|tender|bid|amendment|pre-?solicitation|combined synopsis|award|invitation to bid"
-    r"|sources sought|contract|quotation|19\w{6,}|pr\d{6,})",
-    re.I,
-)
+# A link counts as a real solicitation only if it has one of these signals
+STRONG = re.compile(
+    r"(solicitation|request for quotation|request for proposal|request for information"
+    r"|\brfq\b|\brfp\b|\brfi\b|invitation (to|for) bid|\bitb\b|tender|appel d.?offre"
+    r"|pre-?solicitation|amendment|modification|\bsf-?30\b|\bsf-?1449\b|bid advertisement"
+    r"|invitation to bid|quotation|combined synopsis|sources sought)", re.I)
+
+# Solicitation-number shapes: PR16187255, 19GH1026Q0029, 191V1026Q0036, 19CG5026R0008
+SOLNUM = re.compile(r"(PR\d{6,}|\b\d{2}[A-Z]{1,2}\d{4}[A-Z]\d{3,4}\b|\b1\d{1,2}[A-Z]{1,2}\d{3,4}[A-Z]\d{3,4}\b)", re.I)
+
+# Obvious noise to drop even if it sneaks past STRONG
+JUNK = re.compile(r"(manage options|manage services|manage \{?vendor|view preferences"
+                  r"|\{title\}|\{vendor_count\}|read more|cookie|^twitter|^facebook"
+                  r"|privacy policy|^overview$|^notice$|^requirements$|^housing$"
+                  r"|^current items$|^attachment$|^the attachment$|^q&a$|^next|^\d+$)", re.I)
+
+EMAIL_RE = re.compile(r"[\w.\-]+@[\w.\-]+\.\w{2,}")
 
 
 def slug(name):
@@ -59,7 +68,6 @@ def slug(name):
 
 
 def fetch(url, tries=3):
-    """Fetch a page with retries. Returns HTML text or raises."""
     last = None
     for i in range(tries):
         try:
@@ -73,15 +81,7 @@ def fetch(url, tries=3):
 
 
 def extract(html, base_url, selector=None):
-    """
-    Turn a page into a stable fingerprint:
-      - items: list of {text, href} for procurement-relevant links
-      - text_hash: hash of the cleaned visible text of the content area
-    Both together catch NEW posts, REMOVED posts, and edits/AMENDMENTS.
-    """
     soup = BeautifulSoup(html, "html.parser")
-
-    # Kill noise that changes on every load
     for tag in soup(["script", "style", "noscript", "svg", "form", "iframe"]):
         tag.decompose()
     for sel in ["header", "footer", "nav", ".menu", "#menu", ".site-header",
@@ -90,44 +90,57 @@ def extract(html, base_url, selector=None):
             t.decompose()
 
     scope = soup
-    if selector:
-        picked = soup.select_one(selector)
-        if picked:
-            scope = picked
+    if selector and soup.select_one(selector):
+        scope = soup.select_one(selector)
     else:
-        # Prefer an obvious main content region if present
-        for sel in ["main", "article", "#content", ".entry-content",
-                    ".page-content", ".content"]:
-            picked = soup.select_one(sel)
-            if picked:
-                scope = picked
+        for sel in ["main", "article", "#content", ".entry-content", ".page-content", ".content"]:
+            if soup.select_one(sel):
+                scope = soup.select_one(sel)
                 break
 
-    items = []
-    seen = set()
+    items, seen, emails = [], set(), set()
     for a in scope.find_all("a", href=True):
         text = " ".join(a.get_text(" ", strip=True).split())
         href = urljoin(base_url, a["href"])
         if not text:
             continue
-        if KEYWORDS.search(text) or KEYWORDS.search(href):
-            key = (text.lower(), href)
-            if key not in seen:
-                seen.add(key)
-                items.append({"text": text, "href": href})
+        for m in EMAIL_RE.findall(text + " " + href):
+            if "state.gov" in m or "usembassy" in m:
+                emails.add(m)
+        if EMAIL_RE.fullmatch(text):
+            continue
+        if JUNK.search(text):
+            continue
+        if not (STRONG.search(text) or SOLNUM.search(text) or SOLNUM.search(href)):
+            continue
+        key = (text.lower(), href)
+        if key not in seen:
+            seen.add(key)
+            items.append({"text": text[:180], "href": href})
 
     visible = " ".join(scope.get_text(" ", strip=True).split())
     text_hash = hashlib.sha256(visible.encode("utf-8", "ignore")).hexdigest()
+    return {"items": items, "text_hash": text_hash, "emails": sorted(emails)}
 
-    return {"items": items, "text_hash": text_hash}
+
+def solnum(text, href=""):
+    m = SOLNUM.search(text) or SOLNUM.search(href)
+    return m.group(0).upper() if m else ""
+
+
+def classify(text):
+    if re.search(r"(cancel|withdrawn|no longer available)", text, re.I):
+        return "cancelled"
+    if re.search(r"(amendment|modif|\bsf-?30\b|extension|revised|addendum|response to quer|\bp0000\d\b|q&a)", text, re.I):
+        return "amendment"
+    return "new"
 
 
 def load_state(s):
     p = os.path.join(STATE_DIR, f"{s}.json")
     if os.path.exists(p):
         try:
-            with open(p) as f:
-                return json.load(f)
+            return json.load(open(p))
         except Exception:
             return None
     return None
@@ -135,12 +148,10 @@ def load_state(s):
 
 def save_state(s, data):
     os.makedirs(STATE_DIR, exist_ok=True)
-    with open(os.path.join(STATE_DIR, f"{s}.json"), "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    json.dump(data, open(os.path.join(STATE_DIR, f"{s}.json"), "w"), indent=2, ensure_ascii=False)
 
 
 def diff_items(old, new):
-    """Return (added, removed) item lists based on (text, href) identity."""
     ok = {(i["text"].lower(), i["href"]): i for i in old}
     nk = {(i["text"].lower(), i["href"]): i for i in new}
     added = [nk[k] for k in nk if k not in ok]
@@ -149,120 +160,199 @@ def diff_items(old, new):
 
 
 def main():
-    with open(SITES_FILE) as f:
-        cfg = yaml.safe_load(f)
+    cfg = yaml.safe_load(open(SITES_FILE))
     sites = cfg.get("sites", [])
 
-    new_hits = []       # (site_name, [items])   -> genuinely new solicitations
-    changed = []        # (site_name)            -> content changed, no clear new link
-    baselines = []      # (site_name, [items])   -> first-ever check
-    errors = []         # (site_name, url, err)
+    buckets = {"new": [], "amendment": [], "cancelled": [], "updated": []}
+    errors = []
+    baseline_rows = []
+    gso_emails = {}
+    checked = 0
+    is_baseline_run = False
 
     for site in sites:
-        name = site["name"]
-        url = site["url"]
-        selector = site.get("selector")
+        name, url, selector = site["name"], site["url"], site.get("selector")
         s = slug(name)
-
         try:
-            html = fetch(url)
-            fp = extract(html, url, selector)
+            fp = extract(fetch(url), url, selector)
         except Exception as e:
-            errors.append((name, url, str(e)[:200]))
-            continue  # IMPORTANT: don't overwrite good state on a failed fetch
+            errors.append({"name": name, "url": url, "err": str(e)[:160]})
+            continue
+        checked += 1
+        if fp["emails"]:
+            gso_emails[name] = fp["emails"]
 
         prev = load_state(s)
         if prev is None:
-            baselines.append((name, fp["items"]))
+            is_baseline_run = True
+            baseline_rows.append({"name": name, "count": len(fp["items"]), "url": url})
             save_state(s, {"url": url, **fp})
             continue
 
         added, removed = diff_items(prev.get("items", []), fp["items"])
-        hash_changed = prev.get("text_hash") != fp["text_hash"]
-
-        if added:
-            new_hits.append((name, url, added))
-        elif hash_changed:
-            # content moved but no new procurement link we could isolate
-            # (could be an amendment edited into an existing post, a date change)
-            changed.append((name, url))
-
+        for it in added:
+            cat = classify(it["text"])
+            buckets[cat].append({"name": name, "text": it["text"],
+                                 "sol": solnum(it["text"], it["href"]), "href": it["href"]})
+        for it in removed:
+            buckets["cancelled"].append({"name": name, "text": it["text"] + " (removed from page)",
+                                         "sol": solnum(it["text"], it["href"]), "href": it["href"]})
+        if not added and not removed and prev.get("text_hash") != fp["text_hash"]:
+            buckets["updated"].append({"name": name, "text": "Page content changed (check listing)",
+                                       "sol": "", "href": url})
         save_state(s, {"url": url, **fp})
 
-    body = build_email(new_hits, changed, baselines, errors)
-    has_news = bool(new_hits or changed or errors)
-    first_run = bool(baselines) and not (new_hits or changed)
+    counts = {k: len(v) for k, v in buckets.items()}
+    total_changes = sum(counts.values())
+    html = build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline_run)
 
-    if has_news or first_run or os.getenv("SEND_DAILY_DIGEST") == "1":
-        subject = build_subject(new_hits, changed, errors, first_run)
-        send_email(subject, body)
-        print(subject)
+    should_send = bool(total_changes or errors or is_baseline_run) or os.getenv("SEND_DAILY_DIGEST") == "1"
+    subject = build_subject(counts, errors, is_baseline_run)
+    if should_send:
+        send_email(subject, html)
+        print("EMAIL SENT:", subject)
     else:
-        print("No changes. No email sent.")
-    print(body)
+        print("No changes — no email.")
+    print(f"changes={total_changes} errors={len(errors)} checked={checked}")
 
 
-def build_subject(new_hits, changed, errors, first_run):
-    n = sum(len(x[2]) for x in new_hits)
-    from datetime import date
-    d = date.today().isoformat()
-    if first_run:
-        return f"[Embassy Tracker] Baseline captured ({d})"
-    parts = []
-    if n:
-        parts.append(f"{n} NEW")
-    if changed:
-        parts.append(f"{len(changed)} changed")
+def build_subject(counts, errors, baseline):
+    d = datetime.now(timezone.utc).strftime("%d %b")
+    if baseline:
+        return f"Embassy Digest — baseline captured ({d})"
+    bits = []
+    if counts["new"]: bits.append(f"{counts['new']} new")
+    if counts["amendment"]: bits.append(f"{counts['amendment']} amend")
+    if counts["cancelled"]: bits.append(f"{counts['cancelled']} cancel/closed")
+    if counts["updated"]: bits.append(f"{counts['updated']} updated")
+    if errors: bits.append(f"{len(errors)} down")
+    return "Embassy Digest — " + (", ".join(bits) if bits else "all clear") + f" ({d})"
+
+
+# ---------------- HTML EMAIL ----------------
+CAT_STYLE = {
+    "new":       ("NEW SOLICITATIONS", "#16a34a"),
+    "amendment": ("AMENDMENTS",        "#d97706"),
+    "cancelled": ("CANCELLED / CLOSED","#dc2626"),
+    "updated":   ("UPDATED PAGES",     "#2563eb"),
+}
+
+
+def _tile(label, value, color):
+    return (f'<td align="center" style="padding:12px 8px;background:{color};'
+            f'border-radius:8px;color:#ffffff;font-family:Arial,sans-serif;">'
+            f'<div style="font-size:26px;font-weight:700;line-height:1">{value}</div>'
+            f'<div style="font-size:11px;letter-spacing:.5px;margin-top:4px">{label}</div></td>')
+
+
+def _rows(items):
+    out = []
+    for it in items:
+        sol = it.get("sol") or "—"
+        out.append(
+            f'<tr>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;'
+            f'font-weight:600;color:#111;white-space:nowrap">{it["name"]}</td>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:Arial;font-size:13px;color:#333">'
+            f'<a href="{it["href"]}" style="color:#1d4ed8;text-decoration:none">{it["text"]}</a></td>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px;'
+            f'color:#555;white-space:nowrap">{sol}</td></tr>')
+    return "".join(out)
+
+
+def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline):
+    now = datetime.now(timezone.utc)
+    label = "Morning" if now.hour < 12 else "Evening"
+    stamp = now.strftime("%A, %d %b %Y · %H:%M UTC")
+
+    S = ['<div style="max-width:720px;margin:0 auto;background:#f6f7f9;padding:18px;font-family:Arial,sans-serif">']
+    S.append('<div style="background:#0f172a;border-radius:10px;padding:18px 20px;color:#fff">'
+             '<div style="font-size:18px;font-weight:700">🏛️ Madison &amp; Main — Embassy Procurement Digest</div>'
+             f'<div style="font-size:12px;color:#94a3b8;margin-top:4px">{label} run · {stamp}</div></div>')
+
+    if is_baseline:
+        S.append('<p style="font-family:Arial;font-size:13px;color:#334155;margin:14px 4px">'
+                 'First run — this is your <b>baseline</b> of what is currently open. '
+                 'From the next run you will only get changes.</p>')
+        S.append('<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden">')
+        S.append('<tr style="background:#0f172a;color:#fff"><td style="padding:8px 10px;font-size:12px">EMBASSY</td>'
+                 '<td style="padding:8px 10px;font-size:12px">OPEN ITEMS</td></tr>')
+        for r in sorted(baseline_rows, key=lambda x: -x["count"]):
+            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">'
+                     f'<a href="{r["url"]}" style="color:#1d4ed8;text-decoration:none">{r["name"]}</a></td>'
+                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">{r["count"]}</td></tr>')
+        S.append('</table>')
+    else:
+        # summary tiles
+        S.append('<table width="100%" cellpadding="0" cellspacing="6" style="margin:14px 0"><tr>')
+        S.append(_tile("NEW", counts["new"], "#16a34a"))
+        S.append(_tile("AMENDMENTS", counts["amendment"], "#d97706"))
+        S.append(_tile("CANCELLED", counts["cancelled"], "#dc2626"))
+        S.append(_tile("UPDATED", counts["updated"], "#2563eb"))
+        S.append(_tile("NOT RESPONDING", len(errors), "#64748b"))
+        S.append('</tr></table>')
+        S.append(f'<p style="font-family:Arial;font-size:12px;color:#64748b;margin:0 4px 10px">'
+                 f'{checked} embassies checked · sol-numbers shown so you can match them against SAM.gov.</p>')
+
+        for cat in ["new", "amendment", "cancelled", "updated"]:
+            if not buckets[cat]:
+                continue
+            title, color = CAT_STYLE[cat]
+            S.append(f'<div style="margin-top:14px;background:{color};color:#fff;padding:8px 12px;'
+                     f'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">{title} ({counts[cat]})</div>')
+            S.append('<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">')
+            S.append('<tr style="background:#f1f5f9"><td style="padding:6px 10px;font-size:11px;color:#475569">EMBASSY</td>'
+                     '<td style="padding:6px 10px;font-size:11px;color:#475569">ITEM</td>'
+                     '<td style="padding:6px 10px;font-size:11px;color:#475569">SOL #</td></tr>')
+            S.append(_rows(buckets[cat]))
+            S.append('</table>')
+
+        if not any(buckets.values()) and not errors:
+            S.append('<p style="font-family:Arial;font-size:14px;color:#16a34a;padding:10px 4px">'
+                     '✓ All quiet — no changes across monitored embassies.</p>')
+
+    # not-responding table (always if any)
     if errors:
-        parts.append(f"{len(errors)} unreachable")
-    tag = ", ".join(parts) if parts else "all clear"
-    return f"[Embassy Tracker] {tag} ({d})"
+        S.append('<div style="margin-top:16px;background:#64748b;color:#fff;padding:8px 12px;'
+                 'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">⚠️ NOT RESPONDING — check by hand</div>')
+        S.append('<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">')
+        for e in errors:
+            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;font-weight:600">{e["name"]}</td>'
+                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;color:#64748b">'
+                     f'<a href="{e["url"]}" style="color:#64748b">{e["err"]}</a></td></tr>')
+        S.append('</table>')
+
+    # GSO emails (baseline only — one-time useful)
+    if is_baseline and gso_emails:
+        S.append('<div style="margin-top:16px;background:#0f766e;color:#fff;padding:8px 12px;'
+                 'border-radius:8px 8px 0 0;font-size:13px;font-weight:700">📇 GSO VENDOR EMAILS FOUND (get on their lists)</div>')
+        S.append('<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:0 0 8px 8px">')
+        for name, addrs in gso_emails.items():
+            S.append(f'<tr><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;font-weight:600">{name}</td>'
+                     f'<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:12px;color:#0f766e">{", ".join(addrs)}</td></tr>')
+        S.append('</table>')
+
+    S.append('<p style="font-family:Arial;font-size:11px;color:#94a3b8;margin:16px 4px 0">'
+             'Madison &amp; Main embassy tracker · public embassy pages only · '
+             'email-only tenders still need GSO vendor-list signup.</p>')
+    S.append('</div>')
+    return "".join(S)
 
 
-def build_email(new_hits, changed, baselines, errors):
-    L = []
-    if new_hits:
-        L.append("=== NEW SOLICITATIONS / AMENDMENTS ===\n")
-        for name, url, items in new_hits:
-            L.append(f"[{name}]  {url}")
-            for it in items:
-                L.append(f"   • {it['text']}\n     {it['href']}")
-            L.append("")
-    if changed:
-        L.append("=== PAGES THAT CHANGED (check manually — possible edit/amendment) ===\n")
-        for name, url in changed:
-            L.append(f"   • {name}\n     {url}")
-        L.append("")
-    if errors:
-        L.append("=== COULD NOT CHECK (site down / blocked — verify by hand) ===\n")
-        for name, url, err in errors:
-            L.append(f"   • {name}: {err}\n     {url}")
-        L.append("")
-    if baselines:
-        L.append("=== BASELINE CAPTURED (first check — currently listed) ===\n")
-        for name, items in baselines:
-            L.append(f"[{name}] — {len(items)} items now on file")
-            for it in items[:15]:
-                L.append(f"   • {it['text']}")
-            L.append("")
-    if not L:
-        L.append("No changes across all monitored embassy pages.")
-    L.append("\n— Madison & Main embassy tracker")
-    return "\n".join(L)
-
-
-def send_email(subject, body):
+def send_email(subject, html):
     user = os.getenv("GMAIL_USER")
     pw = os.getenv("GMAIL_APP_PASSWORD")
     to = os.getenv("ALERT_TO") or user
     if not (user and pw and to):
-        print("!! Email not sent: missing GMAIL_USER / GMAIL_APP_PASSWORD / ALERT_TO", file=sys.stderr)
+        print("!! Email not sent: missing secrets", file=sys.stderr)
         return
-    msg = MIMEText(body, "plain", "utf-8")
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = user
     msg["To"] = to
     msg["Date"] = formatdate(localtime=True)
+    msg.attach(MIMEText("Open in an HTML-capable mail client to view the digest.", "plain"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(user, pw)
         server.sendmail(user, [x.strip() for x in to.split(",")], msg.as_string())
