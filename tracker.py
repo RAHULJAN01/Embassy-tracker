@@ -699,6 +699,7 @@ def main():
     cfg = yaml.safe_load(open(SITES_FILE))
     sites = cfg.get("sites", [])
     site_items, errors, baseline_rows, gso_emails, current_site = [], [], [], {}, []
+    structure_warn = []
     checked, is_baseline = 0, False
     today = datetime.now(timezone.utc).date().isoformat()
 
@@ -711,6 +712,12 @@ def main():
             errors.append({"name": name, "url": url, "err": str(e)[:160]}); continue
         checked += 1
         if fp["emails"]: gso_emails[name] = fp["emails"]
+        # self-diagnosis: a page that loaded fine but suddenly went EMPTY (was listing
+        # items before, now zero) usually means the embassy changed its page layout.
+        # Flag it so it's never a silent miss — the digest will ask for a manual look.
+        _prev = load_json(os.path.join(STATE_DIR, f"{s}.json"), None)
+        if _prev is not None and len(_prev.get("items", [])) >= 3 and len(fp["items"]) == 0:
+            structure_warn.append({"name": name, "url": url, "was": len(_prev.get("items", []))})
         prev = load_json(os.path.join(STATE_DIR, f"{s}.json"), None)
         stamp_first_seen(fp["items"], (prev or {}).get("items", []), today)
         for it in fp["items"]:  # every item currently on the page → active inventory
@@ -853,7 +860,8 @@ def main():
 
     html = build_html(buckets, counts, errors, checked, baseline_rows, gso_emails,
                       is_baseline, sam_note, len(sam_items),
-                      active_list, winnable, closing_soon, unverified_list, len(sites))
+                      active_list, winnable, closing_soon, unverified_list, len(sites),
+                      structure_warn)
 
     if not is_baseline and deep_used:
         sam_note += f" · deep-read {deep_used} documents"
@@ -1058,9 +1066,11 @@ def _legend():
 
 
 def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_baseline, sam_note, sam_count,
-               active_list=None, winnable=None, closing_soon=None, unverified_list=None, total_sites=0):
+               active_list=None, winnable=None, closing_soon=None, unverified_list=None, total_sites=0,
+               structure_warn=None):
     active_list = active_list or []; winnable = winnable or []
     closing_soon = closing_soon or []; unverified_list = unverified_list or []
+    structure_warn = structure_warn or []
     active_count, winnable_count = len(active_list), len(winnable)
     now = datetime.now(timezone.utc)
     ref = "MM-OPR-" + now.strftime("%Y%m%d-%H%M")
@@ -1162,6 +1172,21 @@ def build_html(buckets, counts, errors, checked, baseline_rows, gso_emails, is_b
                      f'deadline or posting date we could read, so we do <b>not</b> count them as active. Open each to confirm '
                      f'whether it is still live.</div>')
             S.append(_table_head(HEAD6)); S.append(_rows(unverified_list[:40])); S.append('</table>')
+
+    # ===== SITE-CHANGE SELF-DIAGNOSIS =====
+    if structure_warn:
+        S.append(_section("PAGES THAT WENT EMPTY — POSSIBLE SITE REDESIGN, PLEASE VERIFY", ORANGE[0], len(structure_warn)))
+        S.append(f'<div style="background:{ORANGE[1]};border:1px solid #fdba74;border-top:none;padding:9px 14px;'
+                 f'font-family:Arial;font-size:11px;color:{ORANGE[2]};line-height:1.6">These pages loaded normally but '
+                 f'returned <b>no</b> solicitations this cycle, having listed some before — usually a sign the mission '
+                 f'changed its page layout. Open each to confirm; if the layout moved, reply and it will be re-pointed.</div>'
+                 f'<table width="100%" cellspacing="0" style="background:{CARD};border:1px solid {LINE};border-collapse:collapse;border-top:none">')
+        for i, w in enumerate(structure_warn):
+            bg = PALE if i % 2 else CARD
+            S.append(f'<tr style="background:{bg}"><td style="padding:9px 12px;border-bottom:1px solid {FAINT};font-size:13px;font-family:Arial;font-weight:700;color:{INK}">{w["name"]}</td>'
+                     f'<td style="padding:9px 12px;border-bottom:1px solid {FAINT};font-size:12px;font-family:Arial;color:{MUTE}">was listing {w["was"]} items, now 0</td>'
+                     f'<td style="padding:9px 12px;border-bottom:1px solid {FAINT}"><a href="{w["url"]}" style="background:{SKY[0]};color:#fff;font-family:Arial;font-size:11px;padding:6px 12px;border-radius:4px;text-decoration:none;font-weight:700">Open &#8599;</a></td></tr>')
+        S.append('</table>')
 
     # ===== SOURCES UNREACHABLE =====
     if errors:
