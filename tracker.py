@@ -236,11 +236,14 @@ GEMINI_PROMPT = (
 # Some accounts LIST a model that then 404s on generateContent, so we try candidates
 # in preference order (Pro-first) until one truly answers, then lock onto it.
 _GEMINI = {"order": None, "model": None, "err": ""}
-MODEL_PREF = ["2.5-pro", "1.5-pro", "-pro", "pro", "2.5-flash", "flash-latest",
-              "2.0-flash", "1.5-flash", "flash"]
+# Flash-first: on the free tier Flash has a huge daily quota and easily handles the
+# volume, and is plenty capable for reading dates + summarising the ask. Pro's free
+# quota is tiny (429s almost immediately), so it's last. Force Pro with GEMINI_MODEL.
+MODEL_PREF = ["2.5-flash", "flash-latest", "2.0-flash", "1.5-flash", "flash",
+              "2.5-pro", "1.5-pro", "-pro", "pro"]
 # tried after the discovered list in case ListModels is misleading
-MODEL_FALLBACK = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-pro-latest",
-                  "gemini-2.5-flash", "gemini-1.5-flash"]
+MODEL_FALLBACK = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-2.5-flash",
+                  "gemini-1.5-flash", "gemini-2.0-flash-001"]
 
 
 def gemini_candidates(key, timeout=30):
@@ -304,8 +307,10 @@ def gemini_extract(text, timeout=60):
                 sc, r = _gemini_call(key, model, prompt, timeout)
             except Exception as e:
                 last = str(e)[:80]; break
-            if sc == 429 and attempt == 0:
-                time.sleep(int(os.getenv("GEMINI_BACKOFF", "15"))); continue
+            if sc == 429:
+                if attempt == 0:
+                    time.sleep(int(os.getenv("GEMINI_BACKOFF", "15"))); continue
+                last = f"429 {model}"; break               # quota hit → try next model
             if sc == 404:                                  # model listed but not served → next
                 last = f"404 {model}"; break
             if sc != 200:
@@ -352,7 +357,7 @@ def enrich_deep(items, cache, budget, recheck_days=7, gemini_budget=None):
     today = datetime.now(timezone.utc).date().isoformat()
     gem_on = bool(os.getenv("GEMINI_API_KEY"))
     if gemini_budget is None:
-        gemini_budget = int(os.getenv("GEMINI_BUDGET", "30"))
+        gemini_budget = int(os.getenv("GEMINI_BUDGET", "60"))
     used = gem_used = 0
     for it in items:
         if (it.get("deadline") or "").strip():
