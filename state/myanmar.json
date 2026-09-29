@@ -1,6 +1,31 @@
 {
   "url": "https://mm.usembassy.gov/commercial-opportunities/",
-  "items": [],
-  "text_hash": "e79284c2a704513691db15ef06af0d7581131d5d197a20aa465ccf48107c4c49",
+  "items": [
+    {
+      "text": "19BM8026Q0017 PD Studio equipment & accessories (FY26)",
+      "href": "https://mm.usembassy.gov/wp-content/uploads/sites/13/2026/09/19BM8026Q0017-SF-1449-Signed.pdf",
+      "date": "",
+      "first_seen": "2026-09-29"
+    },
+    {
+      "text": "Internet service at 84/86 Pyay Road",
+      "href": "https://mm.usembassy.gov/wp-content/uploads/sites/13/2026/09/Solicitation-No.-19BM8026Q0021.pdf",
+      "date": "",
+      "first_seen": "2026-09-29"
+    },
+    {
+      "text": "Modification of Solicitation for Jefferson Center Mandalay Services",
+      "href": "https://mm.usembassy.gov/wp-content/uploads/sites/13/2026/08/19BM8026Q0014-P00001-Jefferson-Center-Mandalay-Services.pdf",
+      "date": "",
+      "first_seen": "2026-09-29"
+    },
+    {
+      "text": "Jefferson Center Mandalay Services",
+      "href": "https://mm.usembassy.gov/wp-content/uploads/sites/13/2026/07/SolicitationNo.19BM8026Q0014.pdf",
+      "date": "",
+      "first_seen": "2026-09-29"
+    }
+  ],
+  "text_hash": "33b9a67652598cf07f51337013a5a2f2928e64ca72b383a9ee4793678a938840",
   "emails": []
 }
