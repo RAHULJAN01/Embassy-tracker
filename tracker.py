@@ -232,66 +232,91 @@ GEMINI_PROMPT = (
 )
 
 
-# which model to use is discovered once per run from the key itself (adapts to
-# whatever the account actually has), preferring Pro. Override with GEMINI_MODEL.
-_GEMINI = {"model": None, "err": ""}
-MODEL_PREF = ["2.5-pro", "1.5-pro", "-pro", "pro", "2.5-flash", "2.0-flash", "flash"]
+# The working model is discovered from the key itself and can differ per account.
+# Some accounts LIST a model that then 404s on generateContent, so we try candidates
+# in preference order (Pro-first) until one truly answers, then lock onto it.
+_GEMINI = {"order": None, "model": None, "err": ""}
+MODEL_PREF = ["2.5-pro", "1.5-pro", "-pro", "pro", "2.5-flash", "flash-latest",
+              "2.0-flash", "1.5-flash", "flash"]
+# tried after the discovered list in case ListModels is misleading
+MODEL_FALLBACK = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-pro-latest",
+                  "gemini-2.5-flash", "gemini-1.5-flash"]
 
 
-def pick_gemini_model(key, timeout=30):
-    """Ask the key which models it can use for generateContent; pick the best (Pro-first).
-    Returns a model name, or '' if none/failure (reason stored in _GEMINI['err'])."""
-    if _GEMINI["model"] is not None:
-        return _GEMINI["model"]
+def gemini_candidates(key, timeout=30):
+    """Ordered list of models to try (Pro-first), discovered from the key + fallbacks."""
+    if _GEMINI["order"] is not None:
+        return _GEMINI["order"]
     forced = os.getenv("GEMINI_MODEL")
+    if forced:
+        _GEMINI["order"] = [forced]; return _GEMINI["order"]
+    names = []
     try:
         r = requests.get("https://generativelanguage.googleapis.com/v1beta/models",
                          params={"key": key, "pageSize": 200}, timeout=timeout)
-        if r.status_code != 200:
-            _GEMINI["model"] = ""; _GEMINI["err"] = f"list HTTP {r.status_code}: {r.text[:90]}"
-            return ""
-        names = [m.get("name", "").split("/")[-1] for m in r.json().get("models", [])
-                 if "generateContent" in (m.get("supportedGenerationMethods") or [])]
-        if forced and forced in names:
-            _GEMINI["model"] = forced; return forced
-        for pref in MODEL_PREF:
-            for n in names:
-                if pref in n and "vision" not in n:
-                    _GEMINI["model"] = n; return n
-        _GEMINI["model"] = names[0] if names else ""
-        if not names:
-            _GEMINI["err"] = "no generateContent models on this key"
-        return _GEMINI["model"]
+        if r.status_code == 200:
+            names = [m.get("name", "").split("/")[-1] for m in r.json().get("models", [])
+                     if "generateContent" in (m.get("supportedGenerationMethods") or [])
+                     and "vision" not in m.get("name", "")]
+        else:
+            _GEMINI["err"] = f"list HTTP {r.status_code}: {r.text[:80]}"
     except Exception as e:
-        _GEMINI["model"] = ""; _GEMINI["err"] = str(e)[:100]
-        return ""
+        _GEMINI["err"] = str(e)[:100]
+    ordered = []
+    for pref in MODEL_PREF:                       # rank discovered models Pro-first
+        for n in names:
+            if pref in n and n not in ordered:
+                ordered.append(n)
+    for n in names:                               # any others discovered
+        if n not in ordered:
+            ordered.append(n)
+    for n in MODEL_FALLBACK:                       # then known-good names as a safety net
+        if n not in ordered:
+            ordered.append(n)
+    _GEMINI["order"] = ordered
+    return ordered
+
+
+def _gemini_call(key, model, prompt, timeout):
+    """One generateContent call. Returns (status, data_or_text)."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    payload = {"contents": [{"parts": [{"text": prompt}]}],
+               "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
+    r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
+    return r.status_code, r
 
 
 def gemini_extract(text, timeout=60):
-    """Ask Gemini (best available Pro model) to read the solicitation text. {} on any problem.
-    Retries once on rate-limit (429) with a short backoff so free-tier limits don't
-    silently drop items."""
+    """Read the solicitation text with the best working model. {} / {_gerr} on problems.
+    Falls through 404 'model not found' to the next candidate; backs off once on 429."""
     key = os.getenv("GEMINI_API_KEY")
     if not key or not (text or "").strip():
         return {}
-    model = pick_gemini_model(key)
-    if not model:
-        return {"_gerr": _GEMINI["err"] or "no usable model"}
     today = datetime.now(timezone.utc).date().isoformat()
-    body = re.sub(r"\s+", " ", text)[:18000]
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    payload = {"contents": [{"parts": [{"text": GEMINI_PROMPT.format(today=today, body=body)}]}],
-               "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
-    for attempt in range(2):
-        try:
-            r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
-            if r.status_code == 429 and attempt == 0:
-                time.sleep(int(os.getenv("GEMINI_BACKOFF", "20"))); continue
-            if r.status_code != 200:
-                return {"_gerr": f"HTTP {r.status_code}: {r.text[:80]}"}
-            cand = (r.json().get("candidates") or [{}])[0]
-            raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
-            data = json.loads(raw)
+    prompt = GEMINI_PROMPT.format(today=today, body=re.sub(r"\s+", " ", text)[:18000])
+    cands = [_GEMINI["model"]] if _GEMINI["model"] else gemini_candidates(key)
+    if not cands:
+        return {"_gerr": _GEMINI["err"] or "no usable model"}
+    last = ""
+    for model in cands:
+        for attempt in range(2):
+            try:
+                sc, r = _gemini_call(key, model, prompt, timeout)
+            except Exception as e:
+                last = str(e)[:80]; break
+            if sc == 429 and attempt == 0:
+                time.sleep(int(os.getenv("GEMINI_BACKOFF", "15"))); continue
+            if sc == 404:                                  # model listed but not served → next
+                last = f"404 {model}"; break
+            if sc != 200:
+                return {"_gerr": f"HTTP {sc}: {r.text[:80]}"}
+            try:
+                cand = (r.json().get("candidates") or [{}])[0]
+                raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
+                data = json.loads(raw)
+            except Exception as e:
+                return {"_gerr": f"parse: {str(e)[:60]}"}
+            _GEMINI["model"] = model                       # lock onto the model that worked
             return {"title": (data.get("title") or "").strip()[:180],
                     "sol": (data.get("sol") or "").strip().upper(),
                     "posted": normalize_any(data.get("posted", "")) or (data.get("posted") or "")[:10],
@@ -301,9 +326,8 @@ def gemini_extract(text, timeout=60):
                     "setaside": (data.get("set_aside") or "").strip()[:60],
                     "demands": (data.get("demands") or "").strip()[:160],
                     "confidence": float(data.get("confidence") or 0)}
-        except Exception as e:
-            return {"_gerr": str(e)[:80]}
-    return {"_gerr": "rate-limited"}
+    _GEMINI["err"] = last or "all models failed"
+    return {"_gerr": _GEMINI["err"]}
 
 
 def _apply_cache(it, c):
