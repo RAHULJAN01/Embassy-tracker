@@ -213,95 +213,125 @@ def deep_read(url):
 #  Needs the GEMINI_API_KEY secret; if absent, everything below is skipped.
 # ---------------------------------------------------------------------------
 GEMINI_PROMPT = (
-    "You are analysing the text of a U.S. embassy procurement solicitation. "
-    "Return ONLY a JSON object with these keys, using strictly what the text states:\n"
-    '  "title"        : short plain-English subject of the solicitation (<=120 chars),\n'
-    '  "sol"          : the solicitation / RFQ / RFP number exactly as written, else "",\n'
-    '  "posted"       : issuance/posted date as YYYY-MM-DD, else "",\n'
-    '  "closing"      : response/closing/submission deadline as YYYY-MM-DD, else "",\n'
-    '  "status"       : one of "open", "closed", "cancelled", "unknown" (relative to today),\n'
-    '  "category"     : one of "goods", "services", "construction", "unknown",\n'
-    '  "confidence"   : 0.0-1.0 how sure you are of the closing date.\n'
-    "Do not invent dates. If a date is written in words or another format, convert it. "
+    "You are a U.S. federal procurement analyst reading ONE embassy solicitation. "
+    "Use ONLY what the text states — never invent. Convert any date (words, slashes, "
+    "other formats) to YYYY-MM-DD. Return ONLY a JSON object with these keys:\n"
+    '  "title"      : short plain-English subject (<=120 chars),\n'
+    '  "sol"        : solicitation / RFQ / RFP number exactly as written, else "",\n'
+    '  "posted"     : issuance/posted date YYYY-MM-DD, else "",\n'
+    '  "closing"    : response/closing/submission deadline YYYY-MM-DD, else "",\n'
+    '  "status"     : "open" | "closed" | "cancelled" | "unknown" (relative to today),\n'
+    '  "category"   : "goods" | "services" | "construction" | "unknown",\n'
+    '  "set_aside"  : any set-aside/eligibility restriction stated (e.g. "small business", '
+    '"local vendors only"), else "" if full-and-open,\n'
+    '  "demands"    : one tight sentence (<=140 chars) of WHAT they want to buy — the item/'
+    'service, quantity or scope, and any must-have (e.g. "Supply & install 40 AC units, '
+    '18-month warranty" or "1-yr janitorial contract, ~30 staff"),\n'
+    '  "confidence" : 0.0-1.0 confidence in the closing date.\n'
     "today is {today}. TEXT:\n{body}"
 )
 
 
-def gemini_extract(text, timeout=45):
-    """Ask Gemini to read the solicitation text. Returns a dict or {} on any problem."""
+def gemini_extract(text, timeout=60):
+    """Ask Gemini (Pro by default) to read the solicitation text. {} on any problem.
+    Retries once on rate-limit (429) with a short backoff so free-tier limits don't
+    silently drop items."""
     key = os.getenv("GEMINI_API_KEY")
     if not key or not (text or "").strip():
         return {}
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
     today = datetime.now(timezone.utc).date().isoformat()
-    body = re.sub(r"\s+", " ", text)[:16000]
+    body = re.sub(r"\s+", " ", text)[:18000]
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {"contents": [{"parts": [{"text": GEMINI_PROMPT.format(today=today, body=body)}]}],
                "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
-    try:
-        r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
-        if r.status_code != 200:
-            return {"_gerr": f"HTTP {r.status_code}"}
-        cand = (r.json().get("candidates") or [{}])[0]
-        raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
-        data = json.loads(raw)
-        return {"title": (data.get("title") or "").strip()[:180],
-                "sol": (data.get("sol") or "").strip().upper(),
-                "posted": normalize_any(data.get("posted", "")) or (data.get("posted") or "")[:10],
-                "deadline": normalize_any(data.get("closing", "")) or (data.get("closing") or "")[:10],
-                "status": (data.get("status") or "unknown").lower(),
-                "category": (data.get("category") or "unknown").lower(),
-                "confidence": float(data.get("confidence") or 0)}
-    except Exception as e:
-        return {"_gerr": str(e)[:80]}
+    for attempt in range(2):
+        try:
+            r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
+            if r.status_code == 429 and attempt == 0:
+                time.sleep(int(os.getenv("GEMINI_BACKOFF", "20"))); continue
+            if r.status_code != 200:
+                return {"_gerr": f"HTTP {r.status_code}: {r.text[:80]}"}
+            cand = (r.json().get("candidates") or [{}])[0]
+            raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
+            data = json.loads(raw)
+            return {"title": (data.get("title") or "").strip()[:180],
+                    "sol": (data.get("sol") or "").strip().upper(),
+                    "posted": normalize_any(data.get("posted", "")) or (data.get("posted") or "")[:10],
+                    "deadline": normalize_any(data.get("closing", "")) or (data.get("closing") or "")[:10],
+                    "status": (data.get("status") or "unknown").lower(),
+                    "category": (data.get("category") or "unknown").lower(),
+                    "setaside": (data.get("set_aside") or "").strip()[:60],
+                    "demands": (data.get("demands") or "").strip()[:160],
+                    "confidence": float(data.get("confidence") or 0)}
+        except Exception as e:
+            return {"_gerr": str(e)[:80]}
+    return {"_gerr": "rate-limited"}
 
 
-def enrich_deep(items, cache, budget, recheck_days=5, gemini_budget=None):
-    """For items still missing a deadline, open the document and read its real dates.
-    Regex reads it first; if that finds no closing date and a Gemini key is set,
-    Gemini reads the same text with judgment. Caches by href so we don't re-download.
-    `budget` caps downloads/run; `gemini_budget` caps AI calls/run."""
+def _apply_cache(it, c):
+    """Copy everything we've learned about a document onto the live item."""
+    if c.get("deadline"): it["deadline"] = c["deadline"]
+    if c.get("posted") and not it.get("posted"): it["posted"] = c["posted"]
+    if c.get("sol") and not it.get("sol"): it["sol"] = c["sol"]
+    if c.get("setaside") and not it.get("setaside"): it["setaside"] = c["setaside"]
+    if c.get("demands"): it["demands"] = c["demands"]
+    if c.get("title") and (GENERIC_LABEL.match(it.get("text", "")) or len(it.get("text", "")) < 12):
+        it["text"] = c["title"]                        # upgrade a junky title with the read one
+    if c.get("cancelled"): it["_cancelled"] = True
+    if c.get("src"): it["_datesrc"] = c["src"]         # provenance: regex vs gemini
+
+
+def enrich_deep(items, cache, budget, recheck_days=7, gemini_budget=None):
+    """Open each solicitation document ONCE, read its real dates + details, cache forever.
+    Token/bandwidth saver: a document that already has a confirmed deadline in the cache is
+    NEVER opened again; only still-undated ('unverified') documents are re-checked, and only
+    after `recheck_days`. Regex reads first; Gemini (Pro) is asked only when regex finds no
+    closing date. `budget` caps downloads/run; `gemini_budget` caps AI calls/run."""
     today = datetime.now(timezone.utc).date().isoformat()
     gem_on = bool(os.getenv("GEMINI_API_KEY"))
     if gemini_budget is None:
-        gemini_budget = int(os.getenv("GEMINI_BUDGET", "40"))
+        gemini_budget = int(os.getenv("GEMINI_BUDGET", "30"))
     used = gem_used = 0
     for it in items:
         if (it.get("deadline") or "").strip():
             continue                                   # already dated (e.g. by SAM) — trust it
         href = it.get("href") or ""
         c = cache.get(href)
-        fresh = c and c.get("checked") and days_since(c["checked"]) is not None and days_since(c["checked"]) < recheck_days
-        if not fresh:
-            if used >= budget:
-                continue                               # out of download budget this run
-            info = deep_read(href)
-            used += 1
-            c = {"deadline": info.get("deadline", ""), "posted": info.get("posted", ""),
-                 "cancelled": bool(info.get("cancelled")), "title": info.get("title", ""),
-                 "sol": info.get("sol", ""), "checked": today, "err": bool(info.get("_err")),
-                 "src": "regex"}
-            # AI fallback: regex found no closing date but we have document text → ask Gemini
-            if gem_on and not c["deadline"] and info.get("_text") and gem_used < gemini_budget:
-                g = gemini_extract(info["_text"])
-                gem_used += 1
-                if g and not g.get("_gerr"):
-                    if g.get("deadline"):
-                        c["deadline"] = g["deadline"]; c["src"] = "gemini"
-                    if g.get("posted") and not c["posted"]: c["posted"] = g["posted"]
-                    if g.get("sol") and not c["sol"]: c["sol"] = g["sol"]
-                    if g.get("title") and not c["title"]: c["title"] = g["title"]
-                    if g.get("status") == "cancelled": c["cancelled"] = True
-                    c["gcat"] = g.get("category", ""); c["gconf"] = g.get("confidence", 0)
-            cache[href] = c
-        # apply cached findings to the item
-        if c.get("deadline"): it["deadline"] = c["deadline"]
-        if c.get("posted") and not it.get("posted"): it["posted"] = c["posted"]
-        if c.get("sol") and not it.get("sol"): it["sol"] = c["sol"]
-        if c.get("title") and (GENERIC_LABEL.match(it.get("text", "")) or len(it.get("text", "")) < 12):
-            it["text"] = c["title"]                    # upgrade a junky title with the read one
-        if c.get("cancelled"): it["_cancelled"] = True
-        if c.get("src"): it["_datesrc"] = c["src"]     # provenance: regex vs gemini
+        # ---- decide whether this document needs opening at all ----
+        if c:
+            if c.get("deadline") or c.get("cancelled"):
+                _apply_cache(it, c); continue          # settled once — never re-read (saves tokens)
+            seen_ago = days_since(c.get("checked", ""))
+            if seen_ago is not None and seen_ago < recheck_days:
+                _apply_cache(it, c); continue          # undated but checked recently — wait
+        if used >= budget:
+            if c: _apply_cache(it, c)
+            continue                                    # out of download budget this run
+        # ---- open and read the document ----
+        info = deep_read(href)
+        used += 1
+        c = {"deadline": info.get("deadline", ""), "posted": info.get("posted", ""),
+             "cancelled": bool(info.get("cancelled")), "title": info.get("title", ""),
+             "sol": info.get("sol", ""), "setaside": "", "demands": "",
+             "checked": today, "err": bool(info.get("_err")), "src": "regex" if info.get("deadline") else ""}
+        # ---- AI fallback: regex found no closing date but we have the text → ask Gemini (Pro) ----
+        if gem_on and not c["deadline"] and info.get("_text") and gem_used < gemini_budget:
+            g = gemini_extract(info["_text"])
+            gem_used += 1
+            if g and not g.get("_gerr"):
+                if g.get("deadline"): c["deadline"] = g["deadline"]; c["src"] = "gemini"
+                if g.get("posted") and not c["posted"]: c["posted"] = g["posted"]
+                if g.get("sol") and not c["sol"]: c["sol"] = g["sol"]
+                if g.get("title") and not c["title"]: c["title"] = g["title"]
+                if g.get("setaside"): c["setaside"] = g["setaside"]
+                if g.get("demands"): c["demands"] = g["demands"]
+                if g.get("status") == "cancelled": c["cancelled"] = True
+                c["gcat"] = g.get("category", ""); c["gconf"] = g.get("confidence", 0)
+            elif g.get("_gerr"):
+                c["gerr"] = g["_gerr"]
+        cache[href] = c
+        _apply_cache(it, c)
     return used
 DATE_RE = re.compile(r"(\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+20\d{2}\b"
                      r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+20\d{2}\b"
@@ -806,6 +836,15 @@ def _badges(it):
     return '<div style="margin-top:6px">' + "".join(b) + m + '</div>'
 
 
+def _demands_line(it):
+    d = (it.get("demands") or "").strip()
+    if not d:
+        return ""
+    return (f'<div style="margin-top:4px;font-family:Arial;font-size:12px;color:{SUBINK};line-height:1.45">'
+            f'<span style="background:{SKY[1]};color:{SKY[2]};font-size:9px;font-weight:700;padding:1px 5px;'
+            f'border-radius:3px;text-transform:uppercase;letter-spacing:.3px">Requires</span> {d}</div>')
+
+
 def _table_head(cols):
     th = "".join(f'<td style="padding:8px 10px;font-size:9.5px;color:{CARD};font-family:Arial;'
                  f'letter-spacing:.5px;font-weight:700;text-transform:uppercase">{c}</td>' for c in cols)
@@ -850,7 +889,7 @@ def _rows(items, zebra=True):
             f'<div style="font-weight:700;color:{INK}">{it["name"]}</div>'
             f'<span style="background:{c};color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700">{src}</span></td>'
             f'<td style="padding:11px 10px;border-bottom:1px solid {FAINT};font-family:Georgia,serif;font-size:13px;color:{INK};vertical-align:top">'
-            f'{it["text"]}{_badges(it)}</td>'
+            f'{it["text"]}{_demands_line(it)}{_badges(it)}</td>'
             f'<td style="padding:11px 10px;border-bottom:1px solid {FAINT};font-family:monospace;font-size:12px;'
             f'color:{SUBINK};white-space:nowrap;vertical-align:top">{it.get("sol") or "—"}</td>'
             f'<td style="padding:11px 10px;border-bottom:1px solid {FAINT};font-family:Arial;font-size:12px;'
@@ -1049,15 +1088,17 @@ def build_weekly_csv(index):
 def build_active_csv(items):
     """Full list of currently-open solicitations with the date each appeared + deadline."""
     buf = io.StringIO(); w = csv.writer(buf)
-    w.writerow(["Post/Country", "Title", "Solicitation #", "Source", "Set-Aside (blank=Open)",
-                "Type", "Trap?", "PSC", "NAICS", "First Seen / Posted", "Deadline", "Winnable"])
+    w.writerow(["Post/Country", "Title", "What it demands", "Solicitation #", "Source",
+                "Set-Aside (blank=Open)", "Type", "Trap?", "PSC", "NAICS",
+                "Posted", "Deadline", "Date source", "Winnable"])
     for it in items:
         typ = "Goods/COTS" if is_goods(it) else ("Service" if it.get("psc") else "")
-        w.writerow([it.get("name", ""), it.get("text", ""), it.get("sol", ""), it.get("source", ""),
+        w.writerow([it.get("name", ""), it.get("text", ""), it.get("demands", ""),
+                    it.get("sol", ""), it.get("source", ""),
                     it.get("setaside", ""), typ, "TRAP" if is_trap(it) else "",
                     it.get("psc", ""), it.get("naics", ""),
                     it.get("posted", "") or it.get("first_seen", ""), it.get("deadline", ""),
-                    "YES" if is_fit(it) else ""])
+                    it.get("_datesrc", ""), "YES" if is_fit(it) else ""])
     return buf.getvalue().encode("utf-8")
 
 
