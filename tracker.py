@@ -232,14 +232,51 @@ GEMINI_PROMPT = (
 )
 
 
+# which model to use is discovered once per run from the key itself (adapts to
+# whatever the account actually has), preferring Pro. Override with GEMINI_MODEL.
+_GEMINI = {"model": None, "err": ""}
+MODEL_PREF = ["2.5-pro", "1.5-pro", "-pro", "pro", "2.5-flash", "2.0-flash", "flash"]
+
+
+def pick_gemini_model(key, timeout=30):
+    """Ask the key which models it can use for generateContent; pick the best (Pro-first).
+    Returns a model name, or '' if none/failure (reason stored in _GEMINI['err'])."""
+    if _GEMINI["model"] is not None:
+        return _GEMINI["model"]
+    forced = os.getenv("GEMINI_MODEL")
+    try:
+        r = requests.get("https://generativelanguage.googleapis.com/v1beta/models",
+                         params={"key": key, "pageSize": 200}, timeout=timeout)
+        if r.status_code != 200:
+            _GEMINI["model"] = ""; _GEMINI["err"] = f"list HTTP {r.status_code}: {r.text[:90]}"
+            return ""
+        names = [m.get("name", "").split("/")[-1] for m in r.json().get("models", [])
+                 if "generateContent" in (m.get("supportedGenerationMethods") or [])]
+        if forced and forced in names:
+            _GEMINI["model"] = forced; return forced
+        for pref in MODEL_PREF:
+            for n in names:
+                if pref in n and "vision" not in n:
+                    _GEMINI["model"] = n; return n
+        _GEMINI["model"] = names[0] if names else ""
+        if not names:
+            _GEMINI["err"] = "no generateContent models on this key"
+        return _GEMINI["model"]
+    except Exception as e:
+        _GEMINI["model"] = ""; _GEMINI["err"] = str(e)[:100]
+        return ""
+
+
 def gemini_extract(text, timeout=60):
-    """Ask Gemini (Pro by default) to read the solicitation text. {} on any problem.
+    """Ask Gemini (best available Pro model) to read the solicitation text. {} on any problem.
     Retries once on rate-limit (429) with a short backoff so free-tier limits don't
     silently drop items."""
     key = os.getenv("GEMINI_API_KEY")
     if not key or not (text or "").strip():
         return {}
-    model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+    model = pick_gemini_model(key)
+    if not model:
+        return {"_gerr": _GEMINI["err"] or "no usable model"}
     today = datetime.now(timezone.utc).date().isoformat()
     body = re.sub(r"\s+", " ", text)[:18000]
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -689,6 +726,11 @@ def main():
             deep_used = enrich_deep(current_site, deep_cache, budget)
             os.makedirs(STATE_DIR, exist_ok=True)
             json.dump(deep_cache, open(DEEP_CACHE, "w"), ensure_ascii=False)
+            if os.getenv("GEMINI_API_KEY"):
+                if _GEMINI.get("model"):
+                    sam_note += f" · AI brain: {_GEMINI['model']}"
+                elif _GEMINI.get("err"):
+                    sam_note += f" · AI off ({_GEMINI['err'][:50]})"
         # (3) classify each with real dates now in hand
         for it in current_site:
             if it.get("_cancelled"):
