@@ -32,9 +32,19 @@ from urllib.parse import urljoin
 import requests, yaml
 from bs4 import BeautifulSoup
 
+try:
+    import pdfplumber
+except Exception:
+    pdfplumber = None
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_DIR = os.path.join(HERE, "state")
 SITES_FILE = os.path.join(HERE, "sites.yaml")
+DEEP_CACHE = os.path.join(STATE_DIR, "_deepcache.json")
 SAM_URL = "https://api.sam.gov/opportunities/v2/search"
 SAM_SEEN = os.path.join(STATE_DIR, "_sam_seen.json")
 
@@ -74,6 +84,154 @@ def title_from_href(href):
     name = re.sub(r"\.(pdf|docx?|xlsx?)$", "", name, flags=re.I)
     name = re.sub(r"[-_]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()[:180]
+
+
+# ============================================================================
+#  DEEP READ  —  actually open each solicitation (PDF or sub-page), read the
+#  text INSIDE it, and pull the real issued/closing dates + cancellation.
+#  This is the free accuracy layer: it stops guessing from link text and reads
+#  the source document, the way a person would.
+# ============================================================================
+MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
+MON = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
+ANYDATE = re.compile(
+    rf"(\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:{MONTHS}|{MON})[a-z]*\.?,?\s+\d{{4}}\b"      # 15 January 2026
+    rf"|\b(?:{MONTHS}|{MON})[a-z]*\.?\s+\d{{1,2}}(?:st|nd|rd|th)?,?\s+\d{{4}}\b"       # January 15, 2026
+    rf"|\b\d{{4}}-\d{{2}}-\d{{2}}\b"                                                    # 2026-01-15
+    rf"|\b\d{{1,2}}/\d{{1,2}}/\d{{2,4}}\b"                                              # 01/15/2026
+    rf"|\b\d{{1,2}}\.\d{{1,2}}\.\d{{4}}\b)", re.I)                                      # 15.01.2026
+
+DL_LABEL = re.compile(
+    r"(closing date|closing time|response deadline|deadline for (?:the )?(?:receipt|submission|offers?|quotations?|bids?|proposals?)"
+    r"|submission deadline|deadline for submission|offers?\s+(?:are\s+)?(?:due|received)"
+    r"|quotations?\s+(?:are\s+)?due|bids?\s+(?:are\s+)?due|proposals?\s+(?:are\s+)?due"
+    r"|due (?:date|no later than)|no later than|last date (?:for|of)|closes on|bid closing"
+    r"|responses? (?:are )?due|questions? (?:are )?due)", re.I)
+ISS_LABEL = re.compile(
+    r"(issuance date|date issued|date of issue(?:ance)?|issue date|issued on|posted on"
+    r"|solicitation date|date of solicitation|opening date|published)", re.I)
+CANCEL_TXT = re.compile(r"(this solicitation is cancel|has been cancel|is cancel|no longer available|"
+                        r"withdrawn|award(?:ed)? to|has been awarded|notice of cancel)", re.I)
+MONTH_FMTS_X = ("%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%d %B %Y", "%d %b %Y",
+                "%m/%d/%Y", "%m/%d/%y", "%d.%m.%Y", "%B %d %Y", "%b %d %Y", "%d %B, %Y")
+
+
+def normalize_any(s):
+    s = re.sub(r"(\d{1,2})(st|nd|rd|th)\b", r"\1", (s or "").strip(), flags=re.I)  # 15th -> 15 only
+    s = re.sub(r"\s+", " ", s).strip(" ,.")
+    for fmt in MONTH_FMTS_X:
+        try:
+            return datetime.strptime(s, fmt).date().isoformat()
+        except Exception:
+            continue
+    # last resort: normalize_date's set
+    return normalize_date(s)
+
+
+def _labeled_date(text, label_re, want="max"):
+    """Find a date that sits just after a label like 'Closing Date:'. Returns ISO or ''."""
+    hits = []
+    for m in label_re.finditer(text):
+        window = text[m.end(): m.end() + 90]      # look just ahead of the label
+        dm = ANYDATE.search(window)
+        if dm:
+            iso = normalize_any(dm.group(0))
+            if iso:
+                hits.append(iso)
+    if not hits:
+        return ""
+    return (max if want == "max" else min)(hits)
+
+
+def parse_solicitation_text(text):
+    """From the full text of a solicitation PDF/page, pull what matters."""
+    text = re.sub(r"\s+", " ", text or "")[:60000]
+    out = {"deadline": "", "posted": "", "cancelled": False, "sol": "", "title": ""}
+    if not text:
+        return out
+    out["cancelled"] = bool(CANCEL_TXT.search(text))
+    out["deadline"] = _labeled_date(text, DL_LABEL, want="max")     # the closing date = latest labeled
+    out["posted"] = _labeled_date(text, ISS_LABEL, want="min")      # issued = earliest labeled
+    sm = SOLNUM.search(text)
+    if sm:
+        out["sol"] = sm.group(0).upper()
+    # a human-readable subject line if present
+    subj = re.search(r"(subject|title|description|for)\s*[:\-]\s*([A-Z0-9][^\n\.]{8,120})", text, re.I)
+    if subj:
+        out["title"] = re.sub(r"\s+", " ", subj.group(2)).strip()[:180]
+    return out
+
+
+def _pdf_text(data):
+    """Extract text from PDF bytes, first two pages are enough for header dates."""
+    if pdfplumber:
+        try:
+            import io as _io
+            with pdfplumber.open(_io.BytesIO(data)) as pdf:
+                return "\n".join((p.extract_text() or "") for p in pdf.pages[:3])
+        except Exception:
+            pass
+    if PdfReader:
+        try:
+            import io as _io
+            r = PdfReader(_io.BytesIO(data))
+            return "\n".join((r.pages[i].extract_text() or "") for i in range(min(3, len(r.pages))))
+        except Exception:
+            pass
+    return ""
+
+
+def deep_read(url):
+    """Open a solicitation link and return parsed {deadline,posted,cancelled,sol,title}.
+    Handles PDFs (read inside) and HTML sub-pages (read visible text). Never raises."""
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=40)
+        r.raise_for_status()
+        ctype = (r.headers.get("Content-Type") or "").lower()
+        if "pdf" in ctype or url.lower().split("?")[0].endswith(".pdf"):
+            return parse_solicitation_text(_pdf_text(r.content))
+        soup = BeautifulSoup(r.text, "html.parser")
+        for t in soup(["script", "style", "noscript", "header", "footer", "nav"]):
+            t.decompose()
+        return parse_solicitation_text(soup.get_text(" ", strip=True))
+    except Exception:
+        return {"deadline": "", "posted": "", "cancelled": False, "sol": "", "title": "", "_err": True}
+
+
+def enrich_deep(items, cache, budget, recheck_days=5):
+    """For items still missing a deadline, open the document and read its real dates.
+    Caches by href so we don't re-download every run. `budget` caps downloads per run."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    used = 0
+    for it in items:
+        if (it.get("deadline") or "").strip():
+            continue                                   # already dated (e.g. by SAM) — trust it
+        href = it.get("href") or ""
+        if not href.lower().split("?")[0].endswith((".pdf", ".doc", ".docx")) and "/wp-content/" not in href:
+            # only worth opening documents / attachment pages; skip generic listing links
+            if not href.lower().split("?")[0].endswith(("/",)) and "usembassy.gov" not in href:
+                pass
+        c = cache.get(href)
+        fresh = c and c.get("checked") and days_since(c["checked"]) is not None and days_since(c["checked"]) < recheck_days
+        if not fresh:
+            if used >= budget:
+                continue                               # out of download budget this run
+            info = deep_read(href)
+            used += 1
+            c = {"deadline": info.get("deadline", ""), "posted": info.get("posted", ""),
+                 "cancelled": bool(info.get("cancelled")), "title": info.get("title", ""),
+                 "sol": info.get("sol", ""), "checked": today, "err": bool(info.get("_err"))}
+            cache[href] = c
+        # apply cached findings
+        if c.get("deadline"):
+            it["deadline"] = c["deadline"]
+        if c.get("posted") and not it.get("posted"):
+            it["posted"] = c["posted"]
+        if c.get("sol") and not it.get("sol"):
+            it["sol"] = c["sol"]
+        if c.get("cancelled"):
+            it["_cancelled"] = True
+    return used
 DATE_RE = re.compile(r"(\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+20\d{2}\b"
                      r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+20\d{2}\b"
                      r"|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/20\d{2}\b)", re.I)
@@ -410,8 +568,10 @@ def main():
     # false "active" counts (e.g. Oman showing 6 when the site had none open).
     recency = int(os.getenv("RECENCY_DAYS", "30"))
     active, unverified = {}, {}
+    deep_used = 0
     if not is_baseline:
-        for it in current_site:  # embassy items on pages now, enriched from SAM
+        # (1) enrich from the SAM index by solicitation number
+        for it in current_site:
             sol = (it.get("sol") or "").upper()
             if sol and sol in sam_index:
                 rec = sam_index[sol]
@@ -421,12 +581,23 @@ def main():
                 it["psc"] = it.get("psc") or rec.get("psc", "")
                 it["naics"] = it.get("naics") or rec.get("naics", "")
                 it["source"] = "Site+SAM"
+        # (2) DEEP READ — open the documents still missing a deadline and read them
+        if os.getenv("DEEP_READ", "1") == "1":
+            deep_cache = load_json(DEEP_CACHE, {})
+            budget = int(os.getenv("DEEP_BUDGET", "60"))
+            deep_used = enrich_deep(current_site, deep_cache, budget)
+            os.makedirs(STATE_DIR, exist_ok=True)
+            json.dump(deep_cache, open(DEEP_CACHE, "w"), ensure_ascii=False)
+        # (3) classify each with real dates now in hand
+        for it in current_site:
+            if it.get("_cancelled"):
+                continue                      # document says cancelled/awarded → not active
             st = eff_status(it, recency)
-            k = sol or ("_" + it["href"])
+            k = (it.get("sol") or "").upper() or ("_" + it["href"])
             if st == "active":
                 active[k] = it
             elif st == "unverified":
-                unverified[k] = it            # no date at all → manual-check list, not active
+                unverified[k] = it            # no date even after opening it → manual check
         for sol, d in sam_index.items():  # SAM-only open items (from the wide index)
             if sol in active:
                 active[sol]["source"] = "Site+SAM"; continue
@@ -450,6 +621,8 @@ def main():
                       is_baseline, sam_note, len(sam_items),
                       active_list, winnable, closing_soon, unverified_list, len(sites))
 
+    if not is_baseline and deep_used:
+        sam_note += f" · deep-read {deep_used} documents"
     attachments = []
     if not is_baseline and active_list:  # full active list attached to EVERY digest
         attachments.append((f"active_solicitations_{today}.csv", build_active_csv(active_list), "text/csv"))
