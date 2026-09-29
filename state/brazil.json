@@ -1,16 +1,8 @@
 {
   "url": "https://br.usembassy.gov/procurement-and-contract-opportunities/",
-  "items": [
-    {
-      "text": "Requests for Quotations",
-      "href": "https://br.usembassy.gov/procurement-and-contract-opportunities/#SSN",
-      "date": "",
-      "first_seen": "2026-09-29"
-    }
-  ],
-  "text_hash": "96ebf786c28bfe2c19ae1d7e379d5dc2a064909e2261636f1ac67069c4ee90c5",
+  "items": [],
+  "text_hash": "12cecf79ef8fca2d6a847944f8182ef64f646aa4ccb4cd0202ed246724a385a8",
   "emails": [
-    "BlasiCS@state.gov",
     "MartinsR@state.gov"
   ]
 }

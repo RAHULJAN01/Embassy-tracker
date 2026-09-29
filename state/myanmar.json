@@ -1,19 +1,6 @@
 {
   "url": "https://mm.usembassy.gov/commercial-opportunities/",
-  "items": [
-    {
-      "text": "Solicitation Notices",
-      "href": "https://mm.usembassy.gov/commercial-opportunities/#solicitation",
-      "date": "",
-      "first_seen": "2026-09-29"
-    },
-    {
-      "text": "Procurement Solicitations",
-      "href": "https://mm.usembassy.gov/tag/procurement-solicitations/",
-      "date": "",
-      "first_seen": "2026-09-29"
-    }
-  ],
+  "items": [],
   "text_hash": "e79284c2a704513691db15ef06af0d7581131d5d197a20aa465ccf48107c4c49",
   "emails": []
 }

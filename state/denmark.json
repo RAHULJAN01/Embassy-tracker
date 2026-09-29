@@ -1,19 +1,6 @@
 {
   "url": "https://dk.usembassy.gov/opportunities-with-the-u-s-government/",
-  "items": [
-    {
-      "text": "Request for Quotations (RFQ): Carpet Tiles – Brand Name or Equal",
-      "href": "https://dk.usembassy.gov/as-of-tuesday-august-19-2025-the-u-s-embassy-copenhagen-requests-quotations-for-the-supply-and-delivery-of-carpet-tiles-for-consular-waiting-room-area/",
-      "date": "",
-      "first_seen": "2026-09-29"
-    },
-    {
-      "text": "Request for Quotation for Winter Driving Training for the Motor Pool staff",
-      "href": "https://dk.usembassy.gov/request-for-quotation-for-winter-driving-training-for-the-motor-pool-staff/",
-      "date": "",
-      "first_seen": "2026-09-29"
-    }
-  ],
+  "items": [],
   "text_hash": "3a3a02d173f1534ba7c94592a4707d3bdd9286d0b3b6f69aaeac762dc0827ff4",
   "emails": [
     "CopenhagenProcurement@state.gov"
