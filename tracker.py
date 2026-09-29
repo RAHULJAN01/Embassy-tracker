@@ -387,7 +387,7 @@ def enrich_deep(items, cache, budget, recheck_days=7, gemini_budget=None):
     today = datetime.now(timezone.utc).date().isoformat()
     gem_on = bool(os.getenv("GEMINI_API_KEY"))
     if gemini_budget is None:
-        gemini_budget = int(os.getenv("GEMINI_BUDGET", "60"))
+        gemini_budget = int(os.getenv("GEMINI_BUDGET", "120"))
     used = gem_used = 0
     for it in items:
         if (it.get("deadline") or "").strip():
@@ -807,7 +807,7 @@ def main():
         # (2) DEEP READ — open the documents still missing a deadline and read them
         if os.getenv("DEEP_READ", "1") == "1":
             deep_cache = load_json(DEEP_CACHE, {})
-            budget = int(os.getenv("DEEP_BUDGET", "100"))
+            budget = int(os.getenv("DEEP_BUDGET", "300"))
             deep_used = enrich_deep(current_site, deep_cache, budget)
             os.makedirs(STATE_DIR, exist_ok=True)
             json.dump(deep_cache, open(DEEP_CACHE, "w"), ensure_ascii=False)
