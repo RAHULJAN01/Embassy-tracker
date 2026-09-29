@@ -24,10 +24,19 @@ jobs:
           SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python tracker.py
-      - run: |
+      - name: Save state snapshots (best-effort, never fails the run)
+        if: always()
+        continue-on-error: true
+        run: |
           git config user.name "embassy-tracker-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add state/
-          git commit -m "snapshots [skip ci]" || echo "no changes"
-          git pull --rebase --autostash origin main || true
-          git push || (git pull --rebase --autostash origin main && git push)
+          git add -A state/ || true
+          git commit -m "snapshots [skip ci]" || { echo "no state changes"; exit 0; }
+          # try a few times; on conflict prefer the freshly-generated state, and if a
+          # rebase gets stuck, abort it cleanly rather than failing the job
+          for i in 1 2 3 4 5; do
+            if git pull --rebase --autostash -X theirs origin main; then :; else git rebase --abort 2>/dev/null || true; git reset --soft HEAD~0 2>/dev/null || true; fi
+            if git push origin HEAD:main; then echo "pushed"; exit 0; fi
+            sleep 6
+          done
+          echo "state snapshot not pushed this run (will re-derive next run)"; exit 0
