@@ -239,11 +239,30 @@ _GEMINI = {"order": None, "model": None, "err": ""}
 # Flash-first: on the free tier Flash has a huge daily quota and easily handles the
 # volume, and is plenty capable for reading dates + summarising the ask. Pro's free
 # quota is tiny (429s almost immediately), so it's last. Force Pro with GEMINI_MODEL.
-MODEL_PREF = ["2.5-flash", "flash-latest", "2.0-flash", "1.5-flash", "flash",
+MODEL_PREF = ["2.0-flash", "2.5-flash", "flash-latest", "1.5-flash", "flash",
               "2.5-pro", "1.5-pro", "-pro", "pro"]
 # tried after the discovered list in case ListModels is misleading
-MODEL_FALLBACK = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-2.5-flash",
+MODEL_FALLBACK = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-flash-latest",
                   "gemini-1.5-flash", "gemini-2.0-flash-001"]
+_LAST_CALL = [0.0]
+
+
+def _throttle():
+    """Space Gemini calls to respect the free per-minute rate limit."""
+    gap = float(os.getenv("GEMINI_DELAY", "4"))
+    wait = gap - (time.time() - _LAST_CALL[0])
+    if wait > 0:
+        time.sleep(wait)
+    _LAST_CALL[0] = time.time()
+
+
+def _json_from(raw):
+    """Parse JSON that may be wrapped in ``` fences or have leading prose."""
+    s = (raw or "").strip()
+    s = re.sub(r"^```(?:json)?", "", s).strip()
+    s = re.sub(r"```$", "", s).strip()
+    m = re.search(r"\{.*\}", s, re.S)
+    return json.loads(m.group(0) if m else s)
 
 
 def gemini_candidates(key, timeout=30):
@@ -281,17 +300,19 @@ def gemini_candidates(key, timeout=30):
 
 
 def _gemini_call(key, model, prompt, timeout):
-    """One generateContent call. Returns (status, data_or_text)."""
+    """One generateContent call (no response_mime_type — some models 400 on it).
+    Returns (status_code, response)."""
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {"contents": [{"parts": [{"text": prompt}]}],
-               "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
+               "generationConfig": {"temperature": 0}}
     r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
     return r.status_code, r
 
 
 def gemini_extract(text, timeout=60):
     """Read the solicitation text with the best working model. {} / {_gerr} on problems.
-    Falls through 404 'model not found' to the next candidate; backs off once on 429."""
+    Paces calls (rate limit), retries 429/503 with backoff, falls through 400/404 to
+    the next candidate model, and locks onto the first model that answers."""
     key = os.getenv("GEMINI_API_KEY")
     if not key or not (text or "").strip():
         return {}
@@ -302,25 +323,26 @@ def gemini_extract(text, timeout=60):
         return {"_gerr": _GEMINI["err"] or "no usable model"}
     last = ""
     for model in cands:
-        for attempt in range(2):
+        for attempt in range(3):
+            _throttle()
             try:
                 sc, r = _gemini_call(key, model, prompt, timeout)
             except Exception as e:
                 last = str(e)[:80]; break
-            if sc == 429:
-                if attempt == 0:
-                    time.sleep(int(os.getenv("GEMINI_BACKOFF", "15"))); continue
-                last = f"429 {model}"; break               # quota hit → try next model
-            if sc == 404:                                  # model listed but not served → next
-                last = f"404 {model}"; break
+            if sc in (429, 503):                           # rate/overload → back off and retry
+                if attempt < 2:
+                    time.sleep(int(os.getenv("GEMINI_BACKOFF", "15")) * (attempt + 1)); continue
+                last = f"{sc} {model}"; break              # give up on this model → next
+            if sc in (400, 404):                           # bad config / not served → next model
+                last = f"{sc} {model}"; break
             if sc != 200:
                 return {"_gerr": f"HTTP {sc}: {r.text[:80]}"}
             try:
                 cand = (r.json().get("candidates") or [{}])[0]
                 raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
-                data = json.loads(raw)
+                data = _json_from(raw)
             except Exception as e:
-                return {"_gerr": f"parse: {str(e)[:60]}"}
+                last = f"parse {model}: {str(e)[:50]}"; break
             _GEMINI["model"] = model                       # lock onto the model that worked
             return {"title": (data.get("title") or "").strip()[:180],
                     "sol": (data.get("sol") or "").strip().upper(),
