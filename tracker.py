@@ -181,36 +181,95 @@ def _pdf_text(data):
     return ""
 
 
+def fetch_doc_text(url):
+    """Return the readable text of a solicitation URL (PDF read inside, else HTML text)."""
+    r = requests.get(url, headers=HEADERS, timeout=40)
+    r.raise_for_status()
+    ctype = (r.headers.get("Content-Type") or "").lower()
+    if "pdf" in ctype or url.lower().split("?")[0].endswith(".pdf"):
+        return _pdf_text(r.content)
+    soup = BeautifulSoup(r.text, "html.parser")
+    for t in soup(["script", "style", "noscript", "header", "footer", "nav"]):
+        t.decompose()
+    return soup.get_text(" ", strip=True)
+
+
 def deep_read(url):
-    """Open a solicitation link and return parsed {deadline,posted,cancelled,sol,title}.
+    """Open a solicitation link and return parsed {deadline,posted,cancelled,sol,title,_text}.
     Handles PDFs (read inside) and HTML sub-pages (read visible text). Never raises."""
     try:
-        r = requests.get(url, headers=HEADERS, timeout=40)
-        r.raise_for_status()
-        ctype = (r.headers.get("Content-Type") or "").lower()
-        if "pdf" in ctype or url.lower().split("?")[0].endswith(".pdf"):
-            return parse_solicitation_text(_pdf_text(r.content))
-        soup = BeautifulSoup(r.text, "html.parser")
-        for t in soup(["script", "style", "noscript", "header", "footer", "nav"]):
-            t.decompose()
-        return parse_solicitation_text(soup.get_text(" ", strip=True))
+        text = fetch_doc_text(url)
+        info = parse_solicitation_text(text)
+        info["_text"] = text
+        return info
     except Exception:
-        return {"deadline": "", "posted": "", "cancelled": False, "sol": "", "title": "", "_err": True}
+        return {"deadline": "", "posted": "", "cancelled": False, "sol": "", "title": "", "_err": True, "_text": ""}
 
 
-def enrich_deep(items, cache, budget, recheck_days=5):
-    """For items still missing a deadline, open the document and read its real dates.
-    Caches by href so we don't re-download every run. `budget` caps downloads per run."""
+# ---------------------------------------------------------------------------
+#  GEMINI BRAIN (optional) — the "common sense" layer. When the regex deep-read
+#  cannot confidently read a closing date, hand the document text to Google
+#  Gemini and let it return clean structured data with judgment. Free tier.
+#  Needs the GEMINI_API_KEY secret; if absent, everything below is skipped.
+# ---------------------------------------------------------------------------
+GEMINI_PROMPT = (
+    "You are analysing the text of a U.S. embassy procurement solicitation. "
+    "Return ONLY a JSON object with these keys, using strictly what the text states:\n"
+    '  "title"        : short plain-English subject of the solicitation (<=120 chars),\n'
+    '  "sol"          : the solicitation / RFQ / RFP number exactly as written, else "",\n'
+    '  "posted"       : issuance/posted date as YYYY-MM-DD, else "",\n'
+    '  "closing"      : response/closing/submission deadline as YYYY-MM-DD, else "",\n'
+    '  "status"       : one of "open", "closed", "cancelled", "unknown" (relative to today),\n'
+    '  "category"     : one of "goods", "services", "construction", "unknown",\n'
+    '  "confidence"   : 0.0-1.0 how sure you are of the closing date.\n'
+    "Do not invent dates. If a date is written in words or another format, convert it. "
+    "today is {today}. TEXT:\n{body}"
+)
+
+
+def gemini_extract(text, timeout=45):
+    """Ask Gemini to read the solicitation text. Returns a dict or {} on any problem."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key or not (text or "").strip():
+        return {}
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     today = datetime.now(timezone.utc).date().isoformat()
-    used = 0
+    body = re.sub(r"\s+", " ", text)[:16000]
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    payload = {"contents": [{"parts": [{"text": GEMINI_PROMPT.format(today=today, body=body)}]}],
+               "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
+    try:
+        r = requests.post(url, params={"key": key}, json=payload, timeout=timeout)
+        if r.status_code != 200:
+            return {"_gerr": f"HTTP {r.status_code}"}
+        cand = (r.json().get("candidates") or [{}])[0]
+        raw = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", [{}]))
+        data = json.loads(raw)
+        return {"title": (data.get("title") or "").strip()[:180],
+                "sol": (data.get("sol") or "").strip().upper(),
+                "posted": normalize_any(data.get("posted", "")) or (data.get("posted") or "")[:10],
+                "deadline": normalize_any(data.get("closing", "")) or (data.get("closing") or "")[:10],
+                "status": (data.get("status") or "unknown").lower(),
+                "category": (data.get("category") or "unknown").lower(),
+                "confidence": float(data.get("confidence") or 0)}
+    except Exception as e:
+        return {"_gerr": str(e)[:80]}
+
+
+def enrich_deep(items, cache, budget, recheck_days=5, gemini_budget=None):
+    """For items still missing a deadline, open the document and read its real dates.
+    Regex reads it first; if that finds no closing date and a Gemini key is set,
+    Gemini reads the same text with judgment. Caches by href so we don't re-download.
+    `budget` caps downloads/run; `gemini_budget` caps AI calls/run."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    gem_on = bool(os.getenv("GEMINI_API_KEY"))
+    if gemini_budget is None:
+        gemini_budget = int(os.getenv("GEMINI_BUDGET", "40"))
+    used = gem_used = 0
     for it in items:
         if (it.get("deadline") or "").strip():
             continue                                   # already dated (e.g. by SAM) — trust it
         href = it.get("href") or ""
-        if not href.lower().split("?")[0].endswith((".pdf", ".doc", ".docx")) and "/wp-content/" not in href:
-            # only worth opening documents / attachment pages; skip generic listing links
-            if not href.lower().split("?")[0].endswith(("/",)) and "usembassy.gov" not in href:
-                pass
         c = cache.get(href)
         fresh = c and c.get("checked") and days_since(c["checked"]) is not None and days_since(c["checked"]) < recheck_days
         if not fresh:
@@ -220,17 +279,29 @@ def enrich_deep(items, cache, budget, recheck_days=5):
             used += 1
             c = {"deadline": info.get("deadline", ""), "posted": info.get("posted", ""),
                  "cancelled": bool(info.get("cancelled")), "title": info.get("title", ""),
-                 "sol": info.get("sol", ""), "checked": today, "err": bool(info.get("_err"))}
+                 "sol": info.get("sol", ""), "checked": today, "err": bool(info.get("_err")),
+                 "src": "regex"}
+            # AI fallback: regex found no closing date but we have document text → ask Gemini
+            if gem_on and not c["deadline"] and info.get("_text") and gem_used < gemini_budget:
+                g = gemini_extract(info["_text"])
+                gem_used += 1
+                if g and not g.get("_gerr"):
+                    if g.get("deadline"):
+                        c["deadline"] = g["deadline"]; c["src"] = "gemini"
+                    if g.get("posted") and not c["posted"]: c["posted"] = g["posted"]
+                    if g.get("sol") and not c["sol"]: c["sol"] = g["sol"]
+                    if g.get("title") and not c["title"]: c["title"] = g["title"]
+                    if g.get("status") == "cancelled": c["cancelled"] = True
+                    c["gcat"] = g.get("category", ""); c["gconf"] = g.get("confidence", 0)
             cache[href] = c
-        # apply cached findings
-        if c.get("deadline"):
-            it["deadline"] = c["deadline"]
-        if c.get("posted") and not it.get("posted"):
-            it["posted"] = c["posted"]
-        if c.get("sol") and not it.get("sol"):
-            it["sol"] = c["sol"]
-        if c.get("cancelled"):
-            it["_cancelled"] = True
+        # apply cached findings to the item
+        if c.get("deadline"): it["deadline"] = c["deadline"]
+        if c.get("posted") and not it.get("posted"): it["posted"] = c["posted"]
+        if c.get("sol") and not it.get("sol"): it["sol"] = c["sol"]
+        if c.get("title") and (GENERIC_LABEL.match(it.get("text", "")) or len(it.get("text", "")) < 12):
+            it["text"] = c["title"]                    # upgrade a junky title with the read one
+        if c.get("cancelled"): it["_cancelled"] = True
+        if c.get("src"): it["_datesrc"] = c["src"]     # provenance: regex vs gemini
     return used
 DATE_RE = re.compile(r"(\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+20\d{2}\b"
                      r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+20\d{2}\b"
@@ -723,6 +794,11 @@ def _badges(it):
         b.append(_pill("Services", "#f1f5f9", MUTE))
     if is_trap(it):
         b.append(_pill("⚠ Out of Scope", RED[1], RED[2]))
+    ds = it.get("_datesrc")
+    if ds == "gemini":
+        b.append(_pill("✓ AI-read from document", SKY[1], SKY[2]))
+    elif ds == "regex":
+        b.append(_pill("✓ Read from document", SKY[1], SKY[2]))
     meta = []
     if it.get("psc"): meta.append("PSC " + it["psc"])
     if it.get("naics"): meta.append("NAICS " + it["naics"])

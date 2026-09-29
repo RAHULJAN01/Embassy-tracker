@@ -22,6 +22,7 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           ALERT_TO: ${{ secrets.ALERT_TO }}
           SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python tracker.py
       - run: |
           git config user.name "embassy-tracker-bot"
