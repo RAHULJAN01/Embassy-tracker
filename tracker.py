@@ -65,6 +65,14 @@ EMAIL_RE = re.compile(r"[\w.\-]+@[\w.\-]+\.\w{2,}")
 GENERIC_LABEL = re.compile(r"^(solicitation package|solicitation packages|solicitation|solicitations|read more|"
                            r"download|click here|attachment|attachments|rfq|rfp|rfi|document|documents|view|more|"
                            r"pdf|link|here|open|announcement|announcements)s?$", re.I)
+# supporting sub-documents of a solicitation — NOT standalone solicitations; drop them
+# so they don't inflate the count or land in the 'unverified' list
+ATTACHMENT = re.compile(r"^\W*(statement of work|scope of work|\bsow\b|specifications?|\bspecs?\b"
+                        r"|technical specificat|site visit|q\s*&\s*a\b|\bqa\b|questions?\s*(and|&)\s*answers?"
+                        r"|responses?\s+to\s+(questions|queries|rfi)|clarificat|drawings?|wage determination"
+                        r"|terms and conditions|\bannex\b|appendix|pre-?bid|pre-?proposal|bid bulletin"
+                        r"|amendment no|price schedule|bill of quantities|\bboq\b|floor plan|past performance"
+                        r"|representations? and certificat|solicitation provisions)", re.I)
 MONTH_FMTS = ("%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%d %B %Y", "%d %b %Y", "%m/%d/%Y")
 
 
@@ -483,6 +491,9 @@ def extract(html, base_url, selector=None):
         if GENERIC_LABEL.match(text) or len(text) < 12:  # generic anchor text → title from the file name
             t2 = title_from_href(href)
             if t2 and len(t2) > len(text): disp = t2
+        # drop supporting sub-documents (SOW, specs, Q&A, site-visit, amendments-only…)
+        if ATTACHMENT.match(disp) or ATTACHMENT.match(title_from_href(href)):
+            continue
         key = (disp.lower(), href_nofrag)
         if key in seen: continue
         seen.add(key)
@@ -492,8 +503,23 @@ def extract(html, base_url, selector=None):
             md = DATE_RE.search(par.get_text(" ", strip=True))
             if md: d = normalize_date(md.group(0))
         items.append({"text": disp[:180], "href": href, "date": d})
+    # collapse rows that share one solicitation number into a single row (the invitation
+    # PDF + its spec/Q&A/attachments are ONE solicitation, not several)
+    bysol, deduped = {}, []
+    for it in items:
+        sn = solnum(it["text"], it["href"])
+        if not sn:
+            deduped.append(it); continue
+        if sn not in bysol:
+            bysol[sn] = it; deduped.append(it)
+        else:
+            keep = bysol[sn]
+            if it.get("date") and not keep.get("date"):
+                keep["date"] = it["date"]                     # borrow a date from a sibling row
+            if not GENERIC_LABEL.match(it["text"]) and len(it["text"]) > len(keep["text"]):
+                keep["text"] = it["text"][:180]               # prefer the fuller title
     visible = " ".join(scope.get_text(" ", strip=True).split())
-    return {"items": items, "text_hash": hashlib.sha256(visible.encode("utf-8", "ignore")).hexdigest(),
+    return {"items": deduped, "text_hash": hashlib.sha256(visible.encode("utf-8", "ignore")).hexdigest(),
             "emails": sorted(emails)}
 
 
@@ -697,14 +723,22 @@ def main():
             baseline_rows.append({"name": name, "count": len(fp["items"]), "url": url})
             save_state(s, {"url": url, **fp}); continue
         added, removed = diff_items(prev.get("items", []), fp["items"])
+        new_sols = {solnum(i["text"], i["href"]) for i in fp["items"]}
         for it in added:
             site_items.append({"name": name, "text": it["text"], "sol": solnum(it["text"], it["href"]),
                                "href": it["href"], "cat": classify(it["text"]), "source": "Site",
                                "posted": it.get("date", ""), "first_seen": it.get("first_seen", today),
                                "deadline": "", "setaside": "", "psc": "", "naics": ""})
         for it in removed:
+            rsol = solnum(it["text"], it["href"])
+            # not a real cancellation if it's a filtered attachment, or the same solicitation
+            # is still present under another row — skip so the digest isn't flooded on cleanup
+            if ATTACHMENT.match(it["text"]) or ATTACHMENT.match(title_from_href(it["href"])):
+                continue
+            if rsol and rsol in new_sols:
+                continue
             site_items.append({"name": name, "text": it["text"] + " (removed from page)",
-                               "sol": solnum(it["text"], it["href"]), "href": it["href"],
+                               "sol": rsol, "href": it["href"],
                                "cat": "cancelled", "source": "Site",
                                "posted": it.get("date", ""), "first_seen": it.get("first_seen", today),
                                "deadline": "", "setaside": "", "psc": "", "naics": ""})
@@ -773,7 +807,7 @@ def main():
         # (2) DEEP READ — open the documents still missing a deadline and read them
         if os.getenv("DEEP_READ", "1") == "1":
             deep_cache = load_json(DEEP_CACHE, {})
-            budget = int(os.getenv("DEEP_BUDGET", "60"))
+            budget = int(os.getenv("DEEP_BUDGET", "100"))
             deep_used = enrich_deep(current_site, deep_cache, budget)
             os.makedirs(STATE_DIR, exist_ok=True)
             json.dump(deep_cache, open(DEEP_CACHE, "w"), ensure_ascii=False)
@@ -783,6 +817,7 @@ def main():
                 elif _GEMINI.get("err"):
                     sam_note += f" · AI off ({_GEMINI['err'][:50]})"
         # (3) classify each with real dates now in hand
+        stale_days = int(os.getenv("STALE_UNVERIFIED_DAYS", "45"))
         for it in current_site:
             if it.get("_cancelled"):
                 continue                      # document says cancelled/awarded → not active
@@ -791,7 +826,12 @@ def main():
             if st == "active":
                 active[k] = it
             elif st == "unverified":
-                unverified[k] = it            # no date even after opening it → manual check
+                # no date even after opening it. If it has sat on the page for weeks it's
+                # almost certainly a stale archive → drop it rather than flag for manual check.
+                age = days_since(it.get("first_seen", ""))
+                if age is not None and age > stale_days:
+                    continue
+                unverified[k] = it            # genuinely undated & recent → manual check
         for sol, d in sam_index.items():  # SAM-only open items (from the wide index)
             if sol in active:
                 active[sol]["source"] = "Site+SAM"; continue
