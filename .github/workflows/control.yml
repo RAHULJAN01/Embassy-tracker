@@ -21,11 +21,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set pause flag
+        env:
+          ACTION: ${{ github.event.inputs.action }}
         run: |
-          if [ "${{ github.event.inputs.action }}" = "stop" ]; then P=true; else P=false; fi
-          printf '{\n "paused": %s,\n "updated": "%s",\n "by": "mission-control"\n}\n' \
-            "$P" "$(date -u '+%Y-%m-%d %H:%M UTC')" > control.json
-          cat control.json
+          # flip ONLY the pause flag — never clobber controlUrl or anything else
+          python3 - <<'PY'
+          import json, os, datetime, pathlib
+          p = pathlib.Path("control.json")
+          try:
+              d = json.loads(p.read_text())
+          except Exception:
+              d = {}
+          d["paused"] = (os.environ.get("ACTION") == "stop")
+          d["updated"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+          d["by"] = "mission-control"
+          p.write_text(json.dumps(d, indent=1))
+          print(json.dumps(d, indent=1))
+          PY
       - name: Cancel in-flight crawls
         if: github.event.inputs.action == 'stop'
         run: |
