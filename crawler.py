@@ -303,6 +303,13 @@ def run(mode):
                 currentJob=f"adjudicating: {meta[:60]}")
         return rec
 
+    def transient(rec):
+        """True if this REVIEW is an AI/provider failure (quota, 429, unparseable) rather
+        than a genuine adjudication. Transient records are NOT stored — they're re-crawled."""
+        rr = (rec.get("review_reason") or "").lower()
+        return rec.get("tier") == "REVIEW" and (rr.startswith("ai") or "provider" in rr
+                                                or "quota" in rr or "cooling" in rr)
+
     try:
         # ---- 1. SAM.gov (primary) ----
         st.beat(phase="sam", currentJob="querying SAM.gov")
@@ -318,6 +325,8 @@ def run(mode):
             except ai.AllExhausted:
                 st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                 break
+            if transient(rec):
+                continue      # AI/provider failure — skip, don't store; will re-crawl next run
             nid = op.get("noticeId", "")
             link = cfg["sam"]["view"].replace("{id}", nid) if nid else "https://sam.gov/"
             rows.append(to_row(rec, post=op.get("organizationName", "SAM.gov"),
@@ -360,6 +369,8 @@ def run(mode):
                     except ai.AllExhausted:
                         st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                         raise StopIteration
+                    if transient(rec):
+                        continue   # AI/provider failure — skip, don't store; re-crawl next run
                     rows.append(to_row(rec, post=root["post"], country=root["country"],
                                        source="Site", link=sl))
                     time.sleep(PAGE_PAUSE)
