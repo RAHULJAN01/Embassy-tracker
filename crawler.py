@@ -18,7 +18,7 @@ v2 rules, per Rahul:
 """
 import os, sys, json, time, hashlib, re, pathlib, datetime, urllib.parse
 
-import analyzer, ai, fetcher, un_sources
+import analyzer, ai, fetcher, un_sources, estimator
 
 HERE = pathlib.Path(__file__).parent
 ROOTS = HERE / "roots.json"
@@ -146,6 +146,69 @@ def extract_sol_number(text):
     return m.group(1).upper().replace(" ", "") if m else ""
 
 
+def all_sol_numbers(text):
+    """Every distinct solicitation reference in a page, in order of appearance."""
+    out, seen = [], set()
+    for m in _SOL_NUM.finditer(text or ""):
+        s = m.group(1).upper().replace(" ", "")
+        if s not in seen:
+            seen.add(s); out.append((m.start(), s))
+    return out
+
+
+# A page that is clearly just navigation / an article, never a solicitation.
+_NOISE_MARKERS = ("skip to main content", "bilateral investment and trade",
+                  "latest report", "privacy policy", "cookie", "newsletter",
+                  "visa information", "consular services")
+_UNIT_SIGNALS = ("closing date", "due date", "offers are due", "quotations are due",
+                 "deadline", "scope of work", "statement of work", "period of performance",
+                 "delivery date", "submit", "f.o.b", "incoterm", "line item", "quantity")
+
+
+def classify_page(text, url=""):
+    """Decide what a fetched page actually IS, so we never store an index page
+    as if it were a solicitation.
+        'solicitation' -> one real notice, adjudicate it
+        'listing'      -> an index carrying several notices, split it
+        'noise'        -> navigation / article / nothing procurable
+    """
+    low = (text or "").lower()
+    sols = all_sol_numbers(text or "")
+    signals = sum(1 for s in _UNIT_SIGNALS if s in low)
+    looks_index = any(k in (url or "").lower()
+                      for k in ("/business", "/procurement", "/tenders", "/opportunit",
+                                "/notice", "/solicitation", "/jobs"))
+
+    if len(sols) >= 2:
+        return "listing"
+    if len(sols) == 1 and signals >= 2:
+        return "solicitation"
+    # no reference number: only trust it if it reads like a real notice and isn't an index
+    if not sols:
+        if signals >= 3 and not looks_index and not any(m in low for m in _NOISE_MARKERS):
+            return "solicitation"
+        return "noise"
+    # exactly one reference but thin content
+    return "solicitation" if signals >= 1 and not looks_index else "noise"
+
+
+def split_inline_solicitations(text, min_len=200):
+    """Many embassies publish each solicitation INLINE on one page with no
+    attachment. Cut that page into one block per solicitation reference so each
+    becomes its own record instead of the whole page becoming one blob."""
+    marks = all_sol_numbers(text or "")
+    if len(marks) < 2:
+        return []
+    blocks = []
+    for i, (pos, sol) in enumerate(marks):
+        start = max(0, pos - 400)                      # keep the heading above the ref
+        end = marks[i + 1][0] - 400 if i + 1 < len(marks) else len(text)
+        chunk = (text or "")[start:max(start + min_len, end)].strip()
+        if len(chunk) >= min_len:
+            blocks.append((sol, chunk))
+    return blocks
+
+
 # --------------------------------------------------------------------------
 # Discovery
 # --------------------------------------------------------------------------
@@ -172,13 +235,18 @@ def collect_candidates(proc_url, cfg):
     if raw is None:
         return [], []
     html_pages, files = [], []
+    host = root_host(final)
     for href, text in fetcher.links(raw, final):
         if is_offsite(href):
+            continue
+        # stay on the mission's own site — a link out to worldbank.org or a news
+        # article is never this embassy's solicitation
+        if root_host(href) != host:
             continue
         low = (href + " " + text).lower()
         if href.lower().split("?")[0].endswith((".pdf", ".doc", ".docx", ".xls", ".xlsx")):
             files.append(href)
-        elif any(k in low for k in cfg["proc_keywords"]) and root_host(href) == root_host(final):
+        elif any(k in low for k in cfg["proc_keywords"]):
             html_pages.append(href.split("#")[0])
     return list(dict.fromkeys(html_pages))[:15], list(dict.fromkeys(files))[:25]
 
@@ -541,7 +609,35 @@ def run(mode):
                         else:
                             text, files, ok, fail = pre["text"], pre["files"], pre["ok"], pre["fail"]
                             link = files[0] if files else root["base"]
-                        if len(text) < 180 or not looks_like_solicitation(text):
+                        if len(text) < 180:
+                            continue
+
+                        # What IS this page? Never store an index page as a solicitation.
+                        kind = classify_page(text, link) if pre is None else "solicitation"
+                        if kind == "noise":
+                            continue
+                        if kind == "listing":
+                            # solicitations written inline on the page -> one record each
+                            units_inline = split_inline_solicitations(text)
+                            for sol_no, chunk in units_inline[:8]:
+                                if not budget_left():
+                                    break
+                                hh2 = unit_hash(chunk)
+                                if hh2 in ledger or not looks_like_solicitation(chunk):
+                                    continue
+                                found += 1
+                                rec2 = adjudicate_unit(chunk, f"{root['post']} {sol_no}")
+                                if transient(rec2):
+                                    continue
+                                ledger.add(hh2)
+                                rows.append(to_row(rec2, post=root["post"], country=root["country"],
+                                                   source="Site", link=link, platform="USGOV",
+                                                   files=files, read_ok=ok, read_fail=fail,
+                                                   sol_hint=sol_no))
+                                time.sleep(PAGE_PAUSE)
+                            continue
+
+                        if not looks_like_solicitation(text):
                             continue
                         h = unit_hash(text)
                         if h in ledger:
@@ -585,6 +681,30 @@ def run(mode):
         traceback.print_exc()
         st.d["lastError"] = f"fatal: {type(e).__name__}: {str(e)[:110]}"
 
+    # ---------------- ESTIMATOR: last stage, only on cleared records ----------------
+    est_done = 0
+    try:
+        for r in rows:
+            if ai_calls >= MAX_AI_CALLS + 25 or (time.time() - t0) > TIME_BUDGET_S + 120:
+                break
+            if paused() or not estimator.should_estimate(r):
+                continue
+            st.beat(phase="estimate", currentJob=f"valuing: {str(r.get('title',''))[:50]}")
+            try:
+                e = estimator.estimate(r, r.get("evidence", ""), call)
+            except ai.AllExhausted:
+                break
+            except Exception:
+                continue
+            ai_calls += 1
+            if e:
+                r["estimate"] = e
+                if not (r.get("value") or "").strip():
+                    r["value"] = e["display"]      # show the estimate where no value was stated
+                est_done += 1
+    except Exception as e:
+        st.d["lastError"] = f"estimator: {str(e)[:80]}"
+
     # ---------------- merge + archive ----------------
     merged, new_c, chg_c = merge_records(prior_rows, rows, mode)
     merged = apply_expiry(merged)
@@ -601,7 +721,7 @@ def run(mode):
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
     st.d["aiDiag"] = rotator.diag()
     st.finish(note=f"done — {new_c} new, {chg_c} changed, {len(merged)} total, {ai_calls} AI calls")
-    print(f"[{mode}] found={found} new={new_c} changed={chg_c} total={len(merged)} "
+    print(f"[{mode}] found={found} new={new_c} changed={chg_c} total={len(merged)} est={est_done} "
           f"ai_calls={ai_calls} blocked={len(blocked_sites)} ledger={len(ledger)}")
 
 

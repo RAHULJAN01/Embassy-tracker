@@ -30,19 +30,19 @@
   /* toolbar — aligned row */
   .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
   .toolbar .grp{display:flex;gap:8px;align-items:center}
-  .btn{height:36px;font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border:1px solid #111;background:#111;color:#fff;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  .btn.sec{background:#fff;color:#111}
-  .btn.danger{border-color:var(--red);background:#fff;color:var(--red)}
-  .btn.on{background:#111;color:#fff;border-color:#111}
+  .btn{height:36px;font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn.sec{background:var(--bg);color:var(--ink)}
+  .btn.danger{border-color:var(--red);background:var(--bg);color:var(--red)}
+  .btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   .dd{position:relative}
-  .dd-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #111;border-radius:2px;min-width:300px;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .dd-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--bg);border:1px solid var(--ink);border-radius:2px;min-width:300px;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.18)}
   .dd.open .dd-menu{display:block}
-  .dd-menu button{display:block;width:100%;text-align:left;border:none;background:#fff;padding:11px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border-bottom:1px solid var(--line)}
+  .dd-menu button{display:block;width:100%;text-align:left;border:none;background:var(--bg);color:var(--ink);padding:11px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border-bottom:1px solid var(--line)}
   .dd-menu button:last-child{border-bottom:none}
   .dd-menu button:hover{background:var(--head)}
   .dd-menu .last{display:block;font-size:11px;color:var(--mute);font-weight:400;font-style:italic;margin-top:3px}
   .spacer{flex:1 1 auto}
-  .toolbar input,.toolbar select{height:36px;font-family:inherit;font-size:13px;padding:0 10px;border:1px solid var(--line2);border-radius:2px;background:#fff;color:#111}
+  .toolbar input,.toolbar select{height:36px;font-family:inherit;font-size:13px;padding:0 10px;border:1px solid var(--line2);border-radius:2px;background:var(--bg);color:var(--ink)}
   .toolbar input{min-width:230px}
   /* summary strip — equal aligned cells */
   .summary{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-top:none;margin-top:0}
@@ -50,7 +50,7 @@
   .summary .cell:last-child{border-right:none}
   .summary .big{font-size:30px;font-weight:700;line-height:1}
   .summary .cap{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--sub);font-weight:700;margin-top:6px}
-  .summary .cell.total{background:#111;color:#fff}
+  .summary .cell.total{background:var(--ink);color:var(--bg)}
   .summary .cell.total .cap{color:#ccc}
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25)}
   .dot.g{background:var(--green)} .dot.o{background:var(--orange)} .dot.r{background:var(--red)} .dot.n{background:#888}
@@ -59,9 +59,15 @@
   .help-banner{background:var(--red);color:#fff;border:1px solid #7f1414;padding:12px 16px;margin-top:0;font-size:13.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   .help-banner .hb-sites{font-weight:400;font-size:12.5px}
   .help-banner a{color:#fff;text-decoration:underline}
-  .help-banner .hb-x{cursor:pointer;background:rgba(255,255,255,.2);border:1px solid #fff;color:#fff;padding:2px 9px;font-size:12px}
+  .help-banner .hb-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    flex-wrap:wrap;padding:7px 0;border-top:1px solid rgba(255,255,255,.35)}
+  .help-banner .hb-cta{display:flex;gap:6px;flex-wrap:wrap}
+  .help-banner .hb-btn{font-family:inherit;font-size:11.5px;font-weight:700;padding:5px 10px;
+    border:1px solid #fff;background:transparent;color:#fff;cursor:pointer;text-decoration:none;white-space:nowrap}
+  .help-banner .hb-btn.solid{background:#fff;color:var(--red)}
+  .help-banner .hb-btn:hover{background:rgba(255,255,255,.18)}
   /* Mission Control panel */
-  .mc-panel{border:1px solid var(--line);border-top:none;background:#fafafa;padding:0}
+  .mc-panel{border:1px solid var(--line);border-top:none;background:var(--alt);color:var(--ink);padding:0}
   .mc-grid{display:grid;grid-template-columns:repeat(4,1fr)}
   .mc-grid .mc-cell{padding:12px 16px;border-right:1px solid var(--line);border-top:1px solid var(--line)}
   .mc-grid .mc-cell:nth-child(4n){border-right:none}
@@ -80,24 +86,15 @@
     --bg:#0d0d0d; --alt:#171717; --head:#1d1d1d; --black:#f0f0f0;
     --greenbg:#102a18; --orangebg:#2e1d0c; --redbg:#2c1212;
   }
-  body.night a,body.night a:visited{color:#f0f0f0}
-  body.night .section{border-color:#f0f0f0}
-  body.night .section > h2{background:#f0f0f0;color:#111}
-  body.night .summary .cell.total{background:#f0f0f0;color:#111}
-  body.night .summary .cell.total .cap{color:#333}
-  body.night table.reg{background:#111}
-  body.night table.reg thead th{background:var(--head);border-bottom-color:#f0f0f0}
-  body.night .btn{background:#f0f0f0;color:#111;border-color:#f0f0f0}
-  body.night .btn.sec{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
-  body.night .mc-panel{background:#141414}
+  body.night a,body.night a:visited{color:var(--ink)}
+  body.night .summary .cell.total .cap{color:#444}
+  body.night table.reg thead th{background:var(--head);border-bottom-color:var(--ink)}
   body.night .mc-bar{background:#2a2a2a;border-color:#555}
-  body.night .mc-bar > i{background:#f0f0f0}
-  body.night .dd-menu{background:#171717;border-color:#6a6a6a}
-  body.night .dd-menu button{color:#f0f0f0}
-  body.night .modal{background:#171717;color:#f0f0f0}
-  body.night input,body.night select{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
-  body.night .nav-tab{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
-  body.night .nav-tab.on{background:#f0f0f0;color:#111;border-color:#f0f0f0}
+  body.night .mc-bar > i{background:var(--ink)}
+  body.night .modal{background:var(--alt);color:var(--ink)}
+  body.night .sector-head{background:#232323}
+  body.night .row:hover{background:#1c1c1c}
+  body.night .dossier > td{background:var(--alt)}
   /* the masthead keeps its own colours in BOTH modes — mandatory */
   body.night .mast{background:#fff;border-bottom-color:#111}
   body.night .mast .bt .n{color:#111} body.night .mast .bt .s{color:#555}
@@ -105,38 +102,47 @@
   body.night .mast .btn.sec{background:#fff;color:#111;border-color:#111}
   /* ---------- platform / agency navigation ---------- */
   .navbar{display:flex;gap:0;border:1px solid var(--line);border-top:none;background:var(--alt);flex-wrap:wrap}
-  .nav-tab{appearance:none;background:#fff;color:#111;border:1px solid var(--line);border-top:none;border-left:none;
+  .nav-tab{appearance:none;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-top:none;border-left:none;
     font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
     padding:11px 20px;cursor:pointer}
-  .nav-tab.on{background:#111;color:#fff;border-color:#111}
+  .nav-tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   .subnav{display:flex;gap:0;border:1px solid var(--line);border-top:none;flex-wrap:wrap}
   .subnav .nav-tab{font-size:11.5px;padding:8px 16px;text-transform:none;letter-spacing:.2px;font-weight:700}
   /* verified badge */
   .vb{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border:1px solid;white-space:nowrap}
   .vb.ok{color:var(--green);border-color:var(--green);background:var(--greenbg)}
   .vb.no{color:var(--orange);border-color:var(--orange);background:var(--orangebg);cursor:pointer}
+  .estv{font-size:9px;font-weight:700;border:1px solid var(--orange);color:var(--orange);padding:1px 4px;letter-spacing:.3px}
+  /* set-aside tag under each title */
+  .sa{display:inline-block;margin-top:5px;font-size:9.5px;font-weight:700;letter-spacing:.4px;
+    padding:2px 6px;border:1px solid;white-space:normal;overflow-wrap:anywhere;line-height:1.3;max-width:100%}
+  .sa-ok{color:var(--green);border-color:var(--green);background:var(--greenbg)}
+  .sa-no{color:var(--red);border-color:var(--red);background:var(--redbg)}
+  .sa-mid{color:var(--orange);border-color:var(--orange);background:var(--orangebg)}
+  .sa-unk{color:var(--mute);border-color:var(--line2)}
   /* sector sub-heading inside a tier */
   .sector-head{background:var(--head);border-top:1px solid var(--line);padding:7px 14px;
     font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--sub)}
   body.night .sector-head{background:#232323}
   /* section */
-  .section{margin-top:22px;border:1px solid #111}
-  .section > h2{margin:0;background:#111;color:#fff;font-size:14px;font-weight:700;letter-spacing:.4px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .section{margin-top:22px;border:1px solid var(--ink)}
+  .section > h2{margin:0;background:var(--ink);color:var(--bg);font-size:14px;font-weight:700;letter-spacing:.4px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
   .section.collapsed table{display:none}
   /* register table — fixed alignment */
-  table.reg{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px;table-layout:fixed}
+  table.reg{width:100%;border-collapse:collapse;background:var(--bg);color:var(--ink);font-size:13.5px;table-layout:fixed}
   table.reg col.c-ref{width:122px} table.reg col.c-src{width:74px} table.reg col.c-pop{width:128px}
-  table.reg col.c-cls{width:104px} table.reg col.c-dl{width:98px} table.reg col.c-val{width:118px}
+  table.reg col.c-cls{width:124px} table.reg col.c-dl{width:98px} table.reg col.c-val{width:118px}
   table.reg col.c-st{width:70px} table.reg col.c-up{width:80px} table.reg col.c-act{width:116px}
   table.reg col.c-vf{width:86px}
-  table.reg thead th{background:var(--head);text-align:left;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--sub);padding:9px 10px;border-bottom:2px solid #111;white-space:normal;vertical-align:bottom;overflow:hidden}
+  table.reg thead th{background:var(--head);text-align:left;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--sub);padding:9px 10px;border-bottom:2px solid #111;white-space:normal;vertical-align:bottom;overflow:hidden;overflow-wrap:anywhere}
   table.reg thead th.r,table.reg td.num{text-align:right}
   table.reg tbody td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
   table.reg tbody tr.row{cursor:pointer}
   table.reg tbody tr.row:hover{background:var(--alt)}
   .ref{font-family:"Courier New",monospace;font-size:12px;color:var(--sub)}
   .ttl{font-weight:700;color:var(--ink);white-space:normal;display:block;overflow-wrap:anywhere}
-  table.reg td{overflow:hidden}
+  table.reg td{overflow:hidden;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+  table.reg td.ref,table.reg td.num,table.reg td.upd,table.reg td.act{overflow-wrap:normal;word-break:normal}
   table.reg td.tcell{white-space:normal;overflow:hidden}
   table.reg td.num{overflow:hidden;text-overflow:ellipsis}
   table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
@@ -157,15 +163,15 @@
   tr.dossier.hidden{display:none}
   .dwrap{padding:16px 18px}
   table.kv{width:100%;border-collapse:collapse;margin-bottom:12px;table-layout:fixed}
-  table.kv th{width:220px;text-align:left;vertical-align:top;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mute);font-weight:700;padding:7px 10px;border:1px solid var(--line);background:#fff}
-  table.kv td{padding:7px 10px;border:1px solid var(--line);background:#fff;font-size:13.5px}
-  .panel{border:1px solid #111;margin-top:12px;background:#fff}
-  .panel > h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:#fff;background:#111}
+  table.kv th{width:220px;text-align:left;vertical-align:top;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mute);font-weight:700;padding:7px 10px;border:1px solid var(--line);background:var(--bg)}
+  table.kv td{padding:7px 10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:13.5px}
+  .panel{border:1px solid var(--ink);margin-top:12px;background:var(--bg);color:var(--ink)}
+  .panel > h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;color:var(--bg);background:var(--ink)}
   .panel .pbody{padding:11px 13px;font-size:13.5px}
   .restr-row{padding:7px 0;border-bottom:1px solid var(--line)} .restr-row:last-child{border-bottom:none}
   .tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:2px;margin-right:8px;white-space:nowrap;border:1px solid}
   .tag.real{background:var(--redbg);color:var(--red);border-color:var(--red)} .tag.boiler{background:var(--orangebg);color:var(--orange);border-color:var(--orange)} .tag.fix{background:var(--greenbg);color:var(--green);border-color:var(--green)}
-  .quote{font-style:italic;background:#fff;border-left:4px solid var(--red);padding:9px 12px;margin:8px 0;color:#111}
+  .quote{font-style:italic;background:var(--bg);border-left:4px solid var(--red);padding:9px 12px;margin:8px 0;color:var(--ink)}
   .draft{background:#fff;border:1px dashed var(--line2);padding:11px 13px;font-size:12.5px;white-space:pre-wrap;margin-top:8px;font-style:italic}
   .srcline{font-size:11.5px;color:var(--mute);margin-top:10px;font-style:italic}
   .dec{margin-top:12px;display:flex;gap:8px;align-items:center}
@@ -182,7 +188,7 @@
   .modal .mb{padding:16px 18px;font-size:14px;color:var(--sub)}
   .modal .mf{padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
   .foot{color:var(--mute);font-size:12px;text-align:center;margin-top:34px;line-height:1.7;font-style:italic}
-  @media(max-width:820px){.hidecol{display:none}}
+  @media(max-width:1150px){.hidecol{display:none}}
 
   /* password gate */
   .gate{position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center}
@@ -288,6 +294,7 @@ function toggleShortlistView(){viewSaved=!viewSaved;document.getElementById('sho
 
 const SMAP={BID:{cls:"g",label:"SECTION I — BID-ELIGIBLE"},MID:{cls:"o",label:"SECTION II — CONDITIONAL (BID / NO-BID)"},NO:{cls:"r",label:"SECTION III — NON-ELIGIBLE (NO-BID)"},REVIEW:{cls:"n",label:"SECTION IV — UNDER REVIEW (needs a human look)"}};
 const SRCLABEL={"SAM":"SAM","Site":"SITE","Site+SAM":"SAM+SITE"};
+function fmtUsd(n){n=+n||0;return n>=1e6?('$'+(n/1e6).toFixed(2)+'M'):n>=1e3?('$'+Math.round(n/1e3)+'K'):('$'+n.toLocaleString());}
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function dleft(d){if(!d)return null;return Math.round((new Date(d)-new Date())/864e5);}
 
@@ -310,6 +317,14 @@ function dossier(s){
     h+='</div></div>';
   }
   if(s.route){h+=`<div class="panel"><h3>Route to Eligibility</h3><div class="pbody">${esc(s.route)}`;if(s.challengeDraft)h+=`<div class="draft">${esc(s.challengeDraft)}</div>`;h+='</div></div>';}
+  if(s.estimate){const e=s.estimate;
+    h+=`<div class="panel"><h3>Valuation — estimated, not stated</h3><div class="pbody">`
+      +`<div style="font-size:20px;font-weight:700;margin-bottom:6px">${esc(e.display||'')}`
+      +`<span style="font-size:11px;font-weight:400;color:var(--mute)"> &nbsp;likely ≈ ${esc(fmtUsd(e.likely))} &nbsp;·&nbsp; confidence ${Math.round((e.confidence||0)*100)}%</span></div>`
+      +`<div><b>Basis:</b> <i>${esc(e.basis||'')}</i></div>`
+      +(e.drivers&&e.drivers.length?`<div style="margin-top:5px"><b>Cost drivers:</b> ${e.drivers.map(esc).join(' · ')}</div>`:'')
+      +(e.currencyNote?`<div style="margin-top:5px"><b>Currency:</b> ${esc(e.currencyNote)}</div>`:'')
+      +`</div></div>`;}
   if(s.citation&&s.citation.quote){h+=`<div class="panel"><h3>Disqualifying Provision (Cited)</h3><div class="pbody"><div class="quote">“${esc(s.citation.quote)}”</div><div class="srcline">Source: ${esc(s.citation.doc)}</div></div></div>`;}
   h+=`<div class="srcline">Data source: ${esc(s.srcData||"")}</div>`;
   if(s.link)h+=`<div style="margin-top:8px"><a class="open-link" href="${esc(s.link)}" target="_blank" rel="noopener">Open official solicitation on source site ↗</a></div>`;
@@ -329,11 +344,11 @@ function rowHTML(s,i){
   return `<tr class="row" onclick="tgl(${i})">
     <td class="ref">${esc(s.sol||'—')}</td>
     <td><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
-    <td class="tcell"><span class="ttl">${esc(s.title)}</span></td>
+    <td class="tcell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}</td>
     <td class="pop tcell hidecol">${esc(s.post)}<br><span class="c">${esc(s.country)}</span></td>
     <td class="hidecol">${esc(s.type)}</td>
     <td class="num"><span class="due ${soon}">${esc(duetxt)}</span></td>
-    <td class="num valcell hidecol">${esc(s.value||'—')}</td>
+    <td class="num valcell hidecol">${s.estimate?`<span class="estv" title="Estimated by the valuation bot — not stated in the notice">EST</span> `:''}${esc(s.value||'—')}</td>
     <td><span class="status ${st}">${esc(s.status)}</span></td>
     <td>${verifyBadge(s)}</td>
     <td class="upd hidecol">${esc(s.updated||'—')}</td>
@@ -343,6 +358,17 @@ function rowHTML(s,i){
       <button class="ibtn" title="Re-verify this solicitation" onclick="event.stopPropagation();confirmAction('reverify','${esc(s.sol)}')">⟳</button>
     </td></tr>
     <tr class="dossier hidden" id="d${i}"><td colspan="11">${dossier(s)}</td></tr>`;
+}
+/* Set-aside the CO used — shown on EVERY row. Red when it locks us out,
+   green when the field is genuinely open, grey when the notice never says. */
+function setAsideTag(s){
+  const raw=(s.setaside||'').trim();
+  if(!raw) return `<span class="sa sa-unk" title="The notice does not state a set-aside">SET-ASIDE NOT STATED</span>`;
+  const l=raw.toLowerCase();
+  const open=/full and open|unrestricted|no set|none|open to all|全/.test(l);
+  const blocking=/8\(a\)|hubzone|sdvosb|wosb|edwosb|service-disabled|small business set|total small|local (firms|companies|vendors)|national(s)? only|domestic only/.test(l);
+  const cls=open?'sa-ok':(blocking?'sa-no':'sa-mid');
+  return `<span class="sa ${cls}" title="Set-aside stated by the contracting officer">${esc(raw.toUpperCase().slice(0,46))}</span>`;
 }
 // VERIFIED = every doc read, dates found, fields complete. Otherwise it's a button to fix it.
 function verifyBadge(s){
@@ -503,13 +529,20 @@ function renderHelp(){
   const el=document.getElementById('helpBanner');
   const sites=(BLOCKED&&BLOCKED.sites)||[];
   if(!sites.length){ el.style.display='none'; return; }
-  const list=sites.slice(0,6).map(b=>{
+  const list=sites.slice(0,8).map((b,i)=>{
     const need=b.need||b.reason||'blocked';
-    return `<a href="${esc(b.url)}" target="_blank" rel="noopener"><b>${esc(b.post||b.host)}</b></a> — ${esc(need)}`;
-  }).join('<br>');
-  el.innerHTML=`<span>⚠ HELP NEEDED — ${sites.length} platform${sites.length>1?'s':''} need you to open a door. `
-    +`Click through, do the human bit (sign in / enter the code / clear the challenge), then hit Run Update ▸ Live Status Check and the bots carry on from there.</span>`
-    +`<span class="hb-sites">${list}</span>`;
+    const label=esc(b.post||b.host);
+    return `<div class="hb-row">
+      <div><b>${label}</b> — ${esc(need)}</div>
+      <div class="hb-cta">
+        <a class="hb-btn" href="${esc(b.url)}" target="_blank" rel="noopener">① Open the portal ↗</a>
+        <button class="hb-btn" onclick="giveAccess('${esc(b.post||b.host)}')">② Give the bots my login ⚿</button>
+        <button class="hb-btn solid" onclick="doneHelping()">③ Done — bots, carry on ▶</button>
+      </div></div>`;
+  }).join('');
+  el.innerHTML=`<div style="width:100%">
+      <div style="margin-bottom:8px">⚠ HELP NEEDED — ${sites.length} platform${sites.length>1?'s':''} need a door opened.</div>
+      <div class="hb-sites" style="width:100%">${list}</div></div>`;
   el.style.display='flex';
 }
 
@@ -543,17 +576,55 @@ function fleetBar(){
      </div>`;
 }
 
+/* ---------- helping a stuck bot ---------- */
+const CRED_NAME={ "UN Global Marketplace":"UNGM", "UNGM":"UNGM", "UNDP Procurement Notices":"UNDP",
+                  "UNDP":"UNDP", "IOM Procurement":"IOM", "IOM":"IOM", "ILO Procurement":"ILO",
+                  "ILO":"ILO", "UNICEF Supply Tenders":"UNICEF", "UNICEF":"UNICEF" };
+function giveAccess(platform){
+  const slug=(CRED_NAME[platform]||platform.replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,10));
+  const url=`https://github.com/${REPO}/settings/secrets/actions/new`;
+  document.getElementById('mTitle').textContent='Give the bots access to '+platform;
+  document.getElementById('mBody').innerHTML=
+    `<p style="margin:0 0 10px">Your password is <b>never</b> put on this page — this page is public code. `
+    +`It goes into GitHub's encrypted secret store, which only the bots can read.</p>`
+    +`<p style="margin:0 0 8px"><b>Add these two secrets:</b></p>`
+    +`<table class="kv"><tr><th>Secret name</th><td><code>${slug}_USER</code></td></tr>`
+    +`<tr><th>Value</th><td>your ${platform} username / email</td></tr>`
+    +`<tr><th>Secret name</th><td><code>${slug}_PASS</code></td></tr>`
+    +`<tr><th>Value</th><td>your ${platform} password</td></tr></table>`
+    +`<p style="margin:10px 0 0"><a href="${url}" target="_blank" rel="noopener"><b>Open the secret page ↗</b></a> `
+    +`— add one, then click “New repository secret” again for the second.</p>`
+    +`<p style="margin:8px 0 0"><i>If this account uses a one-time code / 2FA, skip this and use `
+    +`“Open the portal” instead — sign in there, then press “Done”.</i></p>`;
+  document.getElementById('mOk').textContent='Got it';
+  document.getElementById('mOk').onclick=()=>{closeModal();document.getElementById('mOk').textContent='Confirm';};
+  document.getElementById('ovl').classList.add('on');
+}
+async function doneHelping(){
+  const r=await ghDispatch('crawl.yml',{mode:'live'});
+  alert(r&&r.ok ? "Bots notified — they'll retry that platform on this pass."
+                : "Couldn't reach the bots"+(r&&r.msg?" ("+r.msg+")":"")+".");
+}
+
 /* ---------- fleet control (STOP / RESUME) ----------
    The page talks to GitHub directly. Your token is kept ONLY in this browser
    (sessionStorage) — it is never in the repo, the page source, or the build. */
 function ghToken(){
-  let t=null; try{ t=sessionStorage.getItem('mm_gh'); }catch(e){}
+  let t=null; try{ t=localStorage.getItem('mm_gh'); }catch(e){}   // remembered, asked once
   if(!t){
-    t=prompt("One-time setup — paste a GitHub token with Actions access.\n\nIt is stored only in this browser tab and never leaves it except to call GitHub.");
-    if(t){ try{ sessionStorage.setItem('mm_gh', t.trim()); }catch(e){} }
+    t=prompt(
+      "ONE-TIME SETUP — control key\n\n"+
+      "This page has no server, so to actually command the bots it calls GitHub directly, "+
+      "and GitHub needs proof it's you. That proof is a token.\n\n"+
+      "Get one: github.com -> Settings -> Developer settings -> Personal access tokens -> "+
+      "Fine-grained tokens -> Generate. Repository access: this repo. Permission: Actions = Read and write.\n\n"+
+      "It is saved only in THIS browser. It is never in the page, the repo, or the build.\n\n"+
+      "Paste it here:");
+    if(t && t.trim()){ try{ localStorage.setItem('mm_gh', t.trim()); }catch(e){} } else { return null; }
   }
   return t?t.trim():null;
 }
+function forgetToken(){ try{ localStorage.removeItem('mm_gh'); }catch(e){} alert("Control key removed from this browser."); }
 async function ghDispatch(workflow, inputs){
   const t=ghToken(); if(!t) return {ok:false,msg:'no token'};
   const url=`https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`;
@@ -574,7 +645,7 @@ async function fleet(what){
       : '<b style="color:var(--green)">RESUME SENT</b> — bots pick up again on the next cycle.';
   } else {
     if(el) el.innerHTML='<b style="color:var(--red)">Failed:</b> '+esc(r.msg||'')+' — check the token has Actions write access.';
-    try{ sessionStorage.removeItem('mm_gh'); }catch(e){}
+    try{ localStorage.removeItem('mm_gh'); }catch(e){}
   }
 }
 

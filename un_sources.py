@@ -39,6 +39,15 @@ UN_SOURCES = [
     {"agency": "UNDP", "name": "UNDP Procurement Notices",
      "list": "https://procurement-notices.undp.org/",
      "base": "https://procurement-notices.undp.org"},
+    # UNDP runs supplier bidding on Oracle "Quantum" (eTendering); IOM uses an
+    # Oracle supplier portal too. Both are login-gated, so they go through the
+    # hold-the-door flow when credentials or a human session are available.
+    {"agency": "UNDP", "name": "UNDP Quantum (eTendering)",
+     "list": "https://estm.fa.em2.oraclecloud.com/fscmUI/faces/PrcPosRegisterSupplier",
+     "base": "https://estm.fa.em2.oraclecloud.com", "gated": True},
+    {"agency": "IOM", "name": "IOM Supplier Portal",
+     "list": "https://www.iom.int/procurement-opportunities",
+     "base": "https://www.iom.int", "gated": True},
     {"agency": "IOM", "name": "IOM Procurement",
      "list": "https://www.iom.int/procurement-opportunities",
      "base": "https://www.iom.int"},
