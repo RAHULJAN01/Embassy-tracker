@@ -150,9 +150,14 @@ class Rotator:
             self.providers.append(["openrouter", os.environ["OPENROUTER_API_KEY"], _openrouter, 0])
         self.calls = 0
         self._last_call = 0.0
+        self.errors = {}          # provider -> last error seen (for diagnostics)
+        self.ok = {}              # provider -> successful call count
 
     def names(self):
         return [p[0] for p in self.providers]
+
+    def diag(self):
+        return {"ok": dict(self.ok), "errors": dict(self.errors)}
 
     def _pace(self):
         gap = time.time() - self._last_call
@@ -177,15 +182,19 @@ class Rotator:
                 parsed = _parse_json(raw)
                 if parsed is None:
                     last_err = f"{name}: unparseable response"
+                    self.errors[name] = last_err
                     continue                      # try another provider rather than give up
                 parsed["_provider"] = name
+                self.ok[name] = self.ok.get(name, 0) + 1
                 return parsed, ""
             except _Quota as e:
                 p[3] = time.time() + COOL_SECONDS
                 last_err = str(e)
+                self.errors[name] = last_err
                 continue
             except Exception as e:
-                last_err = f"{name}: {str(e)[:80]}"
+                last_err = f"{name}: {str(e)[:120]}"
+                self.errors[name] = last_err
                 continue
         return None, (last_err, tried)
 

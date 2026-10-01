@@ -404,6 +404,7 @@ def run(mode):
     save(DATA, {"meta": meta, "solicitations": merged})
     save(STATE, state)
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
+    st.d["aiDiag"] = rotator.diag()      # per-provider ok/error counts for diagnostics
     st.finish(note=f"done — {new_c} new, {chg_c} changed, {len(merged)} total, {ai_calls} AI calls")
     print(f"[{mode}] found={found} new={new_c} changed={chg_c} total={len(merged)} "
           f"ai_calls={ai_calls} blocked={len(blocked_sites)}")
@@ -449,8 +450,30 @@ def tally(rows):
     return c
 
 
+def probe():
+    """Fast provider self-test: one trivial call per provider, write results to status.json."""
+    rotator, call = ai.make_caller()
+    prompt = ('Return ONLY this JSON: {"tier":"BID","confidence":0.9}')
+    results = {}
+    for p in rotator.providers:
+        name, key, fn = p[0], p[1], p[2]
+        try:
+            raw = fn(key, prompt)
+            parsed = ai._parse_json(raw)
+            results[name] = "OK" if parsed else f"reply not JSON: {str(raw)[:80]}"
+        except Exception as e:
+            results[name] = f"ERROR: {str(e)[:140]}"
+    out = {"mode": "probe", "startedAt": now_utc(), "heartbeat": now_utc(),
+           "currentJob": "provider self-test", "running": False,
+           "providers": rotator.names(), "probe": results}
+    save(STATUS, out)
+    print("probe:", json.dumps(results, indent=1))
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "live"
+    if mode == "probe":
+        probe(); sys.exit(0)
     if mode not in ("roots", "live"):
-        print("usage: crawler.py [roots|live]"); sys.exit(1)
+        print("usage: crawler.py [roots|live|probe]"); sys.exit(1)
     run(mode)

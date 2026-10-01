@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "roots = deep re-crawl slice | live = quick status check"
+        description: "roots = deep re-crawl | live = quick check | probe = provider self-test"
         type: choice
-        options: [roots, live]
+        options: [roots, live, probe]
         default: roots
 permissions:
   contents: write
