@@ -1,54 +1,19 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-01 14:34 UTC",
- "heartbeat": "2026-10-01 14:59 UTC",
- "currentJob": "done — 6 new, 2 changed, 15 total, 22 AI calls",
- "phase": "embassy",
- "done": 8,
- "queued": 150,
- "found": 62,
- "aiCalls": 22,
- "aiBudget": 120,
- "providers": [
-  "gemini",
-  "groq",
-  "mistral",
-  "openrouter"
- ],
- "blockedSites": [],
- "coverage": {
-  "Bulgaria": 4,
-  "Croatia": 9,
-  "Cyprus": 4,
-  "Czech Republic": 2,
-  "Denmark": 8,
-  "Estonia": 2,
-  "Finland": 1,
-  "France": 1,
-  "Georgia": 1,
-  "Germany": 4,
-  "Greece": 1,
-  "Hungary": 0,
-  "Iceland": 6,
-  "Ireland": 3,
-  "Italy": 12,
-  "Kosovo": 5,
-  "Latvia": 2
- },
- "etaNote": "",
- "lastError": "",
+ "startedAt": "",
+ "heartbeat": "",
+ "currentJob": "fleet run complete",
+ "found": 0,
+ "queued": 0,
+ "aiCalls": 0,
+ "aiBudget": 0,
+ "providers": [],
+ "coverage": {},
+ "bots": 0,
  "running": false,
+ "lastError": "",
  "aiDiag": {
-  "ok": {
-   "groq": 7,
-   "openrouter": 1
-  },
-  "errors": {
-   "gemini": "gemini 429",
-   "groq": "openai/gpt-oss-120b 429",
-   "mistral": "mistral-small-2603 429",
-   "openrouter": "qwen/qwen3.8-27b:free 200"
-  }
- },
- "finishedAt": "2026-10-01 14:59 UTC"
+  "ok": {},
+  "errors": {}
+ }
 }
