@@ -73,3 +73,35 @@ FIXED: Est Value no longer overlaps Status.
 4. Add UN public sources (UNGM/IOM/UNDP/ILO) + platform/agency tags.
 5. Add SAM domestic vs overseas split.
 6. UI: platform tabs, agency sub-sections (non-empty only), sector sub-grouping.
+
+---
+
+## v3 additions (locked in)
+
+### Data-quality fixes (these are real bugs seen in live output)
+- **One solicitation = one record.** A solicitation with 5 attachments must NOT become 5 rows.
+  The solicitation PAGE is the unit; its files are attachments of that unit. Group by parent
+  page / solicitation number, merge all file text into one dossier, emit ONE record.
+- **Dates are mandatory.** Bot must extract posted / closing / Q&A dates from the page AND from
+  every attachment (multi-format regex sweep + AI pass + fallback). "No date" is a failure, not
+  an acceptable result. If still unfound after all passes → record is marked UNVERIFIED, not blank.
+- **Expired = not active.** Any solicitation past its submission deadline leaves the active list.
+
+### VERIFIED indicator (per solicitation)
+Three states, shown on every row across every platform:
+- **VERIFIED** — all attachments read, dates found, key fields complete, citation checked.
+- **PARTIAL / UNVERIFIED** — bot could not read a doc, find dates, or complete fields.
+  The indicator becomes a **[Verify]** button → triggers a targeted re-scan of that one record.
+
+### Mission Control: STOP / RESUME switch
+Master kill-switch + resume for all bots, in Mission Control. Backed by a `control.json`
+flag the crawler reads at start and between batches — paused = exit cleanly, resume = continue
+from checkpoint. (In-page control needs a GitHub token held in the browser — see open question.)
+
+### Night mode
+Toggle that inverts the whole page (black↔white). **The top masthead — LLC logo, flag, title bar —
+is EXCLUDED and never changes in either mode.** Status colours (red/orange/green) stay as-is.
+
+### UN: authenticated, not public-only
+User chose full authenticated access (UNGM / IOM / UNDP / ILO) and will hold the door.
+Constraint to resolve: a cloud runner cannot borrow a local browser session — see open question.
