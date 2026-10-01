@@ -247,7 +247,16 @@ def sam_search(cfg, limit=60):
     params = {"api_key": key, "limit": str(limit), "postedFrom": pf, "postedTo": pt, "ptype": "o,k,r"}
     if SAM_NAICS:
         params["ncode"] = SAM_NAICS.split(",")[0]
-    raw, ct, final = fetcher.get(cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params))
+    try:
+        raw, ct, final = fetcher.get(cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params))
+    except fetcher.Blocked as b:
+        # SAM rate-limits hard. Never let that take the whole run down — the
+        # UN and embassy phases still have work to do.
+        print(f"SAM unavailable ({b}) — skipping SAM this slice")
+        return []
+    except Exception as e:
+        print(f"SAM error ({str(e)[:80]}) — skipping SAM this slice")
+        return []
     if not raw:
         return []
     try:

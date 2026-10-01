@@ -41,6 +41,34 @@ def better(a, b):
     return a if score(a) >= score(b) else b
 
 
+def normalize(r):
+    """Backfill fields on records written before the v2 schema so they still
+    slot into the platform / sector / archive structure."""
+    r.setdefault("platform", "USGOV")
+    r.setdefault("agency", "")
+    r.setdefault("sector", "")
+    r.setdefault("domestic", False)
+    r.setdefault("files", [])
+    r.setdefault("fileCount", len(r.get("files") or []))
+    r.setdefault("verifyNotes", [])
+    if not r.get("verified"):
+        notes = []
+        if not r.get("deadline"): notes.append("no closing date found")
+        if r.get("tier") == "REVIEW": notes.append("not adjudicated")
+        r["verified"] = "VERIFIED" if not notes else "UNVERIFIED"
+        r["verifyNotes"] = notes
+    dl = r.get("deadline") or ""
+    cancelled = str(r.get("status", "")).lower() in ("cancelled", "canceled", "removed")
+    if (dl and dl < today()) or cancelled:
+        r["archived"] = True
+        if dl and dl < today() and str(r.get("status", "")) in ("Active", "Check", ""):
+            r["status"] = "Expired"
+        r.setdefault("archivedOn", today())
+    else:
+        r["archived"] = bool(r.get("archived", False)) if not dl else False
+    return r
+
+
 def main(shard_dir):
     base = HERE / "data.json"
     merged = {}
@@ -75,7 +103,7 @@ def main(shard_dir):
         if sstate.get("root_idx"):
             state["root_idx"] = sstate["root_idx"]
 
-    rows = list(merged.values())
+    rows = [normalize(r) for r in merged.values()]
 
     # fleet-wide status roll-up for Mission Control
     agg = {"mode": (statuses[0].get("mode") if statuses else "roots"),
