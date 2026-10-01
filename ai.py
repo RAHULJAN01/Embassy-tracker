@@ -56,10 +56,18 @@ def _parse_json(text):
 
 
 def _post(url, headers, payload):
+    """POST JSON. Returns (status, body_text) even on HTTP errors (body captured safely)."""
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return r.status, r.read().decode("utf-8", "replace")
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        return e.code, body
 
 
 def _is_quota(status, body):
@@ -71,15 +79,27 @@ def _is_quota(status, body):
 
 
 # ---------- provider adapters: each returns raw model text or raises ----------
-def _gemini(key, prompt, model="gemini-1.5-flash"):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-    payload = {"contents": [{"parts": [{"text": prompt}]}],
-               "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}}
-    st, body = _post(url, {"Content-Type": "application/json"}, payload)
-    if _is_quota(st, body):
-        raise _Quota(f"gemini {st}")
-    d = json.loads(body)
-    return d["candidates"][0]["content"]["parts"][0]["text"]
+# Gemini free models to try in order (first that works wins; handles deprecations/404).
+GEMINI_MODELS = [m for m in [os.getenv("GEMINI_MODEL", "")] if m] + [
+    "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest", "gemini-1.5-flash-8b"]
+
+
+def _gemini(key, prompt):
+    last = ""
+    for model in GEMINI_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        payload = {"contents": [{"parts": [{"text": prompt}]}],
+                   "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}}
+        st, body = _post(url, {"Content-Type": "application/json"}, payload)
+        if _is_quota(st, body):
+            raise _Quota(f"gemini {st}")
+        if st == 404:                       # model not served -> try the next one
+            last = f"404 {model}"; continue
+        if st != 200:
+            raise RuntimeError(f"gemini HTTP {st}: {body[:120]}")
+        d = json.loads(body)
+        return d["candidates"][0]["content"]["parts"][0]["text"]
+    raise RuntimeError(f"gemini: no model served ({last})")
 
 
 def _openai_style(url, key, model, prompt):
@@ -89,6 +109,8 @@ def _openai_style(url, key, model, prompt):
                            "Authorization": f"Bearer {key}"}, payload)
     if _is_quota(st, body):
         raise _Quota(f"{model} {st}")
+    if st != 200:
+        raise RuntimeError(f"{model} HTTP {st}: {body[:120]}")
     d = json.loads(body)
     return d["choices"][0]["message"]["content"]
 
@@ -154,7 +176,10 @@ class Rotator:
                 last_err = str(e)
                 continue
             except urllib.error.HTTPError as e:
-                b = e.read().decode("replace") if hasattr(e, "read") else ""
+                try:
+                    b = e.read().decode("utf-8", "replace")
+                except Exception:
+                    b = ""
                 if _is_quota(e.code, b):
                     p[3] = now + COOL_SECONDS
                     last_err = f"{name} {e.code}"
