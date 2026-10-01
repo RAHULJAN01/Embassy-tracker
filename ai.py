@@ -87,7 +87,8 @@ def _discover(provider, url, key, prefer, want_free=False):
                 if want_free and not mid.endswith(":free"):
                     continue
                 low = mid.lower()
-                if any(x in low for x in ("whisper", "tts", "embed", "guard", "vision", "image")):
+                if any(x in low for x in ("whisper", "tts", "embed", "guard", "vision", "image",
+                                          "orpheus", "audio", "speech", "parler", "sauce", "rerank")):
                     continue
                 ids.append(mid)
         except Exception:
@@ -167,8 +168,8 @@ def _openai_style(url, key, models, prompt, extra_headers=None):
         st, body = _post(url, headers, payload)
         if _is_quota(st, body):
             raise _Quota(f"{model} {st}")
-        if st == 404:
-            last = f"404 {model}"; continue
+        if st in (400, 404):                 # model-specific issue (gone/terms/unavailable) -> next
+            last = f"{st} {model}: {body[:60]}"; continue
         if st != 200:
             raise RuntimeError(f"{model} HTTP {st}: {body[:120]}")
         d = json.loads(body)
@@ -178,7 +179,7 @@ def _openai_style(url, key, models, prompt, extra_headers=None):
 
 def _groq(key, prompt):
     models = _discover("groq", "https://api.groq.com/openai/v1/models", key,
-                       prefer=["llama-3.3-70b", "llama-3.1-8b-instant", "llama-3", "mixtral"]) \
+                       prefer=["llama-3.3-70b", "llama-3.1-8b-instant", "gpt-oss", "llama-3", "mixtral", "gemma"]) \
         or ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
     return _openai_style("https://api.groq.com/openai/v1/chat/completions", key, models[:5], prompt)
 
