@@ -465,7 +465,8 @@ def probe():
             results[name] = f"ERROR: {str(e)[:140]}"
     out = {"mode": "probe", "startedAt": now_utc(), "heartbeat": now_utc(),
            "currentJob": "provider self-test", "running": False,
-           "providers": rotator.names(), "probe": results}
+           "providers": rotator.names(), "probe": results,
+           "discovered": {k: v[:3] for k, v in ai._MODEL_CACHE.items()}}
     save(STATUS, out)
     print("probe:", json.dumps(results, indent=1))
 

@@ -57,6 +57,51 @@ def _parse_json(text):
     return None
 
 
+def _get(url, headers):
+    """GET JSON (for model discovery). Returns (status, body_text)."""
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, e.read().decode("utf-8", "replace")
+        except Exception:
+            return e.code, ""
+
+
+_MODEL_CACHE = {}
+
+
+def _discover(provider, url, key, prefer, want_free=False):
+    """Query a provider's /models endpoint and pick a usable chat model.
+    `prefer` is an ordered list of substrings to prioritise. Cached per process."""
+    if provider in _MODEL_CACHE:
+        return _MODEL_CACHE[provider]
+    st, body = _get(url, {"Authorization": f"Bearer {key}", "User-Agent": _UA})
+    ids = []
+    if st == 200:
+        try:
+            for m in json.loads(body).get("data", []):
+                mid = m.get("id", "")
+                if want_free and not mid.endswith(":free"):
+                    continue
+                low = mid.lower()
+                if any(x in low for x in ("whisper", "tts", "embed", "guard", "vision", "image")):
+                    continue
+                ids.append(mid)
+        except Exception:
+            pass
+    # order by preference
+    ranked = [m for p in prefer for m in ids if p in m.lower()] + ids
+    seen, out = set(), []
+    for m in ranked:
+        if m not in seen:
+            seen.add(m); out.append(m)
+    _MODEL_CACHE[provider] = out
+    return out
+
+
 def _post(url, headers, payload):
     """POST JSON. Returns (status, body_text) even on HTTP errors (body captured safely)."""
     data = json.dumps(payload).encode("utf-8")
@@ -132,23 +177,25 @@ def _openai_style(url, key, models, prompt, extra_headers=None):
 
 
 def _groq(key, prompt):
-    return _openai_style("https://api.groq.com/openai/v1/chat/completions",
-                         key, ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"], prompt)
+    models = _discover("groq", "https://api.groq.com/openai/v1/models", key,
+                       prefer=["llama-3.3-70b", "llama-3.1-8b-instant", "llama-3", "mixtral"]) \
+        or ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+    return _openai_style("https://api.groq.com/openai/v1/chat/completions", key, models[:5], prompt)
 
 
 def _mistral(key, prompt):
-    return _openai_style("https://api.mistral.ai/v1/chat/completions",
-                         key, ["mistral-small-latest", "open-mistral-7b"], prompt)
-
-
-# OpenRouter free models change over time; try several known-free ones in order.
-_OR_MODELS = ["meta-llama/llama-3.1-8b-instruct:free", "google/gemma-2-9b-it:free",
-              "mistralai/mistral-7b-instruct:free", "qwen/qwen-2.5-7b-instruct:free",
-              "meta-llama/llama-3.2-3b-instruct:free"]
+    models = _discover("mistral", "https://api.mistral.ai/v1/models", key,
+                       prefer=["mistral-small", "open-mistral", "ministral", "mistral"]) \
+        or ["mistral-small-latest", "open-mistral-7b"]
+    return _openai_style("https://api.mistral.ai/v1/chat/completions", key, models[:5], prompt)
 
 
 def _openrouter(key, prompt):
-    return _openai_style("https://openrouter.ai/api/v1/chat/completions", key, _OR_MODELS, prompt,
+    models = _discover("openrouter", "https://openrouter.ai/api/v1/models", key,
+                       prefer=["llama-3.3-70b", "llama-3.1", "deepseek", "qwen", "gemma"],
+                       want_free=True) \
+        or ["meta-llama/llama-3.1-8b-instruct:free"]
+    return _openai_style("https://openrouter.ai/api/v1/chat/completions", key, models[:6], prompt,
                          extra_headers={"HTTP-Referer": "https://rahuljan01.github.io/Embassy-tracker/",
                                         "X-Title": "Madison Main Solicitation Register"})
 
