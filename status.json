@@ -1,7 +1,7 @@
 {
  "mode": "probe",
- "startedAt": "2026-10-01 13:32 UTC",
- "heartbeat": "2026-10-01 13:32 UTC",
+ "startedAt": "2026-10-01 13:34 UTC",
+ "heartbeat": "2026-10-01 13:34 UTC",
  "currentJob": "provider self-test",
  "running": false,
  "providers": [
@@ -12,8 +12,8 @@
  ],
  "probe": {
   "gemini": "ERROR: gemini 429",
-  "groq": "ERROR: llama-3.3-70b-versatile HTTP 403: error code: 1010\n",
+  "groq": "ERROR: gemma2-9b-it HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to htt",
   "mistral": "ERROR: mistral-small-latest 429",
-  "openrouter": "ERROR: meta-llama/llama-3.3-70b-instruct:free HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now "
+  "openrouter": "ERROR: no model served (404 meta-llama/llama-3.2-3b-instruct:free)"
  }
 }
