@@ -70,6 +70,57 @@ def better(a, b):
     return a if score(a) >= score(b) else b
 
 
+_INDEX_PATHS = ("/business/", "/business", "/procurement/", "/procurement", "/jobs/",
+                "/tenders/", "/opportunities/", "/doing-business")
+
+
+_NAV_TITLES = ("jump into the main content", "skip to main content", "doing business in",
+               "procurement seminar", "business ready", "home page", "search results",
+               "privacy policy", "contact us")
+_SOL_OK = re.compile(r"^[A-Z0-9][A-Z0-9\-/_.#]{4,}$", re.I)
+
+
+def clean_sol(r):
+    """A reference number is a reference number. If an earlier pass shoved a whole
+    sentence in there, drop it so it can't masquerade as an identity."""
+    sol = (r.get("sol") or "").strip()
+    if not sol:
+        return r
+    if len(sol) > 30 or (" " in sol and not _SOL_OK.match(sol.replace(" ", ""))):
+        r["sol"] = ""
+    elif not _SOL_OK.match(sol.replace(" ", "")):
+        r["sol"] = ""
+    return r
+
+
+def is_junk(r):
+    """A record that is not actually a solicitation — an index/landing page that an
+    earlier crawl stored by mistake. These get removed from the register entirely,
+    so the operator is never asked to 'verify' something that was never a notice."""
+    link = (r.get("link") or "").lower().split("?")[0].rstrip("/")
+    title = (r.get("title") or "").strip()
+    sol = (r.get("sol") or "").strip()
+    has_real_sol = bool(sol) and sol.lower() not in ("none", "n/a", "-")
+
+    # the link IS the procurement index page itself, with nothing identifying a notice
+    for p in _INDEX_PATHS:
+        if link.endswith(p.rstrip("/")) and not has_real_sol:
+            return True
+    # off-site pages that were never this mission's solicitation
+    if "usembassy.gov" not in link and "sam.gov" not in link and "ungm.org" not in link \
+       and "undp.org" not in link and "iom.int" not in link and "ilo.org" not in link \
+       and "unicef.org" not in link and link:
+        if not has_real_sol:
+            return True
+    t = title.lower()
+    if any(t.startswith(n) or n in t for n in _NAV_TITLES) and not r.get('deadline'):
+        return True
+    # nothing to show and nothing to chase
+    if (not title or title.startswith("(untitled")) and not has_real_sol and not r.get("deadline"):
+        return True
+    return False
+
+
 def normalize(r):
     """Backfill fields on records written before the v2 schema so they still
     slot into the platform / sector / archive structure."""
@@ -133,7 +184,8 @@ def main(shard_dir):
         if sstate.get("root_idx"):
             state["root_idx"] = sstate["root_idx"]
 
-    rows = [normalize(r) for r in merged.values()]
+    rows = [normalize(clean_sol(r)) for r in merged.values() if not is_junk(clean_sol(r))]
+    dropped = len(merged) - len(rows)
 
     # fleet-wide status roll-up for Mission Control
     agg = {"mode": (statuses[0].get("mode") if statuses else "roots"),
@@ -177,7 +229,7 @@ def main(shard_dir):
     (HERE / "blocked.json").write_text(json.dumps({"sites": blocked, "updated": stamp},
                                                   indent=1, ensure_ascii=False))
     (HERE / "state.json").write_text(json.dumps(state, indent=1))
-    print(f"merged {len(shard_dirs)} shards -> {len(rows)} records "
+    print(f"merged {len(shard_dirs)} shards -> {len(rows)} records (dropped {dropped} non-solicitations) "
           f"(active {counts['active']}, archived {counts['archived']}, ledger {len(ledger)})")
 
 
