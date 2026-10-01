@@ -104,32 +104,53 @@ def _gemini(key, prompt):
     raise RuntimeError(f"gemini: no model served ({last})")
 
 
-def _openai_style(url, key, model, prompt):
-    payload = {"model": model, "temperature": 0.1,
-               "messages": [{"role": "user", "content": prompt}]}
-    st, body = _post(url, {"Content-Type": "application/json",
-                           "Authorization": f"Bearer {key}"}, payload)
-    if _is_quota(st, body):
-        raise _Quota(f"{model} {st}")
-    if st != 200:
-        raise RuntimeError(f"{model} HTTP {st}: {body[:120]}")
-    d = json.loads(body)
-    return d["choices"][0]["message"]["content"]
+_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+
+def _openai_style(url, key, models, prompt, extra_headers=None):
+    """OpenAI-compatible chat call. `models` is a list tried in order (404 -> next).
+    Sends a browser User-Agent so Cloudflare (Groq cf-1010) doesn't block the call."""
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {key}",
+               "User-Agent": _UA}
+    if extra_headers:
+        headers.update(extra_headers)
+    last = ""
+    for model in models:
+        payload = {"model": model, "temperature": 0.1,
+                   "messages": [{"role": "user", "content": prompt}]}
+        st, body = _post(url, headers, payload)
+        if _is_quota(st, body):
+            raise _Quota(f"{model} {st}")
+        if st == 404:
+            last = f"404 {model}"; continue
+        if st != 200:
+            raise RuntimeError(f"{model} HTTP {st}: {body[:120]}")
+        d = json.loads(body)
+        return d["choices"][0]["message"]["content"]
+    raise RuntimeError(f"no model served ({last})")
 
 
 def _groq(key, prompt):
     return _openai_style("https://api.groq.com/openai/v1/chat/completions",
-                         key, "llama-3.3-70b-versatile", prompt)
+                         key, ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"], prompt)
 
 
 def _mistral(key, prompt):
     return _openai_style("https://api.mistral.ai/v1/chat/completions",
-                         key, "mistral-small-latest", prompt)
+                         key, ["mistral-small-latest", "open-mistral-7b"], prompt)
+
+
+# OpenRouter free models change over time; try several known-free ones in order.
+_OR_MODELS = ["meta-llama/llama-3.1-8b-instruct:free", "google/gemma-2-9b-it:free",
+              "mistralai/mistral-7b-instruct:free", "qwen/qwen-2.5-7b-instruct:free",
+              "meta-llama/llama-3.2-3b-instruct:free"]
 
 
 def _openrouter(key, prompt):
-    return _openai_style("https://openrouter.ai/api/v1/chat/completions",
-                         key, "meta-llama/llama-3.3-70b-instruct:free", prompt)
+    return _openai_style("https://openrouter.ai/api/v1/chat/completions", key, _OR_MODELS, prompt,
+                         extra_headers={"HTTP-Referer": "https://rahuljan01.github.io/Embassy-tracker/",
+                                        "X-Title": "Madison Main Solicitation Register"})
 
 
 class _Quota(Exception):
