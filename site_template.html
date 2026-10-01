@@ -503,8 +503,12 @@ function renderHelp(){
   const el=document.getElementById('helpBanner');
   const sites=(BLOCKED&&BLOCKED.sites)||[];
   if(!sites.length){ el.style.display='none'; return; }
-  const list=sites.slice(0,6).map(b=>`<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.post||b.host)}</a>`).join(', ');
-  el.innerHTML=`<span>⚠ HELP NEEDED — ${sites.length} site${sites.length>1?'s':''} blocked the bot. Open the link, clear the block (sign in / pass the challenge), then run a Live Status Check so it can resume.</span>`
+  const list=sites.slice(0,6).map(b=>{
+    const need=b.need||b.reason||'blocked';
+    return `<a href="${esc(b.url)}" target="_blank" rel="noopener"><b>${esc(b.post||b.host)}</b></a> — ${esc(need)}`;
+  }).join('<br>');
+  el.innerHTML=`<span>⚠ HELP NEEDED — ${sites.length} platform${sites.length>1?'s':''} need you to open a door. `
+    +`Click through, do the human bit (sign in / enter the code / clear the challenge), then hit Run Update ▸ Live Status Check and the bots carry on from there.</span>`
     +`<span class="hb-sites">${list}</span>`;
   el.style.display='flex';
 }

@@ -18,7 +18,7 @@ v2 rules, per Rahul:
 """
 import os, sys, json, time, hashlib, re, pathlib, datetime, urllib.parse
 
-import analyzer, ai, fetcher
+import analyzer, ai, fetcher, un_sources
 
 HERE = pathlib.Path(__file__).parent
 ROOTS = HERE / "roots.json"
@@ -100,6 +100,17 @@ def root_host(url):
         return urllib.parse.urlparse(url).netloc.lower()
     except Exception:
         return ""
+
+
+def _raise_help(blocked_sites, blocked_hosts, st, label, url, need, platform="USGOV"):
+    """Record a hold-the-door request so the red HELP banner can ask Rahul."""
+    host = root_host(url) or label
+    if host in blocked_hosts:
+        return
+    blocked_sites.append({"host": host, "post": label, "platform": platform,
+                          "url": url, "reason": need, "need": need, "since": now_utc()})
+    blocked_hosts.add(host)
+    st.beat(blockedSites=blocked_sites)
 
 
 SOCIAL = ("x.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com",
@@ -408,6 +419,57 @@ def run(mode):
                                files=(op.get("resourceLinks") or []), read_ok=ok, read_fail=fail,
                                sol_hint=op.get("solicitationNumber", "")))
             time.sleep(PAGE_PAUSE)
+
+        # ---------------- United Nations (UNGM / UNDP / IOM / ILO / UNICEF) ----------------
+        un_srcs = [s for i, s in enumerate(un_sources.UN_SOURCES)
+                   if SHARDS <= 1 or i % SHARDS == SHARD]
+        for src in un_srcs:
+            if not budget_left():
+                break
+            agency = src["agency"]
+            st.beat(phase="un", currentJob=f"UN · {agency}")
+            opener = None
+            try:
+                if un_sources.has_credentials(agency):
+                    try:
+                        opener = un_sources.try_login(agency)
+                        un_sources.keep_alive(opener, agency)      # stop the session timing out
+                    except un_sources.HoldTheDoor as h:
+                        _raise_help(blocked_sites, blocked_hosts, st, agency, h.url or src["list"],
+                                    h.need, platform="UN")
+                        opener = None                               # carry on with public access
+                notices = un_sources.list_notices(src)
+            except un_sources.HoldTheDoor as h:
+                _raise_help(blocked_sites, blocked_hosts, st, agency, h.url or src["list"],
+                            h.need, platform="UN")
+                continue
+            except Exception as e:
+                st.d["lastError"] = f"{agency}: {str(e)[:80]}"
+                continue
+
+            for url, title in notices[:10]:
+                if not budget_left():
+                    break
+                text, atts = un_sources.fetch_notice(url, opener)
+                if len(text) < 180 or not looks_like_solicitation(text):
+                    continue
+                h = unit_hash(text)
+                if h in ledger:
+                    continue
+                found += 1
+                try:
+                    rec = adjudicate_unit(text, f"{agency}: {title[:40]}")
+                except ai.AllExhausted:
+                    st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
+                    break
+                if transient(rec):
+                    continue
+                ledger.add(h)
+                rows.append(to_row(rec, post=src["name"], country="", source="UN",
+                                   link=url, platform="UN", agency=agency,
+                                   files=atts, read_ok=1 + len(atts), read_fail=0,
+                                   sol_hint=title[:60]))
+                time.sleep(PAGE_PAUSE)
 
         # ---------------- Embassy sites (sharded + resumable) ----------------
         roots = cfg.get("roots", [])
