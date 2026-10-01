@@ -7,7 +7,7 @@ disjoint by construction. This merges them and still de-duplicates defensively
 (by solicitation number, then by link) so a solicitation can never appear twice
 even if two bots happened to see it.
 """
-import sys, json, pathlib, datetime
+import sys, re, json, pathlib, datetime
 
 HERE = pathlib.Path(__file__).parent
 
@@ -24,7 +24,12 @@ def load(p, d):
 
 
 def key_of(r):
-    return (r.get("sol") or "").strip().upper() or (r.get("link") or "")
+    """Normalised identity: '#19CA1026Q0002', '19CA1026Q0002' and 'RFQ 19CA1026Q0002'
+    are the SAME solicitation and must never become two rows."""
+    sol = (r.get("sol") or "").upper()
+    sol = re.sub(r"^(RFQ|RFP|ITB|IFB|SOL|NO\.?|#)[\s:#-]*", "", sol.strip())
+    sol = re.sub(r"[^A-Z0-9]", "", sol)
+    return sol or (r.get("link") or "")
 
 
 def better(a, b):

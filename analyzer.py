@@ -107,6 +107,12 @@ _DATE_PATTERNS = [
     (re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(20\d{2})\b"), "dMy"),
     # October 20, 2026 / Oct 20 2026
     (re.compile(r"\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(20\d{2})\b"), "Mdy"),
+    # 18-Aug-25 / 18 Aug 25   (two-digit year)
+    (re.compile(r"\b(\d{1,2})[-\s]([A-Za-z]{3,9})\.?[-\s](\d{2})\b(?!\d)"), "dMyy"),
+    # 20.10.2026  (dotted, common in EU/UN docs)
+    (re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b"), "dmy"),
+    # 2026.10.20
+    (re.compile(r"\b(20\d{2})\.(\d{1,2})\.(\d{1,2})\b"), "ymd"),
 ]
 
 
@@ -141,6 +147,9 @@ def find_dates(text):
                 iso = _mk(c, b, a)
             elif kind == "dMy":
                 iso = _mk(c, _month_num(b), a)
+            elif kind == "dMyy":
+                mn = _month_num(b)
+                iso = _mk("20" + c, mn, a) if mn else ""
             else:  # Mdy
                 iso = _mk(c, _month_num(a), b)
             if iso:
@@ -275,12 +284,22 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
         rec["posted"] = harvest_date(text, _POSTED_CUES)
     if not rec["qa_due"]:
         rec["qa_due"] = harvest_date(text, _QA_CUES)
-    # last resort: if still no closing date, take the latest future date in the document
+    # titles often carry the deadline, e.g. "... (by August 18, 2025)"
+    if not rec["closing"] and rec.get("title"):
+        td = find_dates(rec["title"])
+        if td:
+            rec["closing"] = td[-1]
+    # last resort: the soonest future date anywhere in the document
     if not rec["closing"]:
         today_iso = today or datetime.date.today().isoformat()
         future = [d for d in find_dates(text) if d >= today_iso]
         if future:
             rec["closing"] = sorted(future)[0]
+    # still nothing, but the document clearly has dates -> use the latest one seen
+    if not rec["closing"]:
+        all_d = find_dates(text)
+        if all_d:
+            rec["closing"] = sorted(all_d)[-1]
 
     # --- sector fallback
     if not rec["sector"]:
