@@ -277,14 +277,29 @@ def sam_unit(op):
     return "\n\n".join(p for p in parts if p).strip(), ok, fail
 
 
+def _pop_country(op):
+    """SAM's placeOfPerformance shape varies (dict / nested dict / string / missing).
+    Return (country_name, country_code) defensively — never raise."""
+    try:
+        pop = op.get("placeOfPerformance") or {}
+        if isinstance(pop, str):
+            return pop, ""
+        if not isinstance(pop, dict):
+            return "", ""
+        c = pop.get("country")
+        if isinstance(c, dict):
+            return str(c.get("name") or ""), str(c.get("code") or "")
+        if isinstance(c, str):
+            return c, c
+        return str(pop.get("countryName") or ""), str(pop.get("countryCode") or "")
+    except Exception:
+        return "", ""
+
+
 def is_domestic(op):
     """SAM notice performed inside the US? -> Domestic tab, else Overseas."""
-    pop = op.get("placeOfPerformance") or {}
-    if isinstance(pop, dict):
-        c = ((pop.get("country") or {}).get("code") or (pop.get("country") or {}).get("name") or "")
-        if c:
-            return str(c).strip().upper() in ("US", "USA", "UNITED STATES")
-    return False
+    name, code = _pop_country(op)
+    return (code or name).strip().upper() in ("US", "USA", "UNITED STATES")
 
 
 # --------------------------------------------------------------------------
@@ -394,30 +409,32 @@ def run(mode):
         for op in sam_search(cfg):
             if not budget_left():
                 break
-            text, ok, fail = sam_unit(op)
-            if len(text) < 180 or not looks_like_solicitation(text):
-                continue
-            h = unit_hash(text)
-            if h in ledger:
-                continue                        # another bot already did this one
-            found += 1
             try:
-                rec = adjudicate_unit(text, op.get("title", "SAM notice"))
+                text, ok, fail = sam_unit(op)
+                if len(text) < 180 or not looks_like_solicitation(text):
+                    continue
+                h = unit_hash(text)
+                if h in ledger:
+                    continue                    # another bot already did this one
+                found += 1
+                rec = adjudicate_unit(text, str(op.get("title", "SAM notice")))
+                if transient(rec):
+                    continue
+                ledger.add(h)
+                nid = op.get("noticeId", "")
+                link = cfg["sam"]["view"].replace("{id}", nid) if nid else "https://sam.gov/"
+                ctry, _ = _pop_country(op)
+                rows.append(to_row(rec, post=str(op.get("organizationName") or "SAM.gov"),
+                                   country=ctry, source="SAM", link=link, platform="USGOV",
+                                   domestic=is_domestic(op),
+                                   files=(op.get("resourceLinks") or []), read_ok=ok, read_fail=fail,
+                                   sol_hint=str(op.get("solicitationNumber") or "")))
             except ai.AllExhausted:
                 st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                 break
-            if transient(rec):
+            except Exception as e:
+                st.d["lastError"] = f"SAM record: {str(e)[:90]}"   # one bad notice never kills the bot
                 continue
-            ledger.add(h)
-            nid = op.get("noticeId", "")
-            link = cfg["sam"]["view"].replace("{id}", nid) if nid else "https://sam.gov/"
-            pop = op.get("placeOfPerformance") or {}
-            ctry = ((pop.get("country") or {}).get("name", "") if isinstance(pop, dict) else "")
-            rows.append(to_row(rec, post=op.get("organizationName", "SAM.gov"), country=ctry,
-                               source="SAM", link=link, platform="USGOV",
-                               domestic=is_domestic(op),
-                               files=(op.get("resourceLinks") or []), read_ok=ok, read_fail=fail,
-                               sol_hint=op.get("solicitationNumber", "")))
             time.sleep(PAGE_PAUSE)
 
         # ---------------- United Nations (UNGM / UNDP / IOM / ILO / UNICEF) ----------------
@@ -450,25 +467,30 @@ def run(mode):
             for url, title in notices[:10]:
                 if not budget_left():
                     break
-                text, atts = un_sources.fetch_notice(url, opener)
-                if len(text) < 180 or not looks_like_solicitation(text):
-                    continue
-                h = unit_hash(text)
-                if h in ledger:
-                    continue
-                found += 1
                 try:
+                    text, atts = un_sources.fetch_notice(url, opener)
+                    if len(text) < 180 or not looks_like_solicitation(text):
+                        continue
+                    h = unit_hash(text)
+                    if h in ledger:
+                        continue
+                    found += 1
                     rec = adjudicate_unit(text, f"{agency}: {title[:40]}")
+                    if transient(rec):
+                        continue
+                    ledger.add(h)
+                    rows.append(to_row(rec, post=src["name"], country="", source="UN",
+                                       link=url, platform="UN", agency=agency,
+                                       files=atts, read_ok=1 + len(atts), read_fail=0,
+                                       sol_hint=title[:60]))
                 except ai.AllExhausted:
                     st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                     break
-                if transient(rec):
-                    continue
-                ledger.add(h)
-                rows.append(to_row(rec, post=src["name"], country="", source="UN",
-                                   link=url, platform="UN", agency=agency,
-                                   files=atts, read_ok=1 + len(atts), read_fail=0,
-                                   sol_hint=title[:60]))
+                except un_sources.HoldTheDoor as hh:
+                    _raise_help(blocked_sites, blocked_hosts, st, agency, hh.url or url,
+                                hh.need, platform="UN")
+                except Exception as e:
+                    st.d["lastError"] = f"{agency} notice: {str(e)[:80]}"
                 time.sleep(PAGE_PAUSE)
 
         # ---------------- Embassy sites (sharded + resumable) ----------------
@@ -503,29 +525,33 @@ def run(mode):
                 for key, pre in list(units.items())[:12]:
                     if not budget_left():
                         break
-                    if pre is None:
-                        text, attach, ok, fail = build_unit_from_page(key)
-                        link, files = key, attach
-                    else:
-                        text, files, ok, fail = pre["text"], pre["files"], pre["ok"], pre["fail"]
-                        link = files[0] if files else root["base"]
-                    if len(text) < 180 or not looks_like_solicitation(text):
-                        continue
-                    h = unit_hash(text)
-                    if h in ledger:
-                        continue
-                    found += 1
                     try:
+                        if pre is None:
+                            text, attach, ok, fail = build_unit_from_page(key)
+                            link, files = key, attach
+                        else:
+                            text, files, ok, fail = pre["text"], pre["files"], pre["ok"], pre["fail"]
+                            link = files[0] if files else root["base"]
+                        if len(text) < 180 or not looks_like_solicitation(text):
+                            continue
+                        h = unit_hash(text)
+                        if h in ledger:
+                            continue
+                        found += 1
                         rec = adjudicate_unit(text, root["post"])
+                        if transient(rec):
+                            continue
+                        ledger.add(h)
+                        rows.append(to_row(rec, post=root["post"], country=root["country"],
+                                           source="Site", link=link, platform="USGOV",
+                                           files=files, read_ok=ok, read_fail=fail))
                     except ai.AllExhausted:
                         st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                         raise StopIteration
-                    if transient(rec):
-                        continue
-                    ledger.add(h)
-                    rows.append(to_row(rec, post=root["post"], country=root["country"],
-                                       source="Site", link=link, platform="USGOV",
-                                       files=files, read_ok=ok, read_fail=fail))
+                    except fetcher.Blocked:
+                        raise
+                    except Exception as e:
+                        st.d["lastError"] = f"{root['post']} unit: {str(e)[:80]}"
                     time.sleep(PAGE_PAUSE)
             except fetcher.Blocked as b:
                 if host not in blocked_hosts:
@@ -544,6 +570,11 @@ def run(mode):
 
     except ai.AllExhausted:
         st.beat(currentJob="AI quota exhausted — paused")
+    except Exception as e:
+        # never lose a shard's work to one unexpected error — log it and still save
+        import traceback
+        traceback.print_exc()
+        st.d["lastError"] = f"fatal: {type(e).__name__}: {str(e)[:110]}"
 
     # ---------------- merge + archive ----------------
     merged, new_c, chg_c = merge_records(prior_rows, rows, mode)
