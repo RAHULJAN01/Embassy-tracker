@@ -147,6 +147,8 @@
     </div>
     <div class="mhead-right">
       <button class="btn sec" style="height:36px" onclick="refreshPage()">↻ Refresh</button>
+      <button class="btn sec" style="height:36px" onclick="lock()" title="Lock the page">🔒 Lock</button>
+      <button class="btn sec" style="height:36px" onclick="lockSite()" title="Log out now">🔒 Lock</button>
       <div class="mmeta">
         Register compiled: <b id="built"></b><br>
         Last full deep-crawl: <b id="lastDeep"></b><br>
@@ -330,8 +332,18 @@ function init(){
 }
 
 function _b64d(s){const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
-async function unlock(){
-  const pw=document.getElementById('gpw').value||''; const err=document.getElementById('gerr');
+// --- session: stay unlocked across refresh (sessionStorage), auto-lock after idle ---
+const IDLE_MIN=30;                 // auto-logout after this many minutes of no activity
+let _idleTimer=null;
+function _touch(){ try{ sessionStorage.setItem('mm_last', Date.now()); }catch(e){} _resetIdle(); }
+function _resetIdle(){ if(_idleTimer) clearTimeout(_idleTimer); _idleTimer=setTimeout(lock, IDLE_MIN*60*1000); }
+function lock(){ try{ sessionStorage.removeItem('mm_pw'); sessionStorage.removeItem('mm_last'); }catch(e){}
+  if(_idleTimer) clearTimeout(_idleTimer);
+  const g=document.getElementById('gate'); if(g){ g.style.display='flex'; const p=document.getElementById('gpw'); if(p){p.value='';p.focus();} } }
+
+async function unlock(pwArg){
+  const pw=(typeof pwArg==='string')?pwArg:(document.getElementById('gpw').value||'');
+  const err=document.getElementById('gerr'); if(err) err.textContent='';
   try{
     let payload;
     if(!LOCKED){ payload=PLAIN; }
@@ -342,11 +354,23 @@ async function unlock(){
       payload=JSON.parse(new TextDecoder().decode(buf));
     }
     META=payload.meta||{}; SOLICITATIONS=payload.solicitations||[];
+    if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
+    _touch();
+    ['click','keydown','scroll','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_touch,{passive:true}));
     document.getElementById('gate').style.display='none';
     init();
-  }catch(e){ err.textContent='Incorrect password.'; }
+  }catch(e){ if(err) err.textContent='Incorrect password.'; }
 }
-if(!LOCKED){ unlock(); } else { setTimeout(()=>document.getElementById('gpw').focus(),50); }
+
+// bootstrap: unlocked build -> open; locked build -> try cached session, else show gate
+(function(){
+  if(!LOCKED){ unlock(); return; }
+  let cachedPw=null, last=0;
+  try{ cachedPw=sessionStorage.getItem('mm_pw'); last=+sessionStorage.getItem('mm_last')||0; }catch(e){}
+  const fresh = cachedPw && (Date.now()-last) < IDLE_MIN*60*1000;
+  if(fresh){ unlock(cachedPw); }
+  else { lock(); setTimeout(()=>{const p=document.getElementById('gpw'); if(p)p.focus();},50); }
+})();
 
 </script>
 </body>
