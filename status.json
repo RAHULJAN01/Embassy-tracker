@@ -1,13 +1,13 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-01 13:38 UTC",
- "heartbeat": "2026-10-01 14:03 UTC",
- "currentJob": "done — 6 new, 0 changed, 9 total, 30 AI calls",
+ "startedAt": "2026-10-01 14:34 UTC",
+ "heartbeat": "2026-10-01 14:59 UTC",
+ "currentJob": "done — 6 new, 2 changed, 15 total, 22 AI calls",
  "phase": "embassy",
- "done": 6,
- "queued": 143,
- "found": 70,
- "aiCalls": 30,
+ "done": 8,
+ "queued": 150,
+ "found": 62,
+ "aiCalls": 22,
  "aiBudget": 120,
  "providers": [
   "gemini",
@@ -17,45 +17,38 @@
  ],
  "blockedSites": [],
  "coverage": {
-  "Indonesia": 1,
-  "Japan": 3,
-  "Laos": 5,
-  "Malaysia": 3,
-  "Marshall Islands": 1,
-  "Micronesia": 4,
-  "Mongolia": 3,
-  "Burma": 2,
-  "New Zealand": 2,
-  "Palau": 3,
-  "Papua New Guinea": 2,
-  "Philippines": 0,
-  "Korea": 5,
-  "Singapore": 0,
-  "Thailand": 2,
-  "Timor-Leste": 6,
-  "Vietnam": 5,
-  "Brunei": 3,
-  "Albania": 1,
-  "Armenia": 9,
-  "Austria": 0,
-  "Azerbaijan": 1,
-  "Belgium": 1,
-  "Bosnia and Herzegovina": 6
+  "Bulgaria": 4,
+  "Croatia": 9,
+  "Cyprus": 4,
+  "Czech Republic": 2,
+  "Denmark": 8,
+  "Estonia": 2,
+  "Finland": 1,
+  "France": 1,
+  "Georgia": 1,
+  "Germany": 4,
+  "Greece": 1,
+  "Hungary": 0,
+  "Iceland": 6,
+  "Ireland": 3,
+  "Italy": 12,
+  "Kosovo": 5,
+  "Latvia": 2
  },
  "etaNote": "",
  "lastError": "",
  "running": false,
  "aiDiag": {
   "ok": {
-   "openrouter": 2,
-   "groq": 4
+   "groq": 7,
+   "openrouter": 1
   },
   "errors": {
    "gemini": "gemini 429",
-   "groq": "openai/gpt-oss-20b 429",
+   "groq": "openai/gpt-oss-120b 429",
    "mistral": "mistral-small-2603 429",
-   "openrouter": "qwen/qwen3.8-27b:free 429"
+   "openrouter": "qwen/qwen3.8-27b:free 200"
   }
  },
- "finishedAt": "2026-10-01 14:03 UTC"
+ "finishedAt": "2026-10-01 14:59 UTC"
 }
