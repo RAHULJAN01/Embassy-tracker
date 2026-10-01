@@ -26,7 +26,9 @@ Pure-stdlib HTTP (urllib) so it runs anywhere with no extra deps.
 import os, json, time, re, urllib.request, urllib.error
 
 TIMEOUT = 90
-COOL_SECONDS = 60          # how long to rest a provider after a 429 before retrying it
+COOL_SECONDS = 50          # how long to rest a provider after a 429 before retrying it
+MIN_INTERVAL = float(os.getenv("AI_PACE", "4.5"))   # min seconds between calls (respect free RPM limits)
+MAX_COOL_WAIT = 55         # if ALL providers are cooling, wait up to this long then retry
 
 
 class AllExhausted(Exception):
@@ -147,49 +149,66 @@ class Rotator:
         if os.getenv("OPENROUTER_API_KEY"):
             self.providers.append(["openrouter", os.environ["OPENROUTER_API_KEY"], _openrouter, 0])
         self.calls = 0
+        self._last_call = 0.0
 
     def names(self):
         return [p[0] for p in self.providers]
 
-    def call(self, prompt):
-        """Return a parsed dict. Rotate on quota; raise AllExhausted if all cooling."""
-        if not self.providers:
-            return {"_gerr": "no AI provider keys configured"}
+    def _pace(self):
+        gap = time.time() - self._last_call
+        if gap < MIN_INTERVAL:
+            time.sleep(MIN_INTERVAL - gap)
+
+    def _attempt(self, prompt):
+        """One sweep over providers that aren't cooling. Returns (dict|None, err)."""
         now = time.time()
         last_err = ""
         tried = 0
         for p in self.providers:
             name, key, fn, cool_until = p
             if cool_until > now:
-                continue                    # still resting after a 429
+                continue
             tried += 1
+            self._pace()
             try:
                 raw = fn(key, prompt)
+                self._last_call = time.time()
                 self.calls += 1
                 parsed = _parse_json(raw)
                 if parsed is None:
-                    return {"_gerr": f"{name}: unparseable response"}
+                    last_err = f"{name}: unparseable response"
+                    continue                      # try another provider rather than give up
                 parsed["_provider"] = name
-                return parsed
+                return parsed, ""
             except _Quota as e:
-                p[3] = now + COOL_SECONDS     # rest this provider
+                p[3] = time.time() + COOL_SECONDS
                 last_err = str(e)
                 continue
-            except urllib.error.HTTPError as e:
-                try:
-                    b = e.read().decode("utf-8", "replace")
-                except Exception:
-                    b = ""
-                if _is_quota(e.code, b):
-                    p[3] = now + COOL_SECONDS
-                    last_err = f"{name} {e.code}"
-                    continue
-                return {"_gerr": f"{name} HTTP {e.code}"}
             except Exception as e:
-                return {"_gerr": f"{name}: {str(e)[:80]}"}
-        # nothing succeeded
+                last_err = f"{name}: {str(e)[:80]}"
+                continue
+        return None, (last_err, tried)
+
+    def call(self, prompt):
+        """Return a parsed dict. Rotate on quota; if everything is cooling, WAIT up to
+        MAX_COOL_WAIT then retry; only raise AllExhausted if still nothing after that."""
+        if not self.providers:
+            return {"_gerr": "no AI provider keys configured"}
+        parsed, info = self._attempt(prompt)
+        if parsed is not None:
+            return parsed
+        last_err, tried = info
         if tried == 0:
-            raise AllExhausted(last_err or "all providers cooling")
+            # every provider is cooling — wait for the soonest to free up, then retry once
+            now = time.time()
+            wait = min(MAX_COOL_WAIT, max(1, int(min(p[3] for p in self.providers) - now) + 1))
+            time.sleep(wait)
+            parsed, info = self._attempt(prompt)
+            if parsed is not None:
+                return parsed
+            if info[1] == 0:
+                raise AllExhausted(last_err or "all providers cooling")
+            last_err = info[0]
         return {"_gerr": f"all providers failed: {last_err}"}
 
 
