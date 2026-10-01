@@ -1,14 +1,14 @@
 {
  "meta": {
-  "lastDeep": "2026-10-01 13:29 UTC",
-  "lastRoots": "2026-10-01 13:29 UTC",
-  "lastLive": "2026-10-01 13:29 UTC",
+  "lastDeep": "2026-10-01 14:03 UTC",
+  "lastRoots": "2026-10-01 14:03 UTC",
+  "lastLive": "2026-10-01 14:03 UTC",
   "counts": {
-   "active": 3,
+   "active": 9,
    "bid": 1,
    "mid": 0,
-   "no": 2,
-   "review": 0
+   "no": 6,
+   "review": 2
   }
  },
  "solicitations": [
@@ -134,6 +134,268 @@
    "reviewReason": "",
    "evidence": "Notice of Funding Opportunity for the U.S. Ambassadors Fund for Cultural Preservation (AFCP) 2026 - U.S. Embassy & Consulates in Indonesia Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy & Consulates in Indonesia Worldwide Caution: The Depar",
    "fp": "fbde64c287584ffa",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "REVIEW",
+   "title": "Open Solicitations for Products and Services for the U.S. Embassy Kuala Lumpur",
+   "sol": "",
+   "post": "U.S. Embassy Malaysia",
+   "country": "Malaysia",
+   "source": "Site",
+   "link": "https://my.usembassy.gov/business/",
+   "posted": "",
+   "deadline": "",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Open Solicitations for Products and Services for the U.S. Embassy Kuala Lumpur.",
+   "type": "Open solicitations for products and services",
+   "scope": "Open Solicitations for Products and Services for the U.S. Embassy Kuala Lumpur.",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [],
+   "restrictions": [],
+   "route": "",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.1,
+   "reviewReason": "low confidence (0.10)",
+   "evidence": "Business - U.S. Embassy in Malaysia - Learn about bilateral investment and trade Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy in Malaysia Worldwide Caution: The Department of State advises Americans worldwide to exercise increased caution",
+   "fp": "ef7905a7e25486ac",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "REVIEW",
+   "title": "(untitled solicitation)",
+   "sol": "",
+   "post": "U.S. Embassy Micronesia",
+   "country": "Micronesia",
+   "source": "Site",
+   "link": "https://fm.usembassy.gov/business/",
+   "posted": "",
+   "deadline": "",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "",
+   "type": "",
+   "scope": "",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [],
+   "restrictions": [],
+   "route": "",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.0,
+   "reviewReason": "no-bid rejected: cited clause not found verbatim in source",
+   "evidence": "Business - U.S. Embassy in the Federated States of Micronesia - Learn about bilateral investment and trade Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy in the Federated States of Micronesia Worldwide Caution: The Department of State advis",
+   "fp": "3b4430aab65ff01c",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "NO",
+   "title": "RFQ PR15389555 : Disconnect Switch for Load Bank (by August 18, 2025) - U.S. Embassy in Timor Leste",
+   "sol": "PR15389555",
+   "post": "U.S. Embassy Timor-Leste",
+   "country": "Timor-Leste",
+   "source": "Site",
+   "link": "https://tl.usembassy.gov/rfq-pr15389555-disconnect-switch-for-load-bank-by-july-31-2025/",
+   "posted": "2025-07-22",
+   "deadline": "2025-08-18",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Supply and install one ASCO disconnect switch for load bank at U.S. Embassy Dili, Timor-Leste.",
+   "type": "Commercial electrical equipment supply and installation",
+   "scope": "Supply and install one ASCO disconnect switch for load bank at U.S. Embassy Dili, Timor-Leste.",
+   "value": "",
+   "shipping": "FOB Destination to U.S. Embassy Dili, Timor-Leste",
+   "payment": "Payment upon receipt and full examination of deliverables",
+   "shipAfter": "Not later than 60 days after date of contract award",
+   "setaside": "Not a small business set-aside",
+   "license": "None stated",
+   "docs": [
+    "SF18-Cover-Page-1.pdf",
+    "SOW.pdf",
+    "RFQ-Package.pdf"
+   ],
+   "restrictions": [
+    {
+     "t": "The Contractor shall provide delivery and installation of one (1) unit of Disconnect Switch for Load Bank.",
+     "k": "real",
+     "note": "Requires on-site installation/labor, which Madison & Main cannot perform."
+    },
+    {
+     "t": "The quoted price must include all labor, materials, installation, transportation, profit, and any other associated costs necessary for full delivery and installation.",
+     "k": "real",
+     "note": "Confirms installation and labor are included in the required performance."
+    }
+   ],
+   "route": "",
+   "challenge": "",
+   "citation": {
+    "doc": "RFQ-Package.pdf",
+    "quote": "The Contractor shall provide delivery and installation of one (1) unit of Disconnect Switch for Load Bank."
+   },
+   "confidence": 0.95,
+   "reviewReason": "",
+   "evidence": "RFQ PR15389555 : Disconnect Switch for Load Bank (by August 18, 2025) - U.S. Embassy in Timor Leste Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy in Timor Leste Worldwide Caution: The Department of State advises Americans worldwide to exer",
+   "fp": "3572173249da496b",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "NO",
+   "title": "Peace Corps Medical Officer (PCMO)",
+   "sol": "",
+   "post": "U.S. Embassy Armenia",
+   "country": "Armenia",
+   "source": "Site",
+   "link": "https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/PCMO-Sample-PSC-Opportunity-Announcement.pdf",
+   "posted": "2026-08-07",
+   "deadline": "2026-09-07",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Provide primary health care, counseling, training, and administrative support to Peace Corps volunteers in Armenia.",
+   "type": "Personal Services Contract",
+   "scope": "Provide primary health care, counseling, training, and administrative support to Peace Corps volunteers in Armenia.",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "Current medical license, registration or certificate in Armenia, the United Stat",
+   "docs": [
+    "PCMO Application Form",
+    "Resume/CV with detailed work history",
+    "Photocopy of Professional Medical License (or equivalent confirmation)",
+    "Completed PCMO Applicant Skills Survey",
+    "Completed and signed Privileging Form",
+    "Copy of Diploma from Medical School",
+    "Verification of Degree Form",
+    "Three Letters of Reference (including one from an immediate supervisor)",
+    "Verification of language proficiency certificates"
+   ],
+   "restrictions": [
+    {
+     "t": "The PCMO will provide health care to U.S. Peace Corps Volunteers in Armenia and will work under the supervision of the Peace Corps Armenia Director in Armenia and the Peace Corps Office of Health Serv",
+     "k": "real",
+     "note": "On‑site labor requirement"
+    }
+   ],
+   "route": "",
+   "challenge": "",
+   "citation": {
+    "doc": "Announcement",
+    "quote": "The PCMO will provide health care to U.S. Peace Corps Volunteers in Armenia and will work under the supervision of the Peace Corps Armenia Director in Armenia and the Peace Corps Office of Health Services in Washington, DC."
+   },
+   "confidence": 1.0,
+   "reviewReason": "",
+   "evidence": "PERSONAL SERVICES CONTRACT OPPORTUNITY ANNOUNCEMENT POSITION: Peace Corps Medical Officer (PCMO) OPENING DATE: August 7, 2026 CLOSING DATE: September 7, 2026 WORK HOURS: Full Time – 40 Hours Minimum/Week COMPENSATION RANGE: 23,670,782 AMD annually (gross), plus benefits The United States Peace Corps seeks a Medical Doctor to serve as a personal services contractor (PSC) Peace Corps Medical Officer (PCMO) based in Armenia. The PCMO will provide health care to U.S. Peace Corps Volunteers in Armenia and will work under the supervision of the Peace Corps Armenia Director in Armenia and the Peace C",
+   "fp": "237322033f8ca239",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "NO",
+   "title": "PRE-SOLICITATION NOTICE – Purchase and Installation of HVAC Equipment",
+   "sol": "19BK8025Q0002",
+   "post": "U.S. Embassy Bosnia and Herzegovina",
+   "country": "Bosnia and Herzegovina",
+   "source": "Site",
+   "link": "https://ba.usembassy.gov/pre-solicitation-notice-purchase-and-installation-of-hvac-equipment/",
+   "posted": "",
+   "deadline": "",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Construction services for HVAC installation at the U.S. Embassy in Sarajevo, Bosnia and Herzegovina",
+   "type": "Construction Services – Purchase and Installation of HVAC Equipment",
+   "scope": "Construction services for HVAC installation at the U.S. Embassy in Sarajevo, Bosnia and Herzegovina",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [
+    "System for Award Management (SAM)",
+    "FAR 4.1102",
+    "FAR 52.204-24",
+    "FAR 52.204-25",
+    "FAR 52.204-26",
+    "FAR 52.212-3 (v)"
+   ],
+   "restrictions": [
+    {
+     "t": "The Contractor shall provide construction services (pre-construction activities, procuring equipment, demolition and removal of the old equipment, installation of New HVAC Components, testing and comm",
+     "k": "real",
+     "note": "Construction services required"
+    }
+   ],
+   "route": "",
+   "challenge": "",
+   "citation": {
+    "doc": "Pre-Solicitation Notice",
+    "quote": "The Contractor shall provide construction services (pre-construction activities, procuring equipment, demolition and removal of the old equipment, installation of New HVAC Components, testing and commissioning) on an existing office building in the American Embassy Sarajevo, Bosnia and Herzegovina."
+   },
+   "confidence": 0.99,
+   "reviewReason": "",
+   "evidence": "PRE-SOLICITATION NOTICE – Purchase and Installation of HVAC Equipment - U.S. Embassy in Bosnia and Herzegovina Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy in Bosnia and Herzegovina Worldwide Caution: The Department of State advises Ameri",
+   "fp": "efe6ac3713c1f4c8",
+   "firstSeen": "2026-10-01"
+  },
+  {
+   "tier": "NO",
+   "title": "RFP – Health Insurance Services for the Embassy LE Staff and Family Members",
+   "sol": "19BK8025R0001",
+   "post": "U.S. Embassy Bosnia and Herzegovina",
+   "country": "Bosnia and Herzegovina",
+   "source": "Site",
+   "link": "https://ba.usembassy.gov/rfp-health-insurance-services-for-the-embassy-le-staff-and-family-members/",
+   "posted": "",
+   "deadline": "2025-03-04",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Health insurance services for LES and eligible dependents",
+   "type": "Health Insurance Services for the Embassy Locally Employed Staff and their famil",
+   "scope": "Health insurance services for LES and eligible dependents",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [
+    "RFP – Health Insurance Services for the Embassy LE Staff and Family Members"
+   ],
+   "restrictions": [
+    {
+     "t": "The Embassy of the United States in Bosnia and Herzegovina is seeking to acquire health insurance services for its Locally Employed Staff (LES) and their eligible dependents.",
+     "k": "real",
+     "note": "Service requirement incompatible with Madison & Main LLC's capabilities."
+    }
+   ],
+   "route": "",
+   "challenge": "",
+   "citation": {
+    "doc": "RFP – Health Insurance Services for the Embassy LE Staff and Family Members",
+    "quote": "The Embassy of the United States in Bosnia and Herzegovina is seeking to acquire health insurance services for its Locally Employed Staff (LES) and their eligible dependents."
+   },
+   "confidence": 0.99,
+   "reviewReason": "",
+   "evidence": "RFP – Health Insurance Services for the Embassy LE Staff and Family Members - U.S. Embassy in Bosnia and Herzegovina Skip to main content An official website of the United States government Here's how you know Official websites use .gov A .gov website belongs to an official government organization in the United States. Secure .gov websites use HTTPS A lock ( Lock A locked padlock ) or https:// means you’ve safely connected to the .gov website. Share sensitive information only on official, secure websites. U.S. Embassy in Bosnia and Herzegovina Worldwide Caution: The Department of State advises",
+   "fp": "16bac84a6affa221",
    "firstSeen": "2026-10-01"
   }
  ]
