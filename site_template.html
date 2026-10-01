@@ -282,6 +282,7 @@
 const LOCKED=/*__LOCKED__*/;
 let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false;
 const REPO="RAHULJAN01/embassy-tracker";
+let CONTROL_URL="";   // set from control.json at build time
 
 
 const TRACKER_API="";
@@ -573,11 +574,19 @@ function renderMC(){
      `+fleetBar();
 }
 function fleetBar(){
+  const srv=controlServer();
+  const link=srv?`<b style="color:var(--green)">connected</b> <span style="color:var(--mute)">${esc(srv.replace(/^https?:\/\//,''))}</span>`
+                :`<b style="color:var(--orange)">not set</b> — buttons will ask for a token instead`;
   return `<div class="mc-job" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
        <b>Bot fleet:</b>
        <button class="btn danger" onclick="fleet('stop')">■ STOP ALL BOTS</button>
        <button class="btn" onclick="fleet('resume')">▶ RESUME</button>
        <span id="fleetState" style="font-size:12px">${PAUSED?'<b style="color:var(--red)">PAUSED</b> — bots will not start until resumed.':'<b style="color:var(--green)">RUNNING</b> — bots work on schedule.'}</span>
+     </div>
+     <div class="mc-job" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+       <b>Control server:</b> <span style="font-size:12px">${link}</span>
+       <button class="btn sec" onclick="setControlServer()">Set server</button>
+       <button class="btn sec" onclick="forgetToken()">Forget token</button>
      </div>`;
 }
 
@@ -629,9 +638,47 @@ function ghToken(){
   }
   return t?t.trim():null;
 }
+function setControlServer(){
+  const cur=controlServer();
+  const u=prompt('Control server URL (your Cloudflare Worker).\n\nExample: https://mm-control.<you>.workers.dev\n\nLeave blank to clear.', cur||'');
+  if(u===null) return;
+  try{ if(u.trim()) localStorage.setItem('mm_ctrl',u.trim()); else localStorage.removeItem('mm_ctrl'); }catch(e){}
+  alert(u.trim()?('Control server set:\n'+u.trim()+'\n\nButtons will use it from now on — no token needed.'):'Control server cleared.');
+}
 function forgetToken(){ try{ localStorage.removeItem('mm_gh'); }catch(e){} alert("Control key removed from this browser."); }
+/* Prefer the control server (no token needed). Falls back to a browser token
+   only if no server is configured yet. */
+function controlServer(){
+  let u=(typeof CONTROL_URL!=='undefined'&&CONTROL_URL)?CONTROL_URL:'';
+  if(!u){ try{ u=localStorage.getItem('mm_ctrl')||''; }catch(e){} }
+  return u.replace(/\/+$/,'');
+}
+function sitePass(){ try{ return sessionStorage.getItem('mm_pw')||''; }catch(e){ return ''; } }
+
+async function srvCall(path, body){
+  const base=controlServer(); if(!base) return null;           // no server -> caller falls back
+  try{
+    const r=await fetch(base+path,{method:body?'POST':'GET',
+      headers:{'Content-Type':'application/json','X-Site-Key':sitePass()},
+      body:body?JSON.stringify(body):undefined});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401) return {ok:false,msg:'server rejected the site password'};
+    return d&&typeof d.ok!=='undefined'?d:{ok:r.ok};
+  }catch(e){ return {ok:false,msg:'server unreachable'}; }
+}
+
+const SRV_PATH={'crawl.yml':'/run','control.yml':null};
 async function ghDispatch(workflow, inputs){
-  const t=ghToken(); if(!t) return {ok:false,msg:'no token'};
+  // 1) through the control server — your password is the key, no token anywhere
+  const base=controlServer();
+  if(base){
+    let path='/run', payload=inputs||{};
+    if(workflow==='control.yml'){ path = (inputs&&inputs.action==='resume')?'/resume':'/stop'; payload={}; }
+    const d=await srvCall(path,payload);
+    if(d) return d;
+  }
+  // 2) fallback: direct to GitHub with a token held in this browser
+  const t=ghToken(); if(!t) return {ok:false,msg:'no control server and no token'};
   const url=`https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`;
   try{
     const r=await fetch(url,{method:'POST',headers:{'Authorization':'token '+t,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
@@ -679,6 +726,7 @@ async function unlock(pwArg){
     META=payload.meta||{}; SOLICITATIONS=payload.solicitations||[];
     STATUS=payload.status||{}; BLOCKED=payload.blocked||{sites:[]};
     PAUSED=!!((payload.control||{}).paused);
+    CONTROL_URL=((payload.control||{}).controlUrl)||CONTROL_URL;
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();
     ['click','keydown','scroll','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_touch,{passive:true}));

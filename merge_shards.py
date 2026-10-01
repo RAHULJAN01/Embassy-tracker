@@ -32,6 +32,30 @@ def key_of(r):
     return sol or (r.get("link") or "")
 
 
+def _merge_pair(a, b):
+    """Same solicitation seen twice (e.g. once on SAM, once on the embassy site).
+    Keep the richer record but remember it was found on BOTH."""
+    keep = better(a, b)
+    other = b if keep is a else a
+    srcs = set()
+    for r in (a, b):
+        for piece in str(r.get("source") or "").replace("+", " ").split():
+            if piece.strip():
+                srcs.add(piece.strip().upper())
+    if {"SAM", "SITE"} <= srcs:
+        keep["source"] = "Site+SAM"
+    elif srcs:
+        keep["source"] = "Site+SAM" if len(srcs) > 1 else keep.get("source")
+    # don't lose anything the other copy had
+    for f in ("deadline", "posted", "value", "setaside", "samId", "estimate", "citation"):
+        if not keep.get(f) and other.get(f):
+            keep[f] = other[f]
+    files = list(dict.fromkeys((keep.get("files") or []) + (other.get("files") or [])))
+    keep["files"] = files
+    keep["fileCount"] = len(files)
+    return keep
+
+
 def better(a, b):
     """Prefer the richer record: verified > more files > more complete > newer."""
     def score(r):
@@ -79,7 +103,8 @@ def main(shard_dir):
     merged = {}
     # start from what's already on the register
     for r in load(base, {"solicitations": []}).get("solicitations", []):
-        merged[key_of(r)] = r
+        k = key_of(r)
+        merged[k] = _merge_pair(merged[k], r) if k in merged else r
 
     meta = load(base, {"meta": {}}).get("meta", {}) or {}
     ledger = set(meta.get("ledger", []))
@@ -95,7 +120,7 @@ def main(shard_dir):
             k = key_of(r)
             if not k:
                 continue
-            merged[k] = better(merged[k], r) if k in merged else r
+            merged[k] = _merge_pair(merged[k], r) if k in merged else r
         ledger |= set((d.get("meta") or {}).get("ledger", []))
         b = load(sd / "blocked.json", {"sites": []})
         for s in b.get("sites", []):

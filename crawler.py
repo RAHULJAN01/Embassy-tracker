@@ -251,6 +251,109 @@ def collect_candidates(proc_url, cfg):
     return list(dict.fromkeys(html_pages))[:15], list(dict.fromkeys(files))[:25]
 
 
+_SAM_LINK = re.compile(r"https?://(?:www\.)?sam\.gov/opp/([0-9a-fA-F]{8,})", re.I)
+_DOC_EXT = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".rtf", ".txt")
+
+
+def _sam_notice_text(notice_id):
+    """A site pointed us at SAM. Go get the actual notice and its documents."""
+    key = os.getenv("SAM_API_KEY", "")
+    parts, atts = [], []
+    if key:
+        url = ("https://api.sam.gov/opportunities/v2/search?"
+               + urllib.parse.urlencode({"api_key": key, "noticeid": notice_id, "limit": "1"}))
+        try:
+            raw, ct, final = fetcher.get(url)
+            if raw:
+                ops = json.loads(raw).get("opportunitiesData") or []
+                if ops:
+                    op = ops[0]
+                    parts += [str(op.get("title") or ""), str(op.get("description") or "")]
+                    atts = list(op.get("resourceLinks") or [])
+        except Exception:
+            pass
+    if not parts:                      # no API key / API refused -> read the public page
+        try:
+            raw, ct, final = fetcher.get(f"https://sam.gov/opp/{notice_id}/view")
+            if raw:
+                parts.append(fetcher.html_text(raw))
+        except Exception:
+            pass
+    for a in atts[:8]:
+        t = fetcher.read_attachment(a)
+        if t:
+            parts.append(f"\n[SAM ATTACHMENT: {a}]\n{t}")
+        time.sleep(PAGE_PAUSE)
+    return "\n\n".join(p for p in parts if p).strip(), atts
+
+
+def chase_solicitation(start_url, max_hops=3):
+    """Follow a solicitation wherever it hides — through pages, attachments and
+    SAM redirects — until the real thing is in hand. Returns
+    (text, files, read_ok, read_fail, sam_id)."""
+    seen, queue = set(), [(start_url, 0)]
+    parts, files, ok, fail = [], [], 0, 0
+    sam_id = ""
+
+    while queue:
+        url, hop = queue.pop(0)
+        if url in seen or hop > max_hops:
+            continue
+        seen.add(url)
+        try:
+            raw, ct, final = fetcher.get(url)
+        except fetcher.Blocked:
+            fail += 1
+            continue
+        if raw is None:
+            fail += 1
+            continue
+
+        low_url = url.lower().split("?")[0]
+        if "pdf" in (ct or "") or low_url.endswith(".pdf"):
+            t = fetcher.pdf_text(raw)
+            if t and not t.startswith("[pdf unreadable"):
+                parts.append(f"\n[DOCUMENT: {url}]\n{t}"); ok += 1
+                if url not in files: files.append(url)
+            else:
+                fail += 1
+            continue
+
+        page = fetcher.html_text(raw)
+        if page:
+            parts.append(page); ok += 1
+
+        # Did this page bounce us to SAM? Then the real notice lives there.
+        m = _SAM_LINK.search(raw.decode("utf-8", "replace") if isinstance(raw, bytes) else str(raw))
+        if m and not sam_id:
+            sam_id = m.group(1)
+            stext, satts = _sam_notice_text(sam_id)
+            if stext:
+                parts.append(f"\n[VIA SAM {sam_id}]\n{stext}"); ok += 1
+                for a in satts:
+                    if a not in files: files.append(a)
+
+        if hop >= max_hops:
+            continue
+        host = root_host(final)
+        for href, text in fetcher.links(raw, final):
+            if is_offsite(href) or href in seen:
+                continue
+            hl = href.lower().split("?")[0]
+            if hl.endswith(_DOC_EXT):
+                queue.append((href, hop + 1))                 # always chase a document
+            elif root_host(href) == host and hop + 1 <= max_hops:
+                blob = (href + " " + (text or "")).lower()
+                # only follow links that smell like the solicitation itself
+                if any(k in blob for k in ("solicitation", "rfq", "rfp", "itb", "ifb", "tender",
+                                           "attachment", "amendment", "sow", "scope", "bid",
+                                           "download", "annex", "document")):
+                    queue.append((href.split("#")[0], hop + 1))
+        time.sleep(PAGE_PAUSE)
+
+    return "\n\n".join(p for p in parts if p).strip(), files, ok, fail, sam_id
+
+
 def build_unit_from_page(sol_url):
     """ONE solicitation page + ALL its attachments -> a single merged dossier.
     Returns (text, attachment_urls, read_ok, read_fail)."""
@@ -306,24 +409,15 @@ def group_file_units(file_urls):
 # --------------------------------------------------------------------------
 # SAM
 # --------------------------------------------------------------------------
-def sam_search(cfg, limit=60):
-    key = os.getenv("SAM_API_KEY", "")
-    if not key:
-        return []
-    pf = (datetime.date.today() - datetime.timedelta(days=30)).strftime("%m/%d/%Y")
-    pt = datetime.date.today().strftime("%m/%d/%Y")
-    params = {"api_key": key, "limit": str(limit), "postedFrom": pf, "postedTo": pt, "ptype": "o,k,r"}
-    if SAM_NAICS:
-        params["ncode"] = SAM_NAICS.split(",")[0]
+def _sam_page(cfg, key, params):
+    """One SAM query. Returns [] on any failure — SAM must never kill a run."""
     try:
         raw, ct, final = fetcher.get(cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params))
     except fetcher.Blocked as b:
-        # SAM rate-limits hard. Never let that take the whole run down — the
-        # UN and embassy phases still have work to do.
-        print(f"SAM unavailable ({b}) — skipping SAM this slice")
+        print(f"SAM rate-limited ({b}) — skipping this query")
         return []
     except Exception as e:
-        print(f"SAM error ({str(e)[:80]}) — skipping SAM this slice")
+        print(f"SAM error ({str(e)[:70]})")
         return []
     if not raw:
         return []
@@ -331,6 +425,35 @@ def sam_search(cfg, limit=60):
         return json.loads(raw).get("opportunitiesData", []) or []
     except Exception:
         return []
+
+
+def sam_search(cfg, limit=60):
+    """Pull BOTH overseas and domestic U.S. notices. Each shard takes a different
+    offset so four bots don't all fetch the same first page."""
+    key = os.getenv("SAM_API_KEY", "")
+    if not key:
+        print("no SAM_API_KEY — SAM skipped")
+        return []
+    pf = (datetime.date.today() - datetime.timedelta(days=30)).strftime("%m/%d/%Y")
+    pt = datetime.date.today().strftime("%m/%d/%Y")
+    base = {"api_key": key, "limit": str(limit), "postedFrom": pf, "postedTo": pt, "ptype": "o,k,r"}
+    if SAM_NAICS:
+        base["ncode"] = SAM_NAICS.split(",")[0]
+
+    out, seen = [], set()
+    queries = [dict(base, offset=str(SHARD * limit))]              # general sweep
+    # an explicit domestic sweep so the Domestic tab is actually populated
+    queries.append(dict(base, offset=str(SHARD * limit), **{"state": "", "country": "US"}))
+    for q in queries:
+        for op in _sam_page(cfg, key, q):
+            nid = op.get("noticeId") or op.get("solicitationNumber") or ""
+            if nid and nid in seen:
+                continue
+            if nid:
+                seen.add(nid)
+            out.append(op)
+        time.sleep(PAGE_PAUSE)
+    return out
 
 
 def sam_unit(op):
@@ -373,10 +496,33 @@ def _pop_country(op):
         return "", ""
 
 
+_US_STATES = {
+    "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA",
+    "ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK",
+    "OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR","GU","VI"}
+
+
 def is_domestic(op):
     """SAM notice performed inside the US? -> Domestic tab, else Overseas."""
     name, code = _pop_country(op)
-    return (code or name).strip().upper() in ("US", "USA", "UNITED STATES")
+    c = (code or name).strip().upper()
+    if c in ("US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA"):
+        return True
+    if c and c not in ("", "NONE"):
+        return False                      # a stated non-US country settles it
+    # no country stated: a US state in the place of performance means domestic
+    try:
+        pop = op.get("placeOfPerformance") or {}
+        if isinstance(pop, dict):
+            st = pop.get("state")
+            code2 = (st.get("code") or st.get("name") or "") if isinstance(st, dict) else (st or "")
+            if str(code2).strip().upper() in _US_STATES:
+                return True
+            if str(pop.get("zip") or "").strip()[:5].isdigit():
+                return True               # a ZIP code is a US address
+    except Exception:
+        pass
+    return False
 
 
 # --------------------------------------------------------------------------
@@ -603,8 +749,10 @@ def run(mode):
                     if not budget_left():
                         break
                     try:
+                        sam_id = ""
                         if pre is None:
-                            text, attach, ok, fail = build_unit_from_page(key)
+                            # chase it through pages, documents and SAM redirects
+                            text, attach, ok, fail, sam_id = chase_solicitation(key)
                             link, files = key, attach
                         else:
                             text, files, ok, fail = pre["text"], pre["files"], pre["ok"], pre["fail"]
@@ -647,9 +795,14 @@ def run(mode):
                         if transient(rec):
                             continue
                         ledger.add(h)
-                        rows.append(to_row(rec, post=root["post"], country=root["country"],
-                                           source="Site", link=link, platform="USGOV",
-                                           files=files, read_ok=ok, read_fail=fail))
+                        # if the trail ended at SAM, it is the SAME solicitation SAM
+                        # carries — tag it so it merges instead of duplicating
+                        r2 = to_row(rec, post=root["post"], country=root["country"],
+                                    source=("Site+SAM" if sam_id else "Site"), link=link,
+                                    platform="USGOV", files=files, read_ok=ok, read_fail=fail)
+                        if sam_id:
+                            r2["samId"] = sam_id
+                        rows.append(r2)
                     except ai.AllExhausted:
                         st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
                         raise StopIteration
