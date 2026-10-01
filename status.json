@@ -1,7 +1,7 @@
 {
  "mode": "probe",
- "startedAt": "2026-10-01 13:34 UTC",
- "heartbeat": "2026-10-01 13:34 UTC",
+ "startedAt": "2026-10-01 13:36 UTC",
+ "heartbeat": "2026-10-01 13:36 UTC",
  "currentJob": "provider self-test",
  "running": false,
  "providers": [
@@ -11,9 +11,26 @@
   "openrouter"
  ],
  "probe": {
-  "gemini": "ERROR: gemini 429",
-  "groq": "ERROR: gemma2-9b-it HTTP 400: {\"error\":{\"message\":\"The model `gemma2-9b-it` has been decommissioned and is no longer supported. Please refer to htt",
-  "mistral": "ERROR: mistral-small-latest 429",
-  "openrouter": "ERROR: no model served (404 meta-llama/llama-3.2-3b-instruct:free)"
+  "gemini": "OK",
+  "groq": "ERROR: canopylabs/orpheus-arabic-saudi HTTP 400: {\"error\":{\"message\":\"The model `canopylabs/orpheus-arabic-saudi` requires terms acceptance. Please",
+  "mistral": "ERROR: mistral-small-2603 429",
+  "openrouter": "OK"
+ },
+ "discovered": {
+  "groq": [
+   "canopylabs/orpheus-arabic-saudi",
+   "canopylabs/orpheus-v1-english",
+   "openai/gpt-oss-20b"
+  ],
+  "mistral": [
+   "mistral-small-2603",
+   "mistral-small-latest",
+   "ministral-3b-2512"
+  ],
+  "openrouter": [
+   "qwen/qwen3.8-27b:free",
+   "google/gemma-4-26b-a4b-it:free",
+   "google/gemma-4-31b-it:free"
+  ]
  }
 }
