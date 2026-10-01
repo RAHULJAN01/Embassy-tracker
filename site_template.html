@@ -175,18 +175,18 @@
   .tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:2px;margin-right:8px;white-space:nowrap;border:1px solid}
   .tag.real{background:var(--redbg);color:var(--red);border-color:var(--red)} .tag.boiler{background:var(--orangebg);color:var(--orange);border-color:var(--orange)} .tag.fix{background:var(--greenbg);color:var(--green);border-color:var(--green)}
   .quote{font-style:italic;background:var(--bg);border-left:4px solid var(--red);padding:9px 12px;margin:8px 0;color:var(--ink)}
-  .draft{background:#fff;border:1px dashed var(--line2);padding:11px 13px;font-size:12.5px;white-space:pre-wrap;margin-top:8px;font-style:italic}
+  .draft{background:var(--bg);color:var(--ink);border:1px dashed var(--line2);padding:11px 13px;font-size:12.5px;white-space:pre-wrap;margin-top:8px;font-style:italic}
   .srcline{font-size:11.5px;color:var(--mute);margin-top:10px;font-style:italic}
   .dec{margin-top:12px;display:flex;gap:8px;align-items:center}
   .dec b{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--sub)}
-  .decbtn{font-size:12px;font-weight:700;padding:6px 12px;border:1px solid var(--line2);background:#fff;color:#111;border-radius:2px;cursor:pointer}
+  .decbtn{font-size:12px;font-weight:700;padding:6px 12px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);border-radius:2px;cursor:pointer}
   .decbtn.bid.on{background:var(--green);border-color:var(--green);color:#fff}
   .decbtn.pass.on{background:var(--red);border-color:var(--red);color:#fff}
   .open-link{font-weight:700;text-decoration:underline}
   /* modal */
   .ovl{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center}
   .ovl.on{display:flex}
-  .modal{background:#fff;max-width:470px;width:92%;border-radius:2px;overflow:hidden;border-top:4px solid #111}
+  .modal{background:var(--bg);color:var(--ink);max-width:470px;width:92%;border-radius:2px;overflow:hidden;border-top:4px solid #111}
   .modal h3{margin:0;padding:14px 18px;font-size:16px;background:var(--head)}
   .modal .mb{padding:16px 18px;font-size:14px;color:var(--sub)}
   .modal .mf{padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
@@ -194,7 +194,7 @@
   @media(max-width:1150px){.hidecol{display:none}}
 
   /* password gate */
-  .gate{position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center}
+  .gate{position:fixed;inset:0;background:var(--bg);color:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center}
   .gatebox{width:360px;max-width:90%;border:1px solid #111;border-top:5px solid #111;padding:26px 24px;text-align:center}
   .gatebox .gseal{width:50px;height:50px;border:2px solid #111;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-family:Arial;margin-bottom:12px}
   .gatebox h2{font-size:16px;margin:0 0 4px;letter-spacing:.3px}
