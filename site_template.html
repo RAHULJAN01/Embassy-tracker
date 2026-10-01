@@ -74,6 +74,51 @@
   .mc-job{padding:10px 16px;border-top:1px solid var(--line);font-size:12.5px;color:#333}
   .mc-job b{color:#111}
   @media(max-width:860px){.mc-grid{grid-template-columns:repeat(2,1fr)}}
+  /* ---------- NIGHT MODE: inverts the page. The masthead is NEVER touched. ---------- */
+  body.night{
+    --ink:#f0f0f0; --sub:#c8c8c8; --mute:#9a9a9a; --line:#454545; --line2:#6a6a6a;
+    --bg:#0d0d0d; --alt:#171717; --head:#1d1d1d; --black:#f0f0f0;
+    --greenbg:#102a18; --orangebg:#2e1d0c; --redbg:#2c1212;
+  }
+  body.night a,body.night a:visited{color:#f0f0f0}
+  body.night .section{border-color:#f0f0f0}
+  body.night .section > h2{background:#f0f0f0;color:#111}
+  body.night .summary .cell.total{background:#f0f0f0;color:#111}
+  body.night .summary .cell.total .cap{color:#333}
+  body.night table.reg{background:#111}
+  body.night table.reg thead th{background:var(--head);border-bottom-color:#f0f0f0}
+  body.night .btn{background:#f0f0f0;color:#111;border-color:#f0f0f0}
+  body.night .btn.sec{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
+  body.night .mc-panel{background:#141414}
+  body.night .mc-bar{background:#2a2a2a;border-color:#555}
+  body.night .mc-bar > i{background:#f0f0f0}
+  body.night .dd-menu{background:#171717;border-color:#6a6a6a}
+  body.night .dd-menu button{color:#f0f0f0}
+  body.night .modal{background:#171717;color:#f0f0f0}
+  body.night input,body.night select{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
+  body.night .nav-tab{background:#171717;color:#f0f0f0;border-color:#6a6a6a}
+  body.night .nav-tab.on{background:#f0f0f0;color:#111;border-color:#f0f0f0}
+  /* the masthead keeps its own colours in BOTH modes — mandatory */
+  body.night .mast{background:#fff;border-bottom-color:#111}
+  body.night .mast .bt .n{color:#111} body.night .mast .bt .s{color:#555}
+  body.night .mast .mmeta{color:#555} body.night .mast .mmeta b{color:#111}
+  body.night .mast .btn.sec{background:#fff;color:#111;border-color:#111}
+  /* ---------- platform / agency navigation ---------- */
+  .navbar{display:flex;gap:0;border:1px solid var(--line);border-top:none;background:var(--alt);flex-wrap:wrap}
+  .nav-tab{appearance:none;background:#fff;color:#111;border:1px solid var(--line);border-top:none;border-left:none;
+    font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+    padding:11px 20px;cursor:pointer}
+  .nav-tab.on{background:#111;color:#fff;border-color:#111}
+  .subnav{display:flex;gap:0;border:1px solid var(--line);border-top:none;flex-wrap:wrap}
+  .subnav .nav-tab{font-size:11.5px;padding:8px 16px;text-transform:none;letter-spacing:.2px;font-weight:700}
+  /* verified badge */
+  .vb{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border:1px solid;white-space:nowrap}
+  .vb.ok{color:var(--green);border-color:var(--green);background:var(--greenbg)}
+  .vb.no{color:var(--orange);border-color:var(--orange);background:var(--orangebg);cursor:pointer}
+  /* sector sub-heading inside a tier */
+  .sector-head{background:var(--head);border-top:1px solid var(--line);padding:7px 14px;
+    font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--sub)}
+  body.night .sector-head{background:#232323}
   /* section */
   .section{margin-top:22px;border:1px solid #111}
   .section > h2{margin:0;background:#111;color:#fff;font-size:14px;font-weight:700;letter-spacing:.4px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
@@ -81,28 +126,29 @@
   /* register table — fixed alignment */
   table.reg{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px;table-layout:fixed}
   table.reg col.c-ref{width:122px} table.reg col.c-src{width:74px} table.reg col.c-pop{width:128px}
-  table.reg col.c-cls{width:116px} table.reg col.c-dl{width:76px} table.reg col.c-val{width:118px}
+  table.reg col.c-cls{width:104px} table.reg col.c-dl{width:98px} table.reg col.c-val{width:118px}
   table.reg col.c-st{width:70px} table.reg col.c-up{width:80px} table.reg col.c-act{width:116px}
+  table.reg col.c-vf{width:86px}
   table.reg thead th{background:var(--head);text-align:left;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--sub);padding:9px 10px;border-bottom:2px solid #111;white-space:normal;vertical-align:bottom;overflow:hidden}
   table.reg thead th.r,table.reg td.num{text-align:right}
   table.reg tbody td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
   table.reg tbody tr.row{cursor:pointer}
   table.reg tbody tr.row:hover{background:var(--alt)}
   .ref{font-family:"Courier New",monospace;font-size:12px;color:var(--sub)}
-  .ttl{font-weight:700;color:#111;white-space:normal;display:block;overflow-wrap:anywhere}
+  .ttl{font-weight:700;color:var(--ink);white-space:normal;display:block;overflow-wrap:anywhere}
   table.reg td{overflow:hidden}
   table.reg td.tcell{white-space:normal;overflow:hidden}
   table.reg td.num{overflow:hidden;text-overflow:ellipsis}
   table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
   .pop{white-space:normal} .pop .c{color:var(--mute);font-size:12px}
-  .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid #111;border-radius:2px;white-space:nowrap}
+  .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid var(--ink);border-radius:2px;white-space:nowrap}
   .status{font-weight:700;font-size:12px;white-space:nowrap}
   .status.g{color:var(--green)} .status.o{color:var(--orange)} .status.r{color:var(--red)}
   .upd{font-size:11.5px;color:var(--mute);white-space:nowrap}
   .num{white-space:nowrap}
   .due{font-weight:700;white-space:nowrap} .due.soon{color:var(--red)}
   .act{white-space:nowrap}
-  .ibtn{font-family:inherit;font-size:12px;line-height:1;padding:6px 6px;border:1px solid var(--line2);background:#fff;color:#111;border-radius:2px;cursor:pointer;margin-right:3px;text-decoration:none;display:inline-block}
+  .ibtn{font-family:inherit;font-size:12px;line-height:1;padding:6px 6px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);border-radius:2px;cursor:pointer;margin-right:3px;text-decoration:none;display:inline-block}
   .act .ibtn:last-child{margin-right:0}
   .ibtn:hover{background:var(--head)}
   .ibtn.star.saved{border-color:var(--orange);color:var(--orange);font-weight:700}
@@ -169,6 +215,7 @@
     <div class="mhead-right">
       <button class="btn sec" style="height:36px" onclick="refreshPage()">↻ Refresh</button>
       <button class="btn sec" style="height:36px" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
+      <button class="btn sec" style="height:36px" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
       <button class="btn sec" style="height:36px" onclick="lock()" title="Log out now">🔒 Lock</button>
       <div class="mmeta">
         Register compiled: <b id="built"></b><br>
@@ -177,6 +224,9 @@
       </div>
     </div>
   </div>
+
+  <div class="navbar" id="navPlatform"></div>
+  <div class="subnav" id="navSub"></div>
 
   <div id="helpBanner" class="help-banner" style="display:none"></div>
   <div id="mcPanel" class="mc-panel" style="display:none"></div>
@@ -221,7 +271,8 @@
 <script>
 /*__ENC__*/
 const LOCKED=/*__LOCKED__*/;
-let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]};
+let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false;
+const REPO="RAHULJAN01/embassy-tracker";
 
 
 const TRACKER_API="";
@@ -284,40 +335,120 @@ function rowHTML(s,i){
     <td class="num"><span class="due ${soon}">${esc(duetxt)}</span></td>
     <td class="num valcell hidecol">${esc(s.value||'—')}</td>
     <td><span class="status ${st}">${esc(s.status)}</span></td>
+    <td>${verifyBadge(s)}</td>
     <td class="upd hidecol">${esc(s.updated||'—')}</td>
     <td class="act">
       <button class="ibtn star ${saved?'saved':''}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${esc(s.sol)}')">${saved?'★':'☆'}</button>
       <a class="ibtn" title="Open on source site" href="${esc(s.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>
       <button class="ibtn" title="Re-verify this solicitation" onclick="event.stopPropagation();confirmAction('reverify','${esc(s.sol)}')">⟳</button>
     </td></tr>
-    <tr class="dossier hidden" id="d${i}"><td colspan="10">${dossier(s)}</td></tr>`;
+    <tr class="dossier hidden" id="d${i}"><td colspan="11">${dossier(s)}</td></tr>`;
+}
+// VERIFIED = every doc read, dates found, fields complete. Otherwise it's a button to fix it.
+function verifyBadge(s){
+  if(s.verified==='VERIFIED') return `<span class="vb ok" title="All documents read, dates and fields confirmed">VERIFIED</span>`;
+  const why=(s.verifyNotes||[]).join('; ')||'not fully verified';
+  return `<span class="vb no" title="${esc(why)}" onclick="event.stopPropagation();confirmAction('reverify','${esc(s.sol)}')">VERIFY ⟳</span>`;
 }
 function tgl(i){const r=document.getElementById('d'+i);if(r)r.classList.toggle('hidden');}
+
+/* ---------- platform / agency navigation state ---------- */
+let NAV={platform:'USGOV', sub:'OVERSEAS'};   // sub: OVERSEAS|DOMESTIC for USGOV, agency name for UN
+const SECTOR_ORDER=['COTS','SERVICES','CONSTRUCTION','MIXED',''];
+const SECTOR_LABEL={COTS:'Commercial Goods (COTS)',SERVICES:'Services',CONSTRUCTION:'Construction',MIXED:'Mixed Scope','':'Unclassified'};
+
+function platformsPresent(){
+  const set=new Set(SOLICITATIONS.map(s=>s.platform||'USGOV'));
+  return ['USGOV','UN'].filter(p=>set.has(p));
+}
+function agenciesPresent(){
+  // only agencies that actually have at least one solicitation — no empty boxes
+  const m={};
+  SOLICITATIONS.forEach(s=>{ if((s.platform||'USGOV')==='UN'){ const a=s.agency||'UN'; m[a]=(m[a]||0)+1; } });
+  return Object.keys(m).sort().map(a=>({name:a,n:m[a]}));
+}
+function renderNav(){
+  const plats=platformsPresent();
+  const nb=document.getElementById('navPlatform');
+  if(plats.length<=0){ nb.innerHTML=''; document.getElementById('navSub').innerHTML=''; return; }
+  const LBL={USGOV:'U.S. Government',UN:'United Nations'};
+  nb.innerHTML=plats.map(p=>`<button class="nav-tab ${NAV.platform===p?'on':''}" onclick="setPlatform('${p}')">${LBL[p]}</button>`).join('');
+  // sub-nav
+  const sb=document.getElementById('navSub');
+  if(NAV.platform==='USGOV'){
+    const subs=[['OVERSEAS','Overseas Posts'],['DOMESTIC','Domestic (inside U.S.)']];
+    sb.innerHTML=subs.map(([k,l])=>{
+      const n=SOLICITATIONS.filter(s=>(s.platform||'USGOV')==='USGOV'&&!s.archived&&(k==='DOMESTIC'?s.domestic:!s.domestic)).length;
+      return `<button class="nav-tab ${NAV.sub===k?'on':''}" onclick="setSub('${k}')">${l} (${n})</button>`;}).join('');
+  }else{
+    const ags=agenciesPresent();
+    sb.innerHTML=[`<button class="nav-tab ${NAV.sub==='ALL'?'on':''}" onclick="setSub('ALL')">All Agencies</button>`]
+      .concat(ags.map(a=>`<button class="nav-tab ${NAV.sub===a.name?'on':''}" onclick="setSub('${esc(a.name)}')">${esc(a.name)} (${a.n})</button>`)).join('');
+  }
+}
+function setPlatform(p){ NAV.platform=p; NAV.sub = (p==='USGOV')?'OVERSEAS':'ALL'; renderNav(); render(); }
+function setSub(s){ NAV.sub=s; renderNav(); render(); }
+
+function inNav(s){
+  const p=s.platform||'USGOV';
+  if(p!==NAV.platform) return false;
+  if(p==='USGOV') return NAV.sub==='DOMESTIC' ? !!s.domestic : !s.domestic;
+  return NAV.sub==='ALL' ? true : (s.agency||'UN')===NAV.sub;
+}
 
 function render(){
   const q=document.getElementById('q').value.toLowerCase().trim();
   const fS=document.getElementById('fSrc').value,fC=document.getElementById('fCountry').value,sort=document.getElementById('fSort').value;
   const saved=LS();
   let list=SOLICITATIONS.map((s,i)=>({s,i})).filter(({s})=>{
+    if(!inNav(s))return false;
     if(viewSaved&&!saved.includes(s.sol))return false;
     if(fS&&s.source!==fS)return false; if(fC&&s.country!==fC)return false;
     if(q&&!(s.title+' '+s.post+' '+s.country+' '+s.type+' '+s.sol+' '+s.summary).toLowerCase().includes(q))return false;
     return true;});
   list.sort((a,b)=>sort==='val'?(parseInt((b.s.value||'').replace(/[^0-9]/g,'')||0)-parseInt((a.s.value||'').replace(/[^0-9]/g,'')||0))
     :sort==='new'?((b.s.posted||'').localeCompare(a.s.posted||'')):((a.s.deadline||'9999').localeCompare(b.s.deadline||'9999')));
-  const cols='<colgroup><col class="c-ref"><col class="c-src"><col><col class="c-pop hidecol"><col class="c-cls hidecol"><col class="c-dl"><col class="c-val hidecol"><col class="c-st"><col class="c-up hidecol"><col class="c-act"></colgroup>';
-  const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th class="hidecol">Last Updated</th><th>Actions</th></tr></thead>`;
-  let html='';
-  ['BID','MID','NO','REVIEW'].forEach(tr=>{
-    const items=list.filter(({s})=>s.tier===tr); if(!items.length)return;
+
+  const active=list.filter(({s})=>!s.archived), archived=list.filter(({s})=>s.archived);
+  const cols='<colgroup><col class="c-ref"><col class="c-src"><col><col class="c-pop hidecol"><col class="c-cls hidecol"><col class="c-dl"><col class="c-val hidecol"><col class="c-st"><col class="c-vf"><col class="c-up hidecol"><col class="c-act"></colgroup>';
+  const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th><th>Actions</th></tr></thead>`;
+
+  // a tier section, sub-grouped by sector: COTS -> Services -> Construction
+  function tierSection(tr){
+    const items=active.filter(({s})=>s.tier===tr); if(!items.length)return '';
     const m=SMAP[tr];
-    html+=`<div class="section"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
+    let h=`<div class="section"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
+    h+=`<table class="reg">${cols}${thead}<tbody>`;
+    SECTOR_ORDER.forEach(sec=>{
+      const grp=items.filter(({s})=>(s.sector||'')===sec); if(!grp.length)return;   // no empty sector blocks
+      h+=`<tr><td class="sector-head" colspan="11">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
+      grp.forEach(({s,i})=>h+=rowHTML(s,i));
+    });
+    return h+'</tbody></table></div>';
+  }
+
+  let html=['BID','MID','NO','REVIEW'].map(tierSection).join('');
+
+  if(archived.length){
+    html+=`<div class="section collapsed"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot n"></span>ARCHIVE — CLOSED, EXPIRED &amp; CANCELLED</span><span>${archived.length} &nbsp;▾</span></h2>`;
     html+=`<table class="reg">${cols}${thead}<tbody>`;
-    items.forEach(({s,i})=>html+=rowHTML(s,i));
+    archived.forEach(({s,i})=>html+=rowHTML(s,i));
     html+='</tbody></table></div>';
-  });
+  }
+
   if(viewSaved&&!list.length) html='<p style="color:var(--mute);padding:24px 0"><i>No solicitations saved to your shortlist yet. Use the ☆ button on any row.</i></p>';
-  document.getElementById('sections').innerHTML=html||'<p style="color:var(--mute);padding:24px 0"><i>No solicitations match the current filters.</i></p>';
+  document.getElementById('sections').innerHTML=html||'<p style="color:var(--mute);padding:24px 0"><i>No solicitations on this platform yet.</i></p>';
+}
+
+/* ---------- night mode (masthead never changes) ---------- */
+function toggleNight(){
+  const on=document.body.classList.toggle('night');
+  try{ localStorage.setItem('mm_night', on?'1':'0'); }catch(e){}
+  const b=document.getElementById('nightBtn'); if(b) b.textContent = on?'☀ Day':'◐ Night';
+}
+function applyNight(){
+  let on=false; try{ on=localStorage.getItem('mm_night')==='1'; }catch(e){}
+  if(on){ document.body.classList.add('night'); const b=document.getElementById('nightBtn'); if(b)b.textContent='☀ Day'; }
 }
 function refreshCounts(){document.getElementById('scount').textContent=LS().length;}
 
@@ -328,7 +459,16 @@ function confirmAction(action,id){
     abort:["Abort Running Update","Signal the running update to stop at the next checkpoint. Nothing already written is lost. Proceed?"],
     reverify:["Re-verify Solicitation","Re-check this solicitation ("+(id||'')+") against its source and update its data and Last-Updated date. Proceed?"]};
   const m=M[action];document.getElementById('mTitle').textContent=m[0];document.getElementById('mBody').textContent=m[1];
-  document.getElementById('mOk').onclick=()=>{closeModal();if(TRACKER_API){fetch(TRACKER_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,id})}).then(r=>alert(r.ok?"Request submitted.":"Failed ("+r.status+").")).catch(()=>alert("Could not reach the tracker."));}};
+  document.getElementById('mOk').onclick=async()=>{
+    closeModal();
+    let r;
+    if(action==='abort')          r=await ghDispatch('control.yml',{action:'stop'});
+    else if(action==='reverify')  r=await ghDispatch('crawl.yml',{mode:'live'});
+    else                          r=await ghDispatch('crawl.yml',{mode:action});   // roots | live
+    const el=document.getElementById('fleetState');
+    if(r&&r.ok){ if(el) el.innerHTML='<b style="color:var(--green)">Request sent.</b>'; alert("Request sent to the bots."); }
+    else { alert("Could not send the request"+(r&&r.msg?" ("+r.msg+")":"")+". Check the token has Actions write access."); }
+  };
   document.getElementById('ovl').classList.add('on');
 }
 function closeModal(){document.getElementById('ovl').classList.remove('on');}
@@ -340,9 +480,11 @@ function init(){
   document.getElementById('lastDeep').textContent=META.lastDeep;
   document.getElementById('lrRoots').textContent="Last run: "+META.lastRoots;
   document.getElementById('lrLive').textContent="Last run: "+META.lastLive;
-  const act=SOLICITATIONS.filter(s=>s.status==="Active");
+  const act=SOLICITATIONS.filter(s=>!s.archived);
   const bid=act.filter(s=>s.tier==='BID').length,mid=act.filter(s=>s.tier==='MID').length,no=act.filter(s=>s.tier==='NO').length;
-  document.getElementById('cov').innerHTML="<b>"+SOLICITATIONS.length+"</b> solicitations on register";
+  const arch=SOLICITATIONS.filter(s=>s.archived).length;
+  const ver=act.filter(s=>s.verified==='VERIFIED').length;
+  document.getElementById('cov').innerHTML="<b>"+act.length+"</b> active &middot; <b>"+ver+"</b> verified &middot; <b>"+arch+"</b> archived";
   document.getElementById('summary').innerHTML=
     `<div class="cell total"><div class="big">${act.length}</div><div class="cap">Total Active Solicitations</div></div>
      <div class="cell"><div class="big" style="color:var(--green)">${bid}</div><div class="cap"><span class="dot g"></span>Bid-Eligible</div></div>
@@ -350,9 +492,9 @@ function init(){
      <div class="cell"><div class="big" style="color:var(--red)">${no}</div><div class="cap"><span class="dot r"></span>Non-Eligible</div></div>
      <div class="cell"><div class="big" id="sl2">0</div><div class="cap">★ Shortlisted</div></div>`;
   document.getElementById('sl2').textContent=LS().length;
-  const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].sort(),sel=document.getElementById('fCountry');
+  const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].filter(Boolean).sort(),sel=document.getElementById('fCountry');
   cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-  renderHelp(); renderMC();
+  applyNight(); renderNav(); renderHelp(); renderMC();
   refreshCounts();render();
 }
 
@@ -371,7 +513,7 @@ function renderHelp(){
 function toggleMC(){ const p=document.getElementById('mcPanel'); p.style.display=(p.style.display==='none'?'block':'none'); if(p.style.display==='block') renderMC(); }
 function renderMC(){
   const p=document.getElementById('mcPanel'); const s=STATUS||{};
-  if(!s||!s.startedAt){ p.innerHTML='<div class="mc-job"><b>Mission Control</b> — no crawler run recorded yet. The engine writes live status here on its first run.</div>'; return; }
+  if(!s||!s.startedAt){ p.innerHTML='<div class="mc-job"><b>Mission Control</b> — no crawler run recorded yet. The engine writes live status here on its first run.</div>'+fleetBar(); return; }
   const pct = s.aiBudget? Math.min(100, Math.round(100*(s.aiCalls||0)/s.aiBudget)):0;
   const cov = s.coverage?Object.keys(s.coverage).length:0;
   const live = s.running?'<span class="mc-live on"></span>Running':'<span class="mc-live off"></span>Idle';
@@ -385,7 +527,51 @@ function renderMC(){
       <div class="mc-cell"><div class="mc-v">${(s.providers||[]).length||0}</div><div class="mc-k">AI providers</div></div>
       <div class="mc-cell"><div class="mc-v">${(BLOCKED.sites||[]).length}</div><div class="mc-k">Blocked sites</div></div>
      </div>
-     <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}</div>`;
+     <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}</div>
+     `+fleetBar();
+}
+function fleetBar(){
+  return `<div class="mc-job" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+       <b>Bot fleet:</b>
+       <button class="btn danger" onclick="fleet('stop')">■ STOP ALL BOTS</button>
+       <button class="btn" onclick="fleet('resume')">▶ RESUME</button>
+       <span id="fleetState" style="font-size:12px">${PAUSED?'<b style="color:var(--red)">PAUSED</b> — bots will not start until resumed.':'<b style="color:var(--green)">RUNNING</b> — bots work on schedule.'}</span>
+     </div>`;
+}
+
+/* ---------- fleet control (STOP / RESUME) ----------
+   The page talks to GitHub directly. Your token is kept ONLY in this browser
+   (sessionStorage) — it is never in the repo, the page source, or the build. */
+function ghToken(){
+  let t=null; try{ t=sessionStorage.getItem('mm_gh'); }catch(e){}
+  if(!t){
+    t=prompt("One-time setup — paste a GitHub token with Actions access.\n\nIt is stored only in this browser tab and never leaves it except to call GitHub.");
+    if(t){ try{ sessionStorage.setItem('mm_gh', t.trim()); }catch(e){} }
+  }
+  return t?t.trim():null;
+}
+async function ghDispatch(workflow, inputs){
+  const t=ghToken(); if(!t) return {ok:false,msg:'no token'};
+  const url=`https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`;
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'Authorization':'token '+t,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({ref:'main',inputs:inputs||{}})});
+    return r.status===204?{ok:true}:{ok:false,msg:'HTTP '+r.status};
+  }catch(e){ return {ok:false,msg:String(e).slice(0,80)}; }
+}
+async function fleet(what){
+  const el=document.getElementById('fleetState');
+  if(el) el.innerHTML='<i>sending…</i>';
+  const r=await ghDispatch('control.yml',{action:what});
+  if(r.ok){
+    PAUSED=(what==='stop');
+    if(el) el.innerHTML=(what==='stop')
+      ? '<b style="color:var(--red)">STOP SENT</b> — bots halt within a minute and stay down until resumed.'
+      : '<b style="color:var(--green)">RESUME SENT</b> — bots pick up again on the next cycle.';
+  } else {
+    if(el) el.innerHTML='<b style="color:var(--red)">Failed:</b> '+esc(r.msg||'')+' — check the token has Actions write access.';
+    try{ sessionStorage.removeItem('mm_gh'); }catch(e){}
+  }
 }
 
 function _b64d(s){const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
@@ -412,6 +598,7 @@ async function unlock(pwArg){
     }
     META=payload.meta||{}; SOLICITATIONS=payload.solicitations||[];
     STATUS=payload.status||{}; BLOCKED=payload.blocked||{sites:[]};
+    PAUSED=!!((payload.control||{}).paused);
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();
     ['click','keydown','scroll','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_touch,{passive:true}));

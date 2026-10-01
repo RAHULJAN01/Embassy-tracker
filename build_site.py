@@ -43,6 +43,7 @@ def main():
         "solicitations": core.get("solicitations", []),
         "status": _opt("status.json", {}),
         "blocked": _opt("blocked.json", {"sites": []}),
+        "control": _opt("control.json", {"paused": False}),
     }
     data = json.dumps(payload, ensure_ascii=False)
     template = (HERE / "site_template.html").read_text(encoding="utf-8")

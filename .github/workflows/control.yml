@@ -1,0 +1,55 @@
+name: Fleet Control
+# The STOP / RESUME switch in Mission Control calls this.
+# It flips control.json, which every crawler reads before and between units of work.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "stop = halt all bots | resume = let them run"
+        type: choice
+        options: [stop, resume]
+        default: stop
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: control
+  cancel-in-progress: false
+jobs:
+  flip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set pause flag
+        run: |
+          if [ "${{ github.event.inputs.action }}" = "stop" ]; then P=true; else P=false; fi
+          printf '{\n "paused": %s,\n "updated": "%s",\n "by": "mission-control"\n}\n' \
+            "$P" "$(date -u '+%Y-%m-%d %H:%M UTC')" > control.json
+          cat control.json
+      - name: Cancel in-flight crawls
+        if: github.event.inputs.action == 'stop'
+        run: |
+          # stop means stop now — cancel any crawl currently running
+          ids=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/crawl.yml/runs?status=in_progress" \
+            | python3 -c "import sys,json;print(' '.join(str(r['id']) for r in json.load(sys.stdin).get('workflow_runs',[])))" || true)
+          for id in $ids; do
+            echo "cancelling run $id"
+            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$id/cancel" >/dev/null || true
+          done
+      - name: Commit + redeploy
+        run: |
+          git config user.name  "mission-control"
+          git config user.email "control@users.noreply.github.com"
+          git add control.json
+          if git diff --cached --quiet; then
+            echo "flag unchanged"
+          else
+            git commit -m "fleet: ${{ github.event.inputs.action }}"
+            for i in 1 2 3; do git pull --rebase --autostash && git push && break; sleep 5; done
+          fi
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}' >/dev/null

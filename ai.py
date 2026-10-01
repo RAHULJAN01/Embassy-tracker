@@ -157,8 +157,9 @@ _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 def _openai_style(url, key, models, prompt, extra_headers=None):
     """OpenAI-compatible chat call. `models` is a list tried in order (404 -> next).
     Sends a browser User-Agent so Cloudflare (Groq cf-1010) doesn't block the call."""
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {key}",
-               "User-Agent": _UA}
+    headers = {"Content-Type": "application/json", "User-Agent": _UA}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"      # keyless endpoints send no auth header
     if extra_headers:
         headers.update(extra_headers)
     last = ""
@@ -205,18 +206,102 @@ class _Quota(Exception):
     pass
 
 
+# ---------- additional free providers ----------
+def _github_models(key, prompt):
+    """GitHub Models — free for developers, runs right beside our Actions."""
+    models = _discover("github", "https://models.github.ai/catalog/models", key,
+                       prefer=["gpt-4o-mini", "gpt-4.1-mini", "llama-3.3", "phi-4", "mistral"]) \
+        or ["openai/gpt-4o-mini", "meta/Llama-3.3-70B-Instruct", "microsoft/Phi-4"]
+    return _openai_style("https://models.github.ai/inference/chat/completions", key, models[:6], prompt)
+
+
+def _cerebras(key, prompt):
+    models = _discover("cerebras", "https://api.cerebras.ai/v1/models", key,
+                       prefer=["llama-3.3-70b", "llama3.1-8b", "llama"]) \
+        or ["llama-3.3-70b", "llama3.1-8b"]
+    return _openai_style("https://api.cerebras.ai/v1/chat/completions", key, models[:4], prompt)
+
+
+def _sambanova(key, prompt):
+    models = _discover("sambanova", "https://api.sambanova.ai/v1/models", key,
+                       prefer=["Llama-3.3-70B", "Llama-3.1-8B", "Meta-Llama"]) \
+        or ["Meta-Llama-3.3-70B-Instruct", "Meta-Llama-3.1-8B-Instruct"]
+    return _openai_style("https://api.sambanova.ai/v1/chat/completions", key, models[:4], prompt)
+
+
+def _nvidia(key, prompt):
+    models = _discover("nvidia", "https://integrate.api.nvidia.com/v1/models", key,
+                       prefer=["llama-3.3-70b", "llama-3.1-8b", "nemotron", "qwen"]) \
+        or ["meta/llama-3.3-70b-instruct", "meta/llama-3.1-8b-instruct"]
+    return _openai_style("https://integrate.api.nvidia.com/v1/chat/completions", key, models[:4], prompt)
+
+
+def _huggingface(key, prompt):
+    models = _discover("huggingface", "https://router.huggingface.co/v1/models", key,
+                       prefer=["llama-3.3", "qwen", "mistral", "llama"]) \
+        or ["meta-llama/Llama-3.3-70B-Instruct"]
+    return _openai_style("https://router.huggingface.co/v1/chat/completions", key, models[:4], prompt)
+
+
+def _pollinations(_key, prompt):
+    """Keyless free endpoint — costs nothing and needs no signup."""
+    return _openai_style("https://text.pollinations.ai/openai", "", ["openai", "mistral"], prompt)
+
+
+def _cloudflare(key, prompt):
+    """Cloudflare Workers AI — its own (non-OpenAI) response shape."""
+    acct = os.getenv("CF_ACCOUNT_ID", "")
+    if not acct:
+        raise RuntimeError("CF_ACCOUNT_ID not set")
+    last = ""
+    for model in ["@cf/meta/llama-3.1-8b-instruct", "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                  "@cf/qwen/qwen1.5-14b-chat-awq", "@cf/mistral/mistral-7b-instruct-v0.1"]:
+        url = f"https://api.cloudflare.com/client/v4/accounts/{acct}/ai/run/{model}"
+        st, body = _post(url, {"Content-Type": "application/json",
+                               "Authorization": f"Bearer {key}", "User-Agent": _UA},
+                         {"messages": [{"role": "user", "content": prompt}]})
+        if _is_quota(st, body):
+            raise _Quota(f"cloudflare {st}")
+        if st in (400, 404):
+            last = f"{st} {model}"; continue
+        if st != 200:
+            raise RuntimeError(f"cloudflare HTTP {st}: {body[:120]}")
+        d = json.loads(body)
+        res = d.get("result", {})
+        return res.get("response") or res.get("text") or json.dumps(res)
+    raise RuntimeError(f"cloudflare: no model served ({last})")
+
+
 # ---------- the rotating caller ----------
 class Rotator:
     def __init__(self):
         self.providers = []
-        if os.getenv("GEMINI_API_KEY"):
-            self.providers.append(["gemini", os.environ["GEMINI_API_KEY"], _gemini, 0])
+        a = self.providers.append
+        # Gemini — supports several keys (each Google account = its own free daily quota)
+        for suffix in ("", "_2", "_3", "_4"):
+            k = os.getenv("GEMINI_API_KEY" + suffix)
+            if k:
+                a(["gemini" + suffix, k, _gemini, 0])
         if os.getenv("GROQ_API_KEY"):
-            self.providers.append(["groq", os.environ["GROQ_API_KEY"], _groq, 0])
+            a(["groq", os.environ["GROQ_API_KEY"], _groq, 0])
         if os.getenv("MISTRAL_API_KEY"):
-            self.providers.append(["mistral", os.environ["MISTRAL_API_KEY"], _mistral, 0])
+            a(["mistral", os.environ["MISTRAL_API_KEY"], _mistral, 0])
         if os.getenv("OPENROUTER_API_KEY"):
-            self.providers.append(["openrouter", os.environ["OPENROUTER_API_KEY"], _openrouter, 0])
+            a(["openrouter", os.environ["OPENROUTER_API_KEY"], _openrouter, 0])
+        if os.getenv("GH_MODELS_TOKEN"):
+            a(["github", os.environ["GH_MODELS_TOKEN"], _github_models, 0])
+        if os.getenv("CF_API_TOKEN") and os.getenv("CF_ACCOUNT_ID"):
+            a(["cloudflare", os.environ["CF_API_TOKEN"], _cloudflare, 0])
+        if os.getenv("CEREBRAS_API_KEY"):
+            a(["cerebras", os.environ["CEREBRAS_API_KEY"], _cerebras, 0])
+        if os.getenv("SAMBANOVA_API_KEY"):
+            a(["sambanova", os.environ["SAMBANOVA_API_KEY"], _sambanova, 0])
+        if os.getenv("NVIDIA_API_KEY"):
+            a(["nvidia", os.environ["NVIDIA_API_KEY"], _nvidia, 0])
+        if os.getenv("HF_API_KEY"):
+            a(["huggingface", os.environ["HF_API_KEY"], _huggingface, 0])
+        if os.getenv("USE_POLLINATIONS", "1") != "0":
+            a(["pollinations", "", _pollinations, 0])     # keyless fallback bot
         self.calls = 0
         self._last_call = 0.0
         self.errors = {}          # provider -> last error seen (for diagnostics)

@@ -1,10 +1,10 @@
 name: Crawl Solicitations
-# The 24/7 engine. Each scheduled run processes one resumable slice (budget-capped
-# to stay on free quota), checkpoints state.json, and commits the results back.
-# Committing data.json triggers Deploy Site, so the live page always mirrors the latest crawl.
+# The 24/7 engine. Runs a FLEET of parallel sharded workers — each owns its own
+# slice of the source list, so no two bots ever redo the same work. Every worker
+# also checks control.json (the Mission Control STOP switch) before doing anything.
 on:
   schedule:
-    - cron: "17 */2 * * *"   # full re-crawl slice every 2 hours (resumable -> continuous coverage)
+    - cron: "17 */2 * * *"   # deep re-crawl slice every 2 hours
     - cron: "47 13 * * *"    # one quick live status check daily
   workflow_dispatch:
     inputs:
@@ -15,22 +15,25 @@ on:
         default: roots
 permissions:
   contents: write
-  actions: write   # lets this workflow dispatch Deploy Site after committing (token pushes don't auto-trigger it)
+  actions: write
 concurrency:
   group: crawl
-  cancel-in-progress: false   # let a running slice finish; the kill-switch is Cancel in the Actions UI
+  cancel-in-progress: false
 jobs:
-  crawl:
+  # ---- gate: don't start a fleet at all if the operator pressed STOP ----
+  gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    outputs:
+      paused: ${{ steps.c.outputs.paused }}
+      mode: ${{ steps.m.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install cryptography pdfplumber pypdf beautifulsoup4 requests
-      - name: Pick mode
-        id: mode
+      - id: c
+        run: |
+          P=$(python3 -c "import json;print(str(json.load(open('control.json')).get('paused',False)).lower())" 2>/dev/null || echo false)
+          echo "paused=$P" >> "$GITHUB_OUTPUT"
+          echo "fleet paused: $P"
+      - id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "mode=${{ github.event.inputs.mode }}" >> "$GITHUB_OUTPUT"
@@ -39,38 +42,84 @@ jobs:
           else
             echo "mode=roots" >> "$GITHUB_OUTPUT"
           fi
-      - name: Run crawler
+
+  crawl:
+    needs: gate
+    if: needs.gate.outputs.paused != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]       # 4 bots working different slices at once
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography pdfplumber pypdf beautifulsoup4 requests
+      - name: Run crawler (shard ${{ matrix.shard }})
         env:
           GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2:   ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3:   ${{ secrets.GEMINI_API_KEY_3 }}
           GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
           MISTRAL_API_KEY:    ${{ secrets.MISTRAL_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_MODELS_TOKEN:    ${{ secrets.GH_MODELS_TOKEN }}
+          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          CEREBRAS_API_KEY:   ${{ secrets.CEREBRAS_API_KEY }}
+          SAMBANOVA_API_KEY:  ${{ secrets.SAMBANOVA_API_KEY }}
+          NVIDIA_API_KEY:     ${{ secrets.NVIDIA_API_KEY }}
+          HF_API_KEY:         ${{ secrets.HF_API_KEY }}
           SAM_API_KEY:        ${{ secrets.SAM_API_KEY }}
-          MAX_AI_CALLS:       "120"
-          TIME_BUDGET_S:      "1500"
-        run: python crawler.py "${{ steps.mode.outputs.mode }}"
-      - name: Commit results
+          UNGM_USER:          ${{ secrets.UNGM_USER }}
+          UNGM_PASS:          ${{ secrets.UNGM_PASS }}
+          SHARD:              ${{ matrix.shard }}
+          SHARDS:             "4"
+          MAX_AI_CALLS:       "60"
+          TIME_BUDGET_S:      "1400"
+        run: python crawler.py "${{ needs.gate.outputs.mode }}"
+      - name: Upload shard result
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: |
+            data.json
+            status.json
+            blocked.json
+            state.json
+          retention-days: 1
+
+  # ---- merge every shard's findings into one register, then deploy ----
+  merge:
+    needs: [gate, crawl]
+    if: always() && needs.gate.outputs.paused != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          path: shards
+      - name: Merge shards
+        run: python merge_shards.py shards
+      - name: Commit + redeploy
         run: |
           git config user.name  "mm-crawler"
           git config user.email "crawler@users.noreply.github.com"
-          git add data.json status.json blocked.json state.json 2>/dev/null || true
+          git add data.json status.json blocked.json state.json
           if git diff --cached --quiet; then
-            echo "no changes this slice"
+            echo "no changes"
           else
-            git commit -m "crawl (${{ steps.mode.outputs.mode }}): update register + status"
-            # retry push in case a deploy commit landed meanwhile
-            for i in 1 2 3; do
-              git pull --rebase --autostash && git push && break
-              sleep 5
-            done
-            echo "changed=1" >> "$GITHUB_OUTPUT"
+            git commit -m "crawl (${{ needs.gate.outputs.mode }}): merged fleet results"
+            for i in 1 2 3; do git pull --rebase --autostash && git push && break; sleep 5; done
+            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+              -d '{"ref":"main"}' >/dev/null
           fi
-        id: commit
-      - name: Trigger deploy
-        if: steps.commit.outputs.changed == '1'
-        run: |
-          curl -s -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
-            -d '{"ref":"main"}'
