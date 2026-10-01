@@ -116,6 +116,37 @@ def root_host(url):
         return ""
 
 
+SOCIAL = ("x.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com",
+          "linkedin.com", "flickr.com", "t.me", "wa.me", "google.com")
+
+
+def is_offsite(url, base):
+    """Skip social / external links during discovery — they're never the solicitation."""
+    h = root_host(url)
+    if any(s in h for s in SOCIAL):
+        return True
+    return False
+
+
+# Strong signals that a page/attachment is a REAL solicitation (not a generic page).
+_SOL_NUM = re.compile(r"\b(19[A-Z]{2}\d{2}[A-Z0-9]{4,}|[A-Z]{2,}-\d{2,}-[A-Z0-9-]+|SOL[-\s]?\d+)\b")
+_DATE = re.compile(r"\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}\s+\w+\s+20\d{2}|\w+\s+\d{1,2},?\s+20\d{2})\b")
+_SIG = ("request for quotation", "request for proposal", "invitation for bid",
+        "solicitation", "rfq", "rfp", "ifb", "offers are due", "quotation", "closing date",
+        "deadline", "submit your", "scope of work", "statement of work", "f.o.b", "fob ")
+
+
+def looks_like_solicitation(text):
+    """Cheap gate BEFORE spending an AI call: must carry at least two real signals
+    (a date, a solicitation-number pattern, or procurement language). Cuts REVIEW noise."""
+    low = text.lower()
+    score = 0
+    if _SOL_NUM.search(text): score += 1
+    if _DATE.search(text): score += 1
+    score += sum(1 for s in _SIG if s in low)
+    return score >= 2
+
+
 def find_solicitation_links(proc_url, cfg):
     """On a procurement listing page, collect links that look like individual
     solicitations or attachments (PDF/RFQ/RFP/tender)."""
@@ -125,6 +156,8 @@ def find_solicitation_links(proc_url, cfg):
     page_txt = fetcher.html_text(raw)
     out = []
     for href, text in fetcher.links(raw, final):
+        if is_offsite(href, proc_url):
+            continue
         low = (href + " " + text).lower()
         if href.lower().endswith((".pdf", ".doc", ".docx")):
             out.append(href)
@@ -139,8 +172,12 @@ def find_solicitation_links(proc_url, cfg):
 
 
 def build_dossier_text(sol_url):
-    """Assemble the full text for ONE solicitation: its page + every attachment."""
-    raw, ct, final = fetcher.get(sol_url)
+    """Assemble the full text for ONE solicitation: its page + every attachment.
+    A block on this single page is skipped (returns ''), not treated as a site block."""
+    try:
+        raw, ct, final = fetcher.get(sol_url)
+    except fetcher.Blocked:
+        return "", []
     parts = []
     attach_urls = []
     if "pdf" in (ct or "") or sol_url.lower().endswith(".pdf"):
@@ -274,7 +311,7 @@ def run(mode):
                 break
             found += 1
             text = sam_record_text(op)
-            if len(text) < 180:
+            if len(text) < 180 or not looks_like_solicitation(text):
                 continue
             try:
                 rec = adjudicate_text(text, op.get("title", "SAM notice"))
@@ -315,7 +352,7 @@ def run(mode):
                     if not budget_left():
                         break
                     text, attach = build_dossier_text(sl)
-                    if len(text) < 180:
+                    if len(text) < 180 or not looks_like_solicitation(text):
                         continue
                     found += 1
                     try:

@@ -98,8 +98,12 @@ def pdf_text(raw):
 
 
 def read_attachment(url):
-    """Download an attachment and return its extracted text ('' if unreadable)."""
-    raw, ct, final = get(url)
+    """Download an attachment and return its extracted text ('' if unreadable).
+    A blocked/!200 attachment is NOT a site block — just skip it."""
+    try:
+        raw, ct, final = get(url)
+    except Blocked:
+        return ""
     if not raw:
         return ""
     if "pdf" in ct or url.lower().endswith(".pdf"):
