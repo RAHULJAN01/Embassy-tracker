@@ -90,8 +90,10 @@
   table.reg tbody tr.row:hover{background:var(--alt)}
   .ref{font-family:"Courier New",monospace;font-size:12px;color:var(--sub)}
   .ttl{font-weight:700;color:#111;white-space:normal;display:block;overflow-wrap:anywhere}
-  table.reg td.tcell{white-space:normal;overflow:visible}
-  table.reg td.num{overflow:visible}
+  table.reg td{overflow:hidden}
+  table.reg td.tcell{white-space:normal;overflow:hidden}
+  table.reg td.num{overflow:hidden;text-overflow:ellipsis}
+  table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
   .pop{white-space:normal} .pop .c{color:var(--mute);font-size:12px}
   .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid #111;border-radius:2px;white-space:nowrap}
   .status{font-weight:700;font-size:12px;white-space:nowrap}
@@ -280,7 +282,7 @@ function rowHTML(s,i){
     <td class="pop tcell hidecol">${esc(s.post)}<br><span class="c">${esc(s.country)}</span></td>
     <td class="hidecol">${esc(s.type)}</td>
     <td class="num"><span class="due ${soon}">${esc(duetxt)}</span></td>
-    <td class="num hidecol">${esc(s.value||'—')}</td>
+    <td class="num valcell hidecol">${esc(s.value||'—')}</td>
     <td><span class="status ${st}">${esc(s.status)}</span></td>
     <td class="upd hidecol">${esc(s.updated||'—')}</td>
     <td class="act">
