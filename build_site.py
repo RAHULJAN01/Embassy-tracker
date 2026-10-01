@@ -1,35 +1,48 @@
 #!/usr/bin/env python3
-"""Build the password-gated public register page.
-Reads site_data.json (the crawler's output), encrypts it with SITE_PASSWORD
-(PBKDF2-SHA256 -> AES-256-GCM), injects the ciphertext into directory_template.html,
-and writes public/index.html for GitHub Pages. The data is NEVER published in clear."""
-import os, json, base64
+"""
+build_site.py — produce the password-GATED live page.
+Encrypts data.json with SITE_PASSWORD (AES-256-GCM, PBKDF2-SHA256) and injects
+the ciphertext into site_template.html -> public/index.html. The password is a
+GitHub Actions secret; it is never stored in the repo or seen by anyone.
+If SITE_PASSWORD is unset, the page is published UNLOCKED (useful before real
+data exists).
+"""
+import os, json, base64, secrets, pathlib
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ITER = 150000
+HERE = pathlib.Path(__file__).parent
+ITERS = 150000
+
+
+def b64(b): return base64.b64encode(b).decode()
+
+
+def encrypt_payload(plaintext: bytes, password: str) -> dict:
+    salt = secrets.token_bytes(16)
+    key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITERS).derive(password.encode())
+    iv = secrets.token_bytes(12)
+    ct = AESGCM(key).encrypt(iv, plaintext, None)   # ciphertext || 16-byte tag (WebCrypto-compatible)
+    return {"v": 1, "salt": b64(salt), "iv": b64(iv), "ct": b64(ct), "iter": ITERS}
+
 
 def main():
-    pw = os.environ.get("SITE_PASSWORD", "")
-    if not pw:
-        raise SystemExit("SITE_PASSWORD not set — refusing to publish unprotected data.")
-    data = json.load(open(os.path.join(HERE, "site_data.json"), encoding="utf-8"))
-    plaintext = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    data = (HERE / "data.json").read_text(encoding="utf-8")
+    template = (HERE / "site_template.html").read_text(encoding="utf-8")
+    pw = os.getenv("SITE_PASSWORD", "")
+    if pw:
+        blob = encrypt_payload(data.encode("utf-8"), pw)
+        enc_js = "const ENC=" + json.dumps(blob) + ";"
+        locked = "true"
+    else:
+        enc_js = "const ENC=null; const PLAIN=" + data + ";"   # unlocked fallback
+        locked = "false"
+    out = template.replace("/*__ENC__*/", enc_js).replace("/*__LOCKED__*/", locked)
+    outdir = HERE / "public"; outdir.mkdir(exist_ok=True)
+    (outdir / "index.html").write_text(out, encoding="utf-8")
+    print(f"built public/index.html — {'LOCKED' if pw else 'UNLOCKED'} — {len(out)} bytes")
 
-    salt, iv = os.urandom(16), os.urandom(12)
-    key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(pw.encode("utf-8"))
-    ct = AESGCM(key).encrypt(iv, plaintext, None)   # ciphertext||tag — matches WebCrypto AES-GCM
-    enc = {"salt": base64.b64encode(salt).decode(), "iv": base64.b64encode(iv).decode(),
-           "ct": base64.b64encode(ct).decode(), "iter": ITER}
-
-    tpl = open(os.path.join(HERE, "directory_template.html"), encoding="utf-8").read()
-    out = tpl.replace("/*__ENC__*/ null", json.dumps(enc))
-    os.makedirs(os.path.join(HERE, "public"), exist_ok=True)
-    with open(os.path.join(HERE, "public", "index.html"), "w", encoding="utf-8") as f:
-        f.write(out)
-    print(f"built public/index.html ({len(out)} bytes), {len(data.get('solicitations',[]))} records encrypted")
 
 if __name__ == "__main__":
     main()

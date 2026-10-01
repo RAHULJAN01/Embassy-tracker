@@ -1,0 +1,234 @@
+{
+ "meta": {
+  "lastDeep": "2026-10-01 02:10 UTC",
+  "lastRoots": "2026-09-28 00:12 UTC",
+  "lastLive": "2026-10-01 06:00 UTC"
+ },
+ "solicitations": [
+  {
+   "tier": "BID",
+   "title": "Supply and Delivery of Office Furniture",
+   "sol": "19KE2025Q0012",
+   "post": "U.S. Embassy Nairobi",
+   "country": "Kenya",
+   "source": "Site+SAM",
+   "link": "https://sam.gov/",
+   "posted": "2026-09-24",
+   "deadline": "2026-10-20",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Supply and delivery of modular office furniture (desks, task chairs, filing units) to the Embassy compound.",
+   "type": "Commercial Goods",
+   "scope": "Approx. 120 units across four categories",
+   "value": "$38,000 – $55,000",
+   "shipping": "F.O.B. Destination, Nairobi",
+   "payment": "Net 30 following acceptance",
+   "shipAfter": "45 days ARO",
+   "setaside": "Full and Open",
+   "license": "None",
+   "docs": [
+    "Price quotation",
+    "Executed SF-1449",
+    "Representations & Certifications (SAM)"
+   ],
+   "restrictions": [
+    {
+     "t": "Delivery required within 45 days ARO",
+     "k": "fix",
+     "note": "Dubai consolidation point and nominated forwarder meet this comfortably."
+    }
+   ],
+   "route": "",
+   "citation": null,
+   "srcData": "SAM structured data + mission PDF (AI-adjudicated)"
+  },
+  {
+   "tier": "BID",
+   "title": "Procurement of Cleaning Supplies",
+   "sol": "19VM3026Q0024",
+   "post": "U.S. Embassy Hanoi",
+   "country": "Vietnam",
+   "source": "SAM",
+   "link": "https://sam.gov/",
+   "posted": "2026-09-09",
+   "deadline": "2026-10-01",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "One-time supply of commercial janitorial consumables and cleaning supplies.",
+   "type": "Commercial Goods (COTS)",
+   "scope": "Consumables, bulk",
+   "value": "$15,000 – $25,000",
+   "shipping": "F.O.B. Destination, Hanoi",
+   "payment": "Net 30",
+   "shipAfter": "30 days ARO",
+   "setaside": "Full and Open",
+   "license": "None",
+   "docs": [
+    "Price quotation",
+    "Representations & Certifications"
+   ],
+   "restrictions": [],
+   "route": "",
+   "citation": null,
+   "srcData": "SAM structured data"
+  },
+  {
+   "tier": "MID",
+   "title": "Supply of Caterpillar OEM Fuel Injectors",
+   "sol": "PR16103729",
+   "post": "U.S. Embassy Monrovia",
+   "country": "Liberia",
+   "source": "Site+SAM",
+   "link": "https://sam.gov/",
+   "posted": "2026-09-20",
+   "deadline": "2026-10-18",
+   "qa": "2026-10-05",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Supply of genuine Caterpillar OEM fuel injectors for Embassy generator sets.",
+   "type": "Commercial Goods (brand-specified)",
+   "scope": "OEM parts, single lot",
+   "value": "$20,000 – $40,000",
+   "shipping": "F.O.B. Destination, Monrovia",
+   "payment": "Net 30",
+   "shipAfter": "60 days ARO",
+   "setaside": "Full and Open",
+   "license": "Authorized-dealer authorization",
+   "docs": [
+    "Price quotation",
+    "Authorized Caterpillar dealer authorization letter",
+    "Representations & Certifications"
+   ],
+   "restrictions": [
+    {
+     "t": "Award conditioned on an authorized Caterpillar dealer authorization letter addressed to Madison & Main LLC",
+     "k": "fix",
+     "note": "The UAE Caterpillar-authorized supplier can issue this authorization — this resolves the condition."
+    },
+    {
+     "t": "Genuine-OEM requirement; aftermarket excluded",
+     "k": "real",
+     "note": "Legitimate specification; source genuine product through the authorized UAE channel."
+    }
+   ],
+   "route": "Secure the authorized-dealer authorization letter from the UAE Caterpillar supplier naming Madison & Main LLC and submit it with the quotation. This single instrument reclassifies the solicitation as BID-eligible.",
+   "citation": null,
+   "srcData": "SAM structured data + mission PDF (AI-adjudicated)"
+  },
+  {
+   "tier": "MID",
+   "title": "Supply of Paper Products (Hygiene Consumables)",
+   "sol": "19UG5026Q0031",
+   "post": "U.S. Embassy Kampala",
+   "country": "Uganda",
+   "source": "Site",
+   "link": "https://ug.usembassy.gov/",
+   "posted": "2026-09-26",
+   "deadline": "2026-10-22",
+   "qa": "2026-10-08",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Routine supply of toilet tissue, paper towels and related hygiene paper products for the mission.",
+   "type": "Commercial Goods (COTS)",
+   "scope": "Consumables, recurring requirement",
+   "value": "$12,000 – $18,000",
+   "shipping": "F.O.B. Destination, Kampala",
+   "payment": "Net 30",
+   "shipAfter": "30 days ARO",
+   "setaside": "Full and Open",
+   "license": "Trade/import license asserted (questionable)",
+   "docs": [
+    "Price quotation",
+    "Trade/import license (per solicitation)",
+    "Representations & Certifications"
+   ],
+   "restrictions": [
+    {
+     "t": "Solicitation asserts a trade/import license requirement for a commercial paper-products supply",
+     "k": "boiler",
+     "note": "Consistent with copy-forwarded boilerplate. A commercial off-the-shelf consumable delivered to post should not require a special trade license. Strong candidate for clarification under the Q&A provision."
+    }
+   ],
+   "route": "Submit a clarification request under the Q&A provision (due 2026-10-08) asking the Contracting Officer to confirm whether a trade/import license is a mandatory condition of award, or whether a standard commercial quotation with active SAM registration suffices. If waived, the solicitation is BID-eligible.",
+   "challengeDraft": "Reference: 19UG5026Q0031 — Request for Clarification\n\nFor this commercial supply of standard paper products delivered to post, we respectfully request confirmation as to whether a trade/import license constitutes a mandatory condition of award, or whether a standard commercial quotation accompanied by the vendor's active SAM.gov registration is sufficient.",
+   "citation": null,
+   "srcData": "Mission PDF (AI-adjudicated)"
+  },
+  {
+   "tier": "NO",
+   "title": "Renovation of Compound Perimeter Wall",
+   "sol": "19ET1026C0003",
+   "post": "U.S. Embassy Addis Ababa",
+   "country": "Ethiopia",
+   "source": "Site",
+   "link": "https://et.usembassy.gov/",
+   "posted": "2026-09-18",
+   "deadline": "2026-10-16",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Construction and renovation of the perimeter security wall, including excavation and on-site works.",
+   "type": "Construction",
+   "scope": "On-site performance",
+   "value": "—",
+   "shipping": "On-site performance",
+   "payment": "Progress payments",
+   "shipAfter": "—",
+   "setaside": "Full and Open",
+   "license": "—",
+   "docs": [],
+   "restrictions": [
+    {
+     "t": "Construction requiring on-site labor and performance/payment bonds",
+     "k": "real",
+     "note": "Outside the source-and-ship model; requires bonding capacity and an on-site workforce."
+    }
+   ],
+   "route": "",
+   "citation": {
+    "doc": "Solicitation 19ET1026C0003 — SF-1442, Section I",
+    "quote": "The Contractor shall furnish performance and payment bonds (SF-25 / SF-25A) and shall perform all work on-site at the Embassy compound, Addis Ababa."
+   },
+   "srcData": "Mission PDF (AI-adjudicated)"
+  },
+  {
+   "tier": "NO",
+   "title": "Local Guard Force Services",
+   "sol": "PR15935139",
+   "post": "U.S. Embassy San José",
+   "country": "Costa Rica",
+   "source": "SAM",
+   "link": "https://sam.gov/",
+   "posted": "2026-09-15",
+   "deadline": "2026-10-01",
+   "qa": "",
+   "status": "Active",
+   "updated": "2026-10-01",
+   "summary": "Provision of uniformed local guard force services at the mission.",
+   "type": "Services (guard force)",
+   "scope": "On-site staffing",
+   "value": "—",
+   "shipping": "On-site performance",
+   "payment": "Monthly",
+   "shipAfter": "—",
+   "setaside": "Full and Open",
+   "license": "—",
+   "docs": [],
+   "restrictions": [
+    {
+     "t": "Guard/staffing service — restricted category requiring on-site personnel",
+     "k": "real",
+     "note": "Requires a local workforce, local licensing and RSO clearance."
+    }
+   ],
+   "route": "",
+   "citation": {
+    "doc": "PR15935139 — Statement of Work, §1.2",
+    "quote": "The contractor shall provide, employ, supervise and insure uniformed guard personnel on-site at U.S. Embassy San José on a 24/7 basis."
+   },
+   "srcData": "SAM structured data + mission PDF (AI-adjudicated)"
+  }
+ ]
+}
