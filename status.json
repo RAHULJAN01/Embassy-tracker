@@ -1,7 +1,7 @@
 {
  "mode": "probe",
- "startedAt": "2026-10-01 13:36 UTC",
- "heartbeat": "2026-10-01 13:36 UTC",
+ "startedAt": "2026-10-01 13:37 UTC",
+ "heartbeat": "2026-10-01 13:37 UTC",
  "currentJob": "provider self-test",
  "running": false,
  "providers": [
@@ -11,16 +11,16 @@
   "openrouter"
  ],
  "probe": {
-  "gemini": "OK",
-  "groq": "ERROR: canopylabs/orpheus-arabic-saudi HTTP 400: {\"error\":{\"message\":\"The model `canopylabs/orpheus-arabic-saudi` requires terms acceptance. Please",
+  "gemini": "ERROR: gemini 429",
+  "groq": "OK",
   "mistral": "ERROR: mistral-small-2603 429",
-  "openrouter": "OK"
+  "openrouter": "ERROR: qwen/qwen3.8-27b:free 429"
  },
  "discovered": {
   "groq": [
-   "canopylabs/orpheus-arabic-saudi",
-   "canopylabs/orpheus-v1-english",
-   "openai/gpt-oss-20b"
+   "openai/gpt-oss-20b",
+   "openai/gpt-oss-120b",
+   "allam-2-7b"
   ],
   "mistral": [
    "mistral-small-2603",
