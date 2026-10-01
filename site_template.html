@@ -53,8 +53,27 @@
   .summary .cell.total{background:#111;color:#fff}
   .summary .cell.total .cap{color:#ccc}
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25)}
-  .dot.g{background:var(--green)} .dot.o{background:var(--orange)} .dot.r{background:var(--red)}
+  .dot.g{background:var(--green)} .dot.o{background:var(--orange)} .dot.r{background:var(--red)} .dot.n{background:#888}
   @media(max-width:860px){.summary{grid-template-columns:repeat(2,1fr)}}
+  /* HELP banner — red, only when a site blocks the bot */
+  .help-banner{background:var(--red);color:#fff;border:1px solid #7f1414;padding:12px 16px;margin-top:0;font-size:13.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .help-banner .hb-sites{font-weight:400;font-size:12.5px}
+  .help-banner a{color:#fff;text-decoration:underline}
+  .help-banner .hb-x{cursor:pointer;background:rgba(255,255,255,.2);border:1px solid #fff;color:#fff;padding:2px 9px;font-size:12px}
+  /* Mission Control panel */
+  .mc-panel{border:1px solid var(--line);border-top:none;background:#fafafa;padding:0}
+  .mc-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  .mc-grid .mc-cell{padding:12px 16px;border-right:1px solid var(--line);border-top:1px solid var(--line)}
+  .mc-grid .mc-cell:nth-child(4n){border-right:none}
+  .mc-cell .mc-v{font-size:17px;font-weight:700;line-height:1.1}
+  .mc-cell .mc-k{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);font-weight:700;margin-top:5px}
+  .mc-bar{height:8px;background:#e4e4e4;border:1px solid var(--line);margin-top:6px}
+  .mc-bar > i{display:block;height:100%;background:#111}
+  .mc-live{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .mc-live.on{background:var(--green)} .mc-live.off{background:var(--sub)}
+  .mc-job{padding:10px 16px;border-top:1px solid var(--line);font-size:12.5px;color:#333}
+  .mc-job b{color:#111}
+  @media(max-width:860px){.mc-grid{grid-template-columns:repeat(2,1fr)}}
   /* section */
   .section{margin-top:22px;border:1px solid #111}
   .section > h2{margin:0;background:#111;color:#fff;font-size:14px;font-weight:700;letter-spacing:.4px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
@@ -147,8 +166,8 @@
     </div>
     <div class="mhead-right">
       <button class="btn sec" style="height:36px" onclick="refreshPage()">↻ Refresh</button>
-      <button class="btn sec" style="height:36px" onclick="lock()" title="Lock the page">🔒 Lock</button>
-      <button class="btn sec" style="height:36px" onclick="lockSite()" title="Log out now">🔒 Lock</button>
+      <button class="btn sec" style="height:36px" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
+      <button class="btn sec" style="height:36px" onclick="lock()" title="Log out now">🔒 Lock</button>
       <div class="mmeta">
         Register compiled: <b id="built"></b><br>
         Last full deep-crawl: <b id="lastDeep"></b><br>
@@ -156,6 +175,9 @@
       </div>
     </div>
   </div>
+
+  <div id="helpBanner" class="help-banner" style="display:none"></div>
+  <div id="mcPanel" class="mc-panel" style="display:none"></div>
 
   <div class="toolbar">
     <div class="grp">
@@ -197,7 +219,7 @@
 <script>
 /*__ENC__*/
 const LOCKED=/*__LOCKED__*/;
-let META={}, SOLICITATIONS=[];
+let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]};
 
 
 const TRACKER_API="";
@@ -211,7 +233,7 @@ function toggleSave(sol){let a=LS();a.includes(sol)?a=a.filter(x=>x!==sol):a.pus
 function setDecision(sol,d){let o=DEC();o[sol]=o[sol]===d?null:d;DECset(o);render();}
 function toggleShortlistView(){viewSaved=!viewSaved;document.getElementById('shortlistBtn').classList.toggle('on',viewSaved);render();}
 
-const SMAP={BID:{cls:"g",label:"SECTION I — BID-ELIGIBLE"},MID:{cls:"o",label:"SECTION II — CONDITIONAL (BID / NO-BID)"},NO:{cls:"r",label:"SECTION III — NON-ELIGIBLE (NO-BID)"}};
+const SMAP={BID:{cls:"g",label:"SECTION I — BID-ELIGIBLE"},MID:{cls:"o",label:"SECTION II — CONDITIONAL (BID / NO-BID)"},NO:{cls:"r",label:"SECTION III — NON-ELIGIBLE (NO-BID)"},REVIEW:{cls:"n",label:"SECTION IV — UNDER REVIEW (needs a human look)"}};
 const SRCLABEL={"SAM":"SAM","Site":"SITE","Site+SAM":"SAM+SITE"};
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function dleft(d){if(!d)return null;return Math.round((new Date(d)-new Date())/864e5);}
@@ -249,7 +271,7 @@ function rowHTML(s,i){
   const dl=dleft(s.deadline);
   const duetxt=s.deadline?(dl!=null&&dl<0?"Closed":(dl!=null&&dl<=7?`${dl} day${dl==1?'':'s'}`:s.deadline)):"—";
   const soon=dl!=null&&dl>=0&&dl<=7?'soon':'';
-  const st=(s.status==="Cancelled"||s.status==="Removed")?'r':SMAP[s.tier].cls;
+  const st=(s.status==="Cancelled"||s.status==="Removed")?'r':((SMAP[s.tier]||{cls:'n'}).cls);
   const saved=isSaved(s.sol);
   return `<tr class="row" onclick="tgl(${i})">
     <td class="ref">${esc(s.sol||'—')}</td>
@@ -284,7 +306,7 @@ function render(){
   const cols='<colgroup><col class="c-ref"><col class="c-src"><col><col class="c-pop hidecol"><col class="c-cls hidecol"><col class="c-dl"><col class="c-val hidecol"><col class="c-st"><col class="c-up hidecol"><col class="c-act"></colgroup>';
   const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th class="hidecol">Last Updated</th><th>Actions</th></tr></thead>`;
   let html='';
-  ['BID','MID','NO'].forEach(tr=>{
+  ['BID','MID','NO','REVIEW'].forEach(tr=>{
     const items=list.filter(({s})=>s.tier===tr); if(!items.length)return;
     const m=SMAP[tr];
     html+=`<div class="section"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
@@ -328,7 +350,40 @@ function init(){
   document.getElementById('sl2').textContent=LS().length;
   const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].sort(),sel=document.getElementById('fCountry');
   cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  renderHelp(); renderMC();
   refreshCounts();render();
+}
+
+// --- red HELP banner: shown only when a site blocks the bot (hold-the-door) ---
+function renderHelp(){
+  const el=document.getElementById('helpBanner');
+  const sites=(BLOCKED&&BLOCKED.sites)||[];
+  if(!sites.length){ el.style.display='none'; return; }
+  const list=sites.slice(0,6).map(b=>`<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.post||b.host)}</a>`).join(', ');
+  el.innerHTML=`<span>⚠ HELP NEEDED — ${sites.length} site${sites.length>1?'s':''} blocked the bot. Open the link, clear the block (sign in / pass the challenge), then run a Live Status Check so it can resume.</span>`
+    +`<span class="hb-sites">${list}</span>`;
+  el.style.display='flex';
+}
+
+// --- Mission Control: live crawler status (toggled from the header) ---
+function toggleMC(){ const p=document.getElementById('mcPanel'); p.style.display=(p.style.display==='none'?'block':'none'); if(p.style.display==='block') renderMC(); }
+function renderMC(){
+  const p=document.getElementById('mcPanel'); const s=STATUS||{};
+  if(!s||!s.startedAt){ p.innerHTML='<div class="mc-job"><b>Mission Control</b> — no crawler run recorded yet. The engine writes live status here on its first run.</div>'; return; }
+  const pct = s.aiBudget? Math.min(100, Math.round(100*(s.aiCalls||0)/s.aiBudget)):0;
+  const cov = s.coverage?Object.keys(s.coverage).length:0;
+  const live = s.running?'<span class="mc-live on"></span>Running':'<span class="mc-live off"></span>Idle';
+  p.innerHTML=
+    `<div class="mc-grid">
+      <div class="mc-cell"><div class="mc-v">${live}</div><div class="mc-k">Status · ${esc(s.mode||'')}</div></div>
+      <div class="mc-cell"><div class="mc-v">${s.found||0}</div><div class="mc-k">Found this run</div></div>
+      <div class="mc-cell"><div class="mc-v">${s.queued||0}</div><div class="mc-k">Queued</div></div>
+      <div class="mc-cell"><div class="mc-v">${cov}</div><div class="mc-k">Posts covered</div></div>
+      <div class="mc-cell" style="grid-column:span 2"><div class="mc-v">${s.aiCalls||0} / ${s.aiBudget||0}</div><div class="mc-k">AI budget this run (free)</div><div class="mc-bar"><i style="width:${pct}%"></i></div></div>
+      <div class="mc-cell"><div class="mc-v">${(s.providers||[]).length||0}</div><div class="mc-k">AI providers</div></div>
+      <div class="mc-cell"><div class="mc-v">${(BLOCKED.sites||[]).length}</div><div class="mc-k">Blocked sites</div></div>
+     </div>
+     <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}</div>`;
 }
 
 function _b64d(s){const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
@@ -354,6 +409,7 @@ async function unlock(pwArg){
       payload=JSON.parse(new TextDecoder().decode(buf));
     }
     META=payload.meta||{}; SOLICITATIONS=payload.solicitations||[];
+    STATUS=payload.status||{}; BLOCKED=payload.blocked||{sites:[]};
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();
     ['click','keydown','scroll','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_touch,{passive:true}));

@@ -27,8 +27,24 @@ def encrypt_payload(plaintext: bytes, password: str) -> dict:
     return {"v": 1, "salt": b64(salt), "iv": b64(iv), "ct": b64(ct), "iter": ITERS}
 
 
+def _opt(name, default):
+    p = HERE / name
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return default
+
+
 def main():
-    data = (HERE / "data.json").read_text(encoding="utf-8")
+    # bundle the directory data + Mission Control status + HELP/blocked list into ONE payload
+    core = _opt("data.json", {"meta": {}, "solicitations": []})
+    payload = {
+        "meta": core.get("meta", {}),
+        "solicitations": core.get("solicitations", []),
+        "status": _opt("status.json", {}),
+        "blocked": _opt("blocked.json", {"sites": []}),
+    }
+    data = json.dumps(payload, ensure_ascii=False)
     template = (HERE / "site_template.html").read_text(encoding="utf-8")
     pw = os.getenv("SITE_PASSWORD", "")
     if pw:

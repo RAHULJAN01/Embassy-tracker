@@ -1,0 +1,65 @@
+name: Crawl Solicitations
+# The 24/7 engine. Each scheduled run processes one resumable slice (budget-capped
+# to stay on free quota), checkpoints state.json, and commits the results back.
+# Committing data.json triggers Deploy Site, so the live page always mirrors the latest crawl.
+on:
+  schedule:
+    - cron: "17 */2 * * *"   # full re-crawl slice every 2 hours (resumable -> continuous coverage)
+    - cron: "47 13 * * *"    # one quick live status check daily
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "roots = deep re-crawl slice | live = quick status check"
+        type: choice
+        options: [roots, live]
+        default: roots
+permissions:
+  contents: write
+concurrency:
+  group: crawl
+  cancel-in-progress: false   # let a running slice finish; the kill-switch is Cancel in the Actions UI
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography pdfplumber pypdf beautifulsoup4 requests
+      - name: Pick mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ github.event.inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "47 13 * * *" ]; then
+            echo "mode=live" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=roots" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run crawler
+        env:
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
+          MISTRAL_API_KEY:    ${{ secrets.MISTRAL_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SAM_API_KEY:        ${{ secrets.SAM_API_KEY }}
+          MAX_AI_CALLS:       "120"
+          TIME_BUDGET_S:      "1500"
+        run: python crawler.py "${{ steps.mode.outputs.mode }}"
+      - name: Commit results
+        run: |
+          git config user.name  "mm-crawler"
+          git config user.email "crawler@users.noreply.github.com"
+          git add data.json status.json blocked.json state.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no changes this slice"
+          else
+            git commit -m "crawl (${{ steps.mode.outputs.mode }}): update register + status"
+            # retry push in case a deploy commit landed meanwhile
+            for i in 1 2 3; do
+              git pull --rebase --autostash && git push && break
+              sleep 5
+            done
+          fi

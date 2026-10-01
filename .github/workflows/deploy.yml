@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - data.json
+      - status.json
+      - blocked.json
       - site_template.html
       - build_site.py
       - .github/workflows/deploy.yml

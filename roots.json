@@ -1,0 +1,1033 @@
+{
+ "version": 1,
+ "sam": {
+  "enabled": true,
+  "kind": "sam",
+  "api": "https://api.sam.gov/opportunities/v2/search",
+  "view": "https://sam.gov/opp/{id}/view",
+  "notes": "Primary, most-reliable source. Pulls all federal incl. embassy posts above threshold."
+ },
+ "proc_hints": [
+  "/business/",
+  "/business/doing-business-with-the-u-s-embassy/",
+  "/embassy-consulates/",
+  "/jobs/",
+  "/procurement/",
+  "/general-services-office/",
+  "/procurement-announcements/"
+ ],
+ "proc_keywords": [
+  "procure",
+  "solicitation",
+  "rfq",
+  "rfp",
+  "ifb",
+  "tender",
+  "bid",
+  "request for quotation",
+  "request for proposal",
+  "gso",
+  "general services",
+  "doing business",
+  "acquisition",
+  "notice of"
+ ],
+ "roots": [
+  {
+   "post": "U.S. Embassy Algeria",
+   "country": "Algeria",
+   "base": "https://dz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Angola",
+   "country": "Angola",
+   "base": "https://ao.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "country": "Benin",
+   "base": "https://bj.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Botswana",
+   "country": "Botswana",
+   "base": "https://bw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Burkina Faso",
+   "country": "Burkina Faso",
+   "base": "https://bf.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Burundi",
+   "country": "Burundi",
+   "base": "https://bi.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cabo Verde",
+   "country": "Cabo Verde",
+   "base": "https://cv.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "country": "Cameroon",
+   "base": "https://cm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Central African Republic",
+   "country": "Central African Republic",
+   "base": "https://cf.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Chad",
+   "country": "Chad",
+   "base": "https://td.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "country": "Democratic Republic of the Congo",
+   "base": "https://cd.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Republic of the Congo",
+   "country": "Republic of the Congo",
+   "base": "https://cg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cote d'Ivoire",
+   "country": "Cote d'Ivoire",
+   "base": "https://ci.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Djibouti",
+   "country": "Djibouti",
+   "base": "https://dj.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Egypt",
+   "country": "Egypt",
+   "base": "https://eg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Equatorial Guinea",
+   "country": "Equatorial Guinea",
+   "base": "https://gq.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Eritrea",
+   "country": "Eritrea",
+   "base": "https://er.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Eswatini",
+   "country": "Eswatini",
+   "base": "https://sz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Ethiopia",
+   "country": "Ethiopia",
+   "base": "https://et.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Gabon",
+   "country": "Gabon",
+   "base": "https://ga.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy The Gambia",
+   "country": "The Gambia",
+   "base": "https://gm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Ghana",
+   "country": "Ghana",
+   "base": "https://gh.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Guinea",
+   "country": "Guinea",
+   "base": "https://gn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "country": "Kenya",
+   "base": "https://ke.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Lesotho",
+   "country": "Lesotho",
+   "base": "https://ls.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Liberia",
+   "country": "Liberia",
+   "base": "https://lr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Madagascar",
+   "country": "Madagascar",
+   "base": "https://mg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Malawi",
+   "country": "Malawi",
+   "base": "https://mw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mali",
+   "country": "Mali",
+   "base": "https://ml.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mauritania",
+   "country": "Mauritania",
+   "base": "https://mr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mauritius",
+   "country": "Mauritius",
+   "base": "https://mu.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Morocco",
+   "country": "Morocco",
+   "base": "https://ma.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mozambique",
+   "country": "Mozambique",
+   "base": "https://mz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Namibia",
+   "country": "Namibia",
+   "base": "https://na.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Niger",
+   "country": "Niger",
+   "base": "https://ne.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Nigeria",
+   "country": "Nigeria",
+   "base": "https://ng.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Rwanda",
+   "country": "Rwanda",
+   "base": "https://rw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Senegal",
+   "country": "Senegal",
+   "base": "https://sn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Sierra Leone",
+   "country": "Sierra Leone",
+   "base": "https://sl.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Somalia",
+   "country": "Somalia",
+   "base": "https://so.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy South Africa",
+   "country": "South Africa",
+   "base": "https://za.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy South Sudan",
+   "country": "South Sudan",
+   "base": "https://ss.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Sudan",
+   "country": "Sudan",
+   "base": "https://sd.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Tanzania",
+   "country": "Tanzania",
+   "base": "https://tz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Togo",
+   "country": "Togo",
+   "base": "https://tg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Uganda",
+   "country": "Uganda",
+   "base": "https://ug.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Zambia",
+   "country": "Zambia",
+   "base": "https://zm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Zimbabwe",
+   "country": "Zimbabwe",
+   "base": "https://zw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bahrain",
+   "country": "Bahrain",
+   "base": "https://bh.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Iraq",
+   "country": "Iraq",
+   "base": "https://iq.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Israel",
+   "country": "Israel",
+   "base": "https://il.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Jordan",
+   "country": "Jordan",
+   "base": "https://jo.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Kuwait",
+   "country": "Kuwait",
+   "base": "https://kw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Lebanon",
+   "country": "Lebanon",
+   "base": "https://lb.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Oman",
+   "country": "Oman",
+   "base": "https://om.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Qatar",
+   "country": "Qatar",
+   "base": "https://qa.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Saudi Arabia",
+   "country": "Saudi Arabia",
+   "base": "https://sa.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Tunisia",
+   "country": "Tunisia",
+   "base": "https://tn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Turkey",
+   "country": "Turkey",
+   "base": "https://tr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy United Arab Emirates",
+   "country": "United Arab Emirates",
+   "base": "https://ae.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Yemen",
+   "country": "Yemen",
+   "base": "https://ye.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Libya",
+   "country": "Libya",
+   "base": "https://ly.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Afghanistan",
+   "country": "Afghanistan",
+   "base": "https://af.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bangladesh",
+   "country": "Bangladesh",
+   "base": "https://bd.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy India",
+   "country": "India",
+   "base": "https://in.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Kazakhstan",
+   "country": "Kazakhstan",
+   "base": "https://kz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Kyrgyzstan",
+   "country": "Kyrgyzstan",
+   "base": "https://kg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Maldives",
+   "country": "Maldives",
+   "base": "https://mv.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Nepal",
+   "country": "Nepal",
+   "base": "https://np.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Pakistan",
+   "country": "Pakistan",
+   "base": "https://pk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Sri Lanka",
+   "country": "Sri Lanka",
+   "base": "https://lk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Tajikistan",
+   "country": "Tajikistan",
+   "base": "https://tj.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Turkmenistan",
+   "country": "Turkmenistan",
+   "base": "https://tm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Uzbekistan",
+   "country": "Uzbekistan",
+   "base": "https://uz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Australia",
+   "country": "Australia",
+   "base": "https://au.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cambodia",
+   "country": "Cambodia",
+   "base": "https://kh.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy China",
+   "country": "China",
+   "base": "https://china.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Fiji",
+   "country": "Fiji",
+   "base": "https://fj.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Indonesia",
+   "country": "Indonesia",
+   "base": "https://id.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Japan",
+   "country": "Japan",
+   "base": "https://jp.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Laos",
+   "country": "Laos",
+   "base": "https://la.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Malaysia",
+   "country": "Malaysia",
+   "base": "https://my.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Marshall Islands",
+   "country": "Marshall Islands",
+   "base": "https://mh.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Micronesia",
+   "country": "Micronesia",
+   "base": "https://fm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mongolia",
+   "country": "Mongolia",
+   "base": "https://mn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Burma",
+   "country": "Burma",
+   "base": "https://mm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy New Zealand",
+   "country": "New Zealand",
+   "base": "https://nz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Palau",
+   "country": "Palau",
+   "base": "https://pw.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Papua New Guinea",
+   "country": "Papua New Guinea",
+   "base": "https://pg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Philippines",
+   "country": "Philippines",
+   "base": "https://ph.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Korea",
+   "country": "Korea",
+   "base": "https://kr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Singapore",
+   "country": "Singapore",
+   "base": "https://sg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Thailand",
+   "country": "Thailand",
+   "base": "https://th.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Timor-Leste",
+   "country": "Timor-Leste",
+   "base": "https://tl.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Vietnam",
+   "country": "Vietnam",
+   "base": "https://vn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Brunei",
+   "country": "Brunei",
+   "base": "https://bn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Albania",
+   "country": "Albania",
+   "base": "https://al.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Armenia",
+   "country": "Armenia",
+   "base": "https://am.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Austria",
+   "country": "Austria",
+   "base": "https://at.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Azerbaijan",
+   "country": "Azerbaijan",
+   "base": "https://az.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Belgium",
+   "country": "Belgium",
+   "base": "https://be.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bosnia and Herzegovina",
+   "country": "Bosnia and Herzegovina",
+   "base": "https://ba.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bulgaria",
+   "country": "Bulgaria",
+   "base": "https://bg.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Croatia",
+   "country": "Croatia",
+   "base": "https://hr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cyprus",
+   "country": "Cyprus",
+   "base": "https://cy.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Czech Republic",
+   "country": "Czech Republic",
+   "base": "https://cz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Denmark",
+   "country": "Denmark",
+   "base": "https://dk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Estonia",
+   "country": "Estonia",
+   "base": "https://ee.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Finland",
+   "country": "Finland",
+   "base": "https://fi.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy France",
+   "country": "France",
+   "base": "https://fr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Georgia",
+   "country": "Georgia",
+   "base": "https://ge.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Germany",
+   "country": "Germany",
+   "base": "https://de.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Greece",
+   "country": "Greece",
+   "base": "https://gr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Hungary",
+   "country": "Hungary",
+   "base": "https://hu.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Iceland",
+   "country": "Iceland",
+   "base": "https://is.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Ireland",
+   "country": "Ireland",
+   "base": "https://ie.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Italy",
+   "country": "Italy",
+   "base": "https://it.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Kosovo",
+   "country": "Kosovo",
+   "base": "https://xk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Latvia",
+   "country": "Latvia",
+   "base": "https://lv.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Lithuania",
+   "country": "Lithuania",
+   "base": "https://lt.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Luxembourg",
+   "country": "Luxembourg",
+   "base": "https://lu.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Malta",
+   "country": "Malta",
+   "base": "https://mt.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Moldova",
+   "country": "Moldova",
+   "base": "https://md.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Montenegro",
+   "country": "Montenegro",
+   "base": "https://me.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Netherlands",
+   "country": "Netherlands",
+   "base": "https://nl.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy North Macedonia",
+   "country": "North Macedonia",
+   "base": "https://mk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Norway",
+   "country": "Norway",
+   "base": "https://no.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Poland",
+   "country": "Poland",
+   "base": "https://pl.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Portugal",
+   "country": "Portugal",
+   "base": "https://pt.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Romania",
+   "country": "Romania",
+   "base": "https://ro.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "country": "Serbia",
+   "base": "https://rs.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Slovakia",
+   "country": "Slovakia",
+   "base": "https://sk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Slovenia",
+   "country": "Slovenia",
+   "base": "https://si.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Spain",
+   "country": "Spain",
+   "base": "https://es.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Sweden",
+   "country": "Sweden",
+   "base": "https://se.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Switzerland",
+   "country": "Switzerland",
+   "base": "https://ch.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Ukraine",
+   "country": "Ukraine",
+   "base": "https://ua.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy United Kingdom",
+   "country": "United Kingdom",
+   "base": "https://uk.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Argentina",
+   "country": "Argentina",
+   "base": "https://ar.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bahamas",
+   "country": "Bahamas",
+   "base": "https://bs.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Barbados",
+   "country": "Barbados",
+   "base": "https://bb.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Belize",
+   "country": "Belize",
+   "base": "https://bz.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Bolivia",
+   "country": "Bolivia",
+   "base": "https://bo.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Brazil",
+   "country": "Brazil",
+   "base": "https://br.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "country": "Canada",
+   "base": "https://ca.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Chile",
+   "country": "Chile",
+   "base": "https://cl.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Colombia",
+   "country": "Colombia",
+   "base": "https://co.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Costa Rica",
+   "country": "Costa Rica",
+   "base": "https://cr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Cuba",
+   "country": "Cuba",
+   "base": "https://cu.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Dominican Republic",
+   "country": "Dominican Republic",
+   "base": "https://do.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Ecuador",
+   "country": "Ecuador",
+   "base": "https://ec.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "country": "El Salvador",
+   "base": "https://sv.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Guatemala",
+   "country": "Guatemala",
+   "base": "https://gt.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Guyana",
+   "country": "Guyana",
+   "base": "https://gy.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Haiti",
+   "country": "Haiti",
+   "base": "https://ht.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Honduras",
+   "country": "Honduras",
+   "base": "https://hn.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Jamaica",
+   "country": "Jamaica",
+   "base": "https://jm.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Mexico",
+   "country": "Mexico",
+   "base": "https://mx.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Nicaragua",
+   "country": "Nicaragua",
+   "base": "https://ni.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Panama",
+   "country": "Panama",
+   "base": "https://pa.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Paraguay",
+   "country": "Paraguay",
+   "base": "https://py.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Peru",
+   "country": "Peru",
+   "base": "https://pe.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Suriname",
+   "country": "Suriname",
+   "base": "https://sr.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Trinidad and Tobago",
+   "country": "Trinidad and Tobago",
+   "base": "https://tt.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Uruguay",
+   "country": "Uruguay",
+   "base": "https://uy.usembassy.gov",
+   "kind": "embassy"
+  },
+  {
+   "post": "U.S. Embassy Venezuela",
+   "country": "Venezuela",
+   "base": "https://ve.usembassy.gov",
+   "kind": "embassy"
+  }
+ ]
+}
