@@ -1,11 +1,11 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-02 16:17 UTC",
- "heartbeat": "2026-10-02 16:28 UTC",
+ "startedAt": "2026-10-02 16:30 UTC",
+ "heartbeat": "2026-10-02 16:40 UTC",
  "currentJob": "fleet run complete",
  "found": 0,
- "queued": 62,
- "aiCalls": 14,
+ "queued": 55,
+ "aiCalls": 20,
  "aiBudget": 32,
  "providers": [
   "cloudflare",
@@ -27,10 +27,10 @@
  "lastError": "",
  "aiDiag": {
   "ok": {
-   "nvidia": 2,
-   "pollinations": 3,
-   "groq": 4,
-   "cloudflare": 3
+   "cloudflare": 7,
+   "pollinations": 4,
+   "groq": 1,
+   "nvidia": 2
   },
   "errors": {
    "gemini": "gemini 429",
@@ -40,12 +40,12 @@
    "mistral": "mistral-small-2603 429",
    "openrouter": "qwen/qwen3.8-27b:free 429",
    "github": "github: Expecting value: line 1 column 1 (char 0)",
-   "cloudflare": "cloudflare 429",
+   "cloudflare": "cloudflare: unparseable response",
    "sambanova": "DeepSeek-V3.1 402",
-   "nvidia": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning 503",
+   "nvidia": "nvidia: The read operation timed out",
    "huggingface": "huggingface: meta-llama/Llama-3.3-70B-Instruct HTTP 403: {\"error\":\"This authentication method does not have sufficient permissions to",
-   "pollinations": "openai 200"
+   "pollinations": "pollinations: 'content'"
   }
  },
- "samDiag": "HTTP 429 | total=? | got=0 | Message throttled out"
+ "samDiag": "SAM not queried"
 }
