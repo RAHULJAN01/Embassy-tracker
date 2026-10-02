@@ -131,32 +131,53 @@ export default {
       }
 
       // ---- WHERE ARE THE BOTS RIGHT NOW ----
-      // Read straight out of the running job's log. No extra commits, no AI
-      // tokens, nothing for the crawler to do but print as it works.
+      // The crawler prints a [PROGRESS] line as it works; we read it out of the
+      // running job's log. GitHub answers the logs endpoint with a 302 to a
+      // SIGNED url that rejects an Authorization header — so the redirect is
+      // taken manually and the second fetch is sent bare. Sending our token
+      // along was why this came back empty.
       if (path === "/live" && request.method === "GET") {
-        const runs = await gh(env, "/actions/workflows/crawl.yml/runs?per_page=3");
+        const runs = await gh(env, "/actions/workflows/crawl.yml/runs?per_page=5");
         const d = await runs.json();
-        const run = (d.workflow_runs || []).find(
-          (r) => r.status === "in_progress" || r.status === "queued"
-        ) || (d.workflow_runs || [])[0];
+        const all = d.workflow_runs || [];
+        const run = all.find((r) => r.status === "in_progress" || r.status === "queued") || all[0];
         if (!run) return json({ ok: true, running: false, bots: [] });
-        const jr = await gh(env, `/actions/runs/${run.id}/jobs`);
+
+        const jr = await gh(env, `/actions/runs/${run.id}/jobs?per_page=20`);
         const jd = await jr.json();
-        const jobs = (jd.jobs || []).filter((j) => j.name.startsWith("crawl"));
+        const jobs = (jd.jobs || []).filter((j) => /^crawl/.test(j.name));
+
+        async function logOf(jobId) {
+          const r1 = await gh(env, `/actions/jobs/${jobId}/logs`, { redirect: "manual" });
+          if (r1.status === 200) return await r1.text();
+          const loc = r1.headers.get("location");
+          if (!loc) return "";
+          const r2 = await fetch(loc);           // bare: no Authorization
+          return r2.ok ? await r2.text() : "";
+        }
+
         const bots = await Promise.all(
           jobs.map(async (j) => {
-            const base = { job: j.name, status: j.status, conclusion: j.conclusion };
-            if (j.status !== "in_progress") return base;
+            const shard = (j.name.match(/\((\d+)\)/) || [])[1] ?? String(jobs.indexOf(j));
+            const step = (j.steps || []).find((s) => s.status === "in_progress");
+            const base = {
+              shard, status: j.status, conclusion: j.conclusion,
+              step: step ? step.name : "",
+              startedAt: j.started_at, finishedAt: j.completed_at,
+            };
             try {
-              const lr = await gh(env, `/actions/jobs/${j.id}/logs`, { redirect: "follow" });
-              if (!lr.ok) return base;
-              const txt = await lr.text();
+              const txt = await logOf(j.id);
               const lines = txt.split("\n").filter((l) => l.includes("[PROGRESS]"));
-              const last = lines[lines.length - 1] || "";
+              if (!lines.length) return base;
+              const last = lines[lines.length - 1];
               const f = {};
               for (const m of last.matchAll(/(\w+)="([^"]*)"/g)) f[m[1]] = m[2];
-              const sh = (last.match(/shard=(\d+)/) || [])[1];
-              return { ...base, shard: sh, ...f, steps: lines.length };
+              // every post this bot has touched this run, newest last
+              const posts = [...new Set(
+                lines.map((l) => (l.match(/post="([^"]*)"/) || [])[1]).filter(Boolean)
+              )];
+              return { ...base, ...f, steps: lines.length,
+                       visited: posts.length, recent: posts.slice(-4) };
             } catch (e) {
               return base;
             }
@@ -165,8 +186,8 @@ export default {
         return json({
           ok: true,
           running: run.status === "in_progress" || run.status === "queued",
-          runStatus: run.status, startedAt: run.created_at, runUrl: run.html_url,
-          bots,
+          runStatus: run.status, conclusion: run.conclusion,
+          startedAt: run.created_at, runUrl: run.html_url, bots,
         });
       }
 

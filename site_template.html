@@ -110,9 +110,10 @@
   .mc-job{padding:10px 16px;border-top:1px solid var(--line);font-size:12.5px;color:#333}
   .mc-job b{color:var(--ink)}
   .lvhead{margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-  .lv{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:5px 0;
-    border-top:1px solid var(--line);font-size:12.5px}
+  .lv{padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}
+  .lvline{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
   .lv b{min-width:52px}
+  .lvtrail{color:var(--mute);font-size:11px;margin-top:3px;font-style:italic}
   .lvw{font-weight:700}
   .lvd{color:var(--sub)}
   .lvq{color:var(--mute);font-size:11.5px}
@@ -190,10 +191,14 @@
   table.reg td.num{overflow:hidden;text-overflow:ellipsis}
   table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
   .pop{white-space:normal} .pop .c{color:var(--mute);font-size:12px}
-  .flag-i{font-size:14px;line-height:1;margin-right:5px;vertical-align:-1px}
-  .flag-cc{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.5px;
-    border:1px solid var(--line2);color:var(--sub);padding:1px 4px;margin-right:5px;
-    vertical-align:1px;font-family:Arial,Helvetica,sans-serif}
+  .flagw{display:inline-block;margin-right:6px;vertical-align:-2px;line-height:0}
+  .flagimg{width:20px;height:15px;display:block;border:1px solid var(--line2);
+    object-fit:cover;background:var(--alt)}
+  .flagw.big .flagimg{width:26px;height:19px}
+  .flagw.noimg .flagimg{display:none}
+  .flagw.noimg::after{content:attr(data-cc);display:inline-block;font-size:9.5px;
+    font-weight:700;letter-spacing:.5px;border:1px solid var(--line2);color:var(--sub);
+    padding:1px 4px;line-height:1.3;font-family:Arial,Helvetica,sans-serif}
   .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid var(--ink);border-radius:2px;white-space:nowrap}
   .status{font-weight:700;font-size:12px;white-space:nowrap}
   .status.g{color:var(--green)} .status.o{color:var(--orange)} .status.r{color:var(--red)}
@@ -527,38 +532,27 @@ function opBadge(s){
   const w=opInfo(s,'switched');if(w) return `<br><span class="opnote swd">MOVED BY YOU TO ${esc(w.tier||'')} ON ${esc(w.on||'')}</span>`;
   return '';
 }
-/* ---------- country flags on every solicitation, old and new ----------
-   The embassy subdomains are ISO country codes, so the map comes free. Flag
-   emoji are weightless and need no network, but Windows renders them as two
-   letters — so support is measured once and, where it is missing, a clean
-   bordered country code is shown instead. Either way every row is marked. */
-let _flagEmojiOK=null;
-function flagEmojiSupported(){
-  if(_flagEmojiOK!==null) return _flagEmojiOK;
-  try{
-    const c=document.createElement('canvas'); c.width=24; c.height=18;
-    const x=c.getContext('2d'); x.font='16px sans-serif';
-    const a=x.measureText('\uD83C\uDDFA\uD83C\uDDF8').width;   // US flag
-    const b=x.measureText('\uD83C\uDDFA').width*2;              // two indicators
-    _flagEmojiOK = a < b - 1;        // a real flag glyph is narrower than two letters
-  }catch(e){ _flagEmojiOK=false; }
-  return _flagEmojiOK;
-}
+/* ---------- country flags on every solicitation ----------
+   REAL flag images, like the US flag in the masthead — not emoji. Emoji flags
+   do not render at all on Windows, which is why none of them showed up. These
+   are 20px PNGs (a few hundred bytes each, cached by the browser) with a 2x
+   source for sharp screens. If an image cannot load the country code appears
+   in its place, so a row is never left unmarked. */
 function isoOf(country){
   if(!country) return '';
   const c=String(country).trim();
-  return FLAGS[c] || FLAGS[c.replace(/^the\s+/i,'')] || '';
+  return (FLAGS[c] || FLAGS[c.replace(/^the\s+/i,'')] || '').toLowerCase();
 }
-function flagOf(country){
+function flagOf(country, cls){
   const cc=isoOf(country);
   if(!cc) return '';
-  if(flagEmojiSupported()){
-    const e=String.fromCodePoint(...[...cc].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
-    return `<span class="flag-i" title="${esc(country)}">${e}</span>`;
-  }
-  return `<span class="flag-cc" title="${esc(country)}">${esc(cc)}</span>`;
+  const t=esc(country);
+  return `<span class="flagw ${cls||''}" title="${t}" data-cc="${cc.toUpperCase()}">`
+       + `<img class="flagimg" alt="${t}" loading="lazy"`
+       + ` src="https://flagcdn.com/w20/${cc}.png"`
+       + ` srcset="https://flagcdn.com/w40/${cc}.png 2x"`
+       + ` onerror="this.parentNode.classList.add('noimg')"></span>`;
 }
-
 
 /* ================= EXCEL EXPORT =================
    A real .xlsx, built in the browser at the moment you click, from whatever is
@@ -593,26 +587,36 @@ function _zip(files){                       // [{name, data:Uint8Array}] -> Blob
 function _xe(v){return String(v==null?"":v)
   .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-function _sheetXML(rows){
+function _colRef(n){let r='';do{ r=String.fromCharCode(65+(n%26))+r; n=Math.floor(n/26)-1; }while(n>=0);return r;}
+function _sheetXML(rows, widths, filter){
+  /* Widths and a filter row are the difference between a wall of truncated
+     text and something you can actually work in. Excel shows nothing useful
+     at default width when a row carries 46 fields. */
   let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
    +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
    +'<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" '
-   +'activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetData>';
+   +'activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+   +'<sheetFormatPr defaultRowHeight="15"/>';
+  if(widths&&widths.length){
+    x+='<cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';
+  }
+  x+='<sheetData>';
   rows.forEach((r,ri)=>{
-    x+=`<row r="${ri+1}">`;
+    x+=`<row r="${ri+1}"${ri===0&&filter?' ht="28" customHeight="1"':''}>`;
     r.forEach((v,ci)=>{
-      let ref=''; let n=ci;
-      do{ ref=String.fromCharCode(65+(n%26))+ref; n=Math.floor(n/26)-1; }while(n>=0);
-      ref+=(ri+1);
-      const num = typeof v==='number' && isFinite(v);
-      if(num) x+=`<c r="${ref}"${ri===0?' s="1"':''}><v>${v}</v></c>`;
-      else if(v!=null && String(v)!=='')
-        x+=`<c r="${ref}" t="inlineStr"${ri===0?' s="1"':''}><is><t xml:space="preserve">${_xe(v)}</t></is></c>`;
+      const ref=_colRef(ci)+(ri+1);
+      const st=(ri===0&&filter)?' s="1"':'';
+      if(typeof v==='number'&&isFinite(v)) x+=`<c r="${ref}"${st}><v>${v}</v></c>`;
+      else if(v!=null&&String(v)!=='')
+        x+=`<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${_xe(v)}</t></is></c>`;
     });
     x+='</row>';
   });
-  return x+'</sheetData></worksheet>';
+  x+='</sheetData>';
+  if(filter&&rows.length>1) x+=`<autoFilter ref="A1:${_colRef(rows[0].length-1)}${rows.length}"/>`;
+  return x+'</worksheet>';
 }
+
 function buildWorkbook(sheets){                      // [{name, rows}]
   const enc=new TextEncoder(), f=[];
   const add=(n,str)=>f.push({name:n,data:enc.encode(str)});
@@ -645,9 +649,9 @@ function buildWorkbook(sheets){                      // [{name, rows}]
     +'<fill><patternFill patternType="gray125"/></fill></fills>'
     +'<borders count="1"><border/></borders>'
     +'<cellStyleXfs count="1"><xf/></cellStyleXfs>'
-    +'<cellXfs count="2"><xf xfId="0"/><xf xfId="0" fontId="1" applyFont="1"/></cellXfs>'
+    +'<cellXfs count="3"><xf xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf xfId="0" fontId="1" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf xfId="0" fontId="1" applyFont="1"/></cellXfs>'
     +'</styleSheet>');
-  sheets.forEach((s,i)=>add(`xl/worksheets/sheet${i+1}.xml`,_sheetXML(s.rows)));
+  sheets.forEach((s,i)=>add(`xl/worksheets/sheet${i+1}.xml`,_sheetXML(s.rows,s.widths,s.filter)));
   return _zip(f);
 }
 
@@ -670,7 +674,7 @@ function _xlRow(s){
   const j=a=>(a||[]).join(" | ");
   const d=dleft(s.deadline);
   const v={_tier:(SMAP[effTier(s)]||{}).label||effTier(s),
-    _iso:isoOf(s.country),_dom:s.domestic?"Domestic":"Overseas",
+    _iso:(isoOf(s.country)||"").toUpperCase(),_dom:s.domestic?"Domestic":"Overseas",
     _vn:j(s.verifyNotes),_days:(d==null?"":d),
     _estbasis:(s.estimate&&s.estimate.basis)||"",
     _items:j(s.lineItems),_forms:j(s.submitForms),_docs:j(s.docs),
@@ -688,48 +692,86 @@ function downloadExcel(){
   const stamp=new Date().toISOString().replace("T"," ").slice(0,16)+" UTC";
   const all=SOLICITATIONS.slice();
   const hdr=XL_COLS.map(c=>c[0]);
-  const grp=(f)=>[hdr].concat(all.filter(f).map(_xlRow));
+  // a width per column so nothing is a truncated smear
+  const W={"Ref. No.":18,"Brief":64,"Title":46,"Decision":30,"Sector":13,"Platform":10,
+    "Agency":12,"Post":26,"Country":18,"Country code":8,"Domestic":10,"Source":10,
+    "Status":11,"Verified":11,"Why not verified":34,"Posted":12,"Questions due":13,
+    "Closing":12,"Days left":9,"Est. value":14,"Valuation basis":48,"Classification":22,
+    "Scope":40,"Line items":52,"Set-aside":24,"How to submit":40,"Send to":34,
+    "Required forms":34,"Required submittals":34,"Award basis":24,"Shipping":24,
+    "Payment":22,"Delivery after award":18,"Licences":24,"Gotchas":56,"Restrictions":56,
+    "Route to eligibility":52,"Cited clause":52,"Confidence":10,"Files read":9,
+    "Unreadable files":34,"Operator action":22,"Link":44,"First seen":12,
+    "Last updated":12,"Last deep scan":18};
+  const widths=hdr.map(h=>W[h]||18);
   const active=s=>!s.archived&&!isDeleted(s)&&!isHidden(s);
+  const grp=(f)=>({rows:[hdr].concat(all.filter(f).map(_xlRow)),widths,filter:true});
   const ai=(STATUS||{}).aiDiag||{};
+
   const mc=[["Madison & Main LLC — Solicitation Register"],["Exported",stamp],[],
     ["MISSION CONTROL"],
-    ["Mode",(STATUS||{}).mode||""],["Started",(STATUS||{}).startedAt||""],
-    ["Heartbeat",(STATUS||{}).heartbeat||""],["Current job",(STATUS||{}).currentJob||""],
-    ["Bots",(STATUS||{}).bots||0],["Found this run",(STATUS||{}).found||0],
+    ["Mode",(STATUS||{}).mode||""],["Run started",(STATUS||{}).startedAt||""],
+    ["Last heartbeat",(STATUS||{}).heartbeat||""],["Current job",(STATUS||{}).currentJob||""],
+    ["Bots",(STATUS||{}).bots||0],["Posts covered this run",Object.keys((STATUS||{}).coverage||{}).length],
+    ["Found this run",(STATUS||{}).found||0],
     ["AI calls",(STATUS||{}).aiCalls||0],["AI budget",(STATUS||{}).aiBudget||0],
     ["Records completed",(STATUS||{}).repaired||0],
     ["Still unfinished",(STATUS||{}).stillUnfinished||0],
-    ["Already-closed skipped",(STATUS||{}).skippedExpired||0],
+    ["Already-closed skipped (no AI spent)",(STATUS||{}).skippedExpired||0],
     ["AI model",ai.model||""],["AI healthy",ai.down?("NO — "+ai.down):"yes"],
     ["Input tokens",ai.inputTokens||0],["Output tokens",ai.outputTokens||0],
     ["Spend this run (USD)",ai.spendUSD||0],
     ["SAM.gov",(STATUS||{}).samDiag||""],["Last error",(STATUS||{}).lastError||""],[],
-    ["REGISTER"],
+    ["THE REGISTER"],
     ["Total records",all.length],["Active",all.filter(active).length],
     ["Bid-eligible",all.filter(s=>active(s)&&effTier(s)==="BID").length],
     ["Conditional",all.filter(s=>active(s)&&effTier(s)==="MID").length],
     ["Non-eligible",all.filter(s=>active(s)&&effTier(s)==="NO").length],
     ["Under review",all.filter(s=>active(s)&&effTier(s)==="REVIEW").length],
+    ["Verified",all.filter(s=>active(s)&&s.verified==="VERIFIED").length],
     ["Hidden",all.filter(s=>isHidden(s)&&!s.archived&&!isDeleted(s)).length],
     ["Archived",all.filter(s=>s.archived&&!isDeleted(s)).length],
     ["Deleted",all.filter(isDeleted).length],
-    ["Last live",(META||{}).lastLive||""],["Last deep crawl",(META||{}).lastDeep||""],[],
-    ["BLOCKED SITES"],["Site","Why","Can you help?"]].concat(
-    ((BLOCKED||{}).sites||[]).map(b=>[b.post||b.host,b.need||b.reason||"",
-      (b.canHelp||b.kind==="login")?"yes — needs a login":"no — the site blocks bots"]));
+    ["Last live",(META||{}).lastLive||""],["Last deep crawl",(META||{}).lastDeep||""]];
+
+  const bl=[["Site","Why","Can you do anything about it?"]].concat(
+    (((BLOCKED||{}).sites)||[]).map(b=>[b.post||b.host,b.need||b.reason||"",
+      (b.canHelp||b.kind==="login")?"yes — it needs a login":"no — the site blocks bots"]));
+
   const co=[["COMPANY INFORMATION"],[]];
   ((COMPANY||{}).groups||[]).forEach(g=>{ co.push([g.title]);
     (g.rows||[]).forEach(r=>co.push(["  "+r[0], r[1]||("("+(r[2]||"not recorded")+")")])); co.push([]); });
-  const sheets=[{name:"Mission Control",rows:mc},
-    {name:"All Solicitations",rows:[hdr].concat(all.map(_xlRow))},
-    {name:"Bid-Eligible",rows:grp(s=>active(s)&&effTier(s)==="BID")},
-    {name:"Conditional",rows:grp(s=>active(s)&&effTier(s)==="MID")},
-    {name:"Non-Eligible",rows:grp(s=>active(s)&&effTier(s)==="NO")},
-    {name:"Under Review",rows:grp(s=>active(s)&&effTier(s)==="REVIEW")},
-    {name:"Hidden",rows:grp(s=>isHidden(s)&&!s.archived&&!isDeleted(s))},
-    {name:"Archive",rows:grp(s=>s.archived&&!isDeleted(s))},
-    {name:"History (deleted)",rows:grp(isDeleted)},
-    {name:"Company",rows:co}];
+
+  /* THE SHEET THAT ACTUALLY READS LIKE SOMETHING: every solicitation written out
+     one field per line, the way the dossier reads on screen. A 46-column row is
+     for filtering; this is for reading. */
+  const detail=[["MADISON & MAIN — EVERY SOLICITATION IN FULL"],["Exported",stamp],[]];
+  all.forEach((s,i)=>{
+    const r=_xlRow(s);
+    detail.push([`${i+1}.  ${s.sol||"(no reference number)"}  —  ${s.title||""}`]);
+    if(s.brief) detail.push(["",s.brief]);
+    detail.push([]);
+    XL_COLS.forEach(([label],ci)=>{
+      const v=r[ci];
+      if(v!==""&&v!=null&&label!=="Title"&&label!=="Brief") detail.push(["  "+label,v]);
+    });
+    detail.push([]); detail.push(["","— — —"]); detail.push([]);
+  });
+
+  const sheets=[
+    {name:"Mission Control",rows:mc,widths:[38,62]},
+    {name:"EVERYTHING in full",rows:detail,widths:[30,110]},
+    {name:"All Solicitations",rows:[hdr].concat(all.map(_xlRow)),widths,filter:true},
+    Object.assign({name:"Bid-Eligible"},grp(s=>active(s)&&effTier(s)==="BID")),
+    Object.assign({name:"Conditional"},grp(s=>active(s)&&effTier(s)==="MID")),
+    Object.assign({name:"Non-Eligible"},grp(s=>active(s)&&effTier(s)==="NO")),
+    Object.assign({name:"Under Review"},grp(s=>active(s)&&effTier(s)==="REVIEW")),
+    Object.assign({name:"Hidden"},grp(s=>isHidden(s)&&!s.archived&&!isDeleted(s))),
+    Object.assign({name:"Archive"},grp(s=>s.archived&&!isDeleted(s))),
+    Object.assign({name:"History (deleted)"},grp(isDeleted)),
+    {name:"Blocked Sites",rows:bl,widths:[34,78,30],filter:true},
+    {name:"Company",rows:co,widths:[38,62]}];
+
   const blob=buildWorkbook(sheets);
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -799,7 +841,11 @@ function collapseAll(){
 const SMAP={BID:{cls:"g",label:"SECTION I — BID-ELIGIBLE"},MID:{cls:"o",label:"SECTION II — CONDITIONAL (BID / NO-BID)"},NO:{cls:"r",label:"SECTION III — NON-ELIGIBLE (NO-BID)"},REVIEW:{cls:"n",label:"SECTION IV — UNDER REVIEW (needs a human look)"}};
 const SRCLABEL={"SAM":"SAM","Site":"SITE","Site+SAM":"SAM+SITE"};
 function fmtUsd(n){n=+n||0;return n>=1e6?('$'+(n/1e6).toFixed(2)+'M'):n>=1e3?('$'+Math.round(n/1e3)+'K'):('$'+n.toLocaleString());}
-function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* esc() is called on everything that reaches the page, so it must survive
+   anything: numbers, booleans, null. It used to assume a string and threw
+   on a number, which took a whole panel down with it. */
+function esc(v){ if(v===null||v===undefined||v===false) return "";
+  return String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function dleft(d){if(!d)return null;return Math.round((new Date(d)-new Date())/864e5);}
 
 function dossier(s){
@@ -837,7 +883,7 @@ function dossier(s){
   /* ---- COMMERCIAL TERMS ---- */
   h+=grp("Commercial terms", tbl(
       kv("Shipping / delivery terms",s.shipping)+kv("Payment terms",s.payment)
-      +kv("Stated value",s.value)+(s.post||s.country?`<tr><th>Place of performance</th><td>${flagOf(s.country)}${esc([s.post,s.country].filter(Boolean).join(", "))}</td></tr>`:"")
+      +kv("Stated value",s.value)+(s.post||s.country?`<tr><th>Place of performance</th><td>${flagOf(s.country,"big")}${esc([s.post,s.country].filter(Boolean).join(", "))}</td></tr>`:"")
       +kv("Source",SRCLABEL[s.source]||s.source)));
 
   /* ---- ELIGIBILITY ---- */
@@ -909,7 +955,7 @@ function rowHTML(s,i){
   return `<tr class="row" onclick="tgl(${i})">
     <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}</td>
     <td data-l="Source"><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
-    <td class="tcell titlecell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}${opBadge(s)}</td>
+    <td class="tcell titlecell"><span class="ttl">${flagOf(s.country)}${esc(s.title)}</span>${setAsideTag(s)}${opBadge(s)}</td>
     <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${flagOf(s.country)}${esc(s.country)}</span></td>
     <td class="hidecol" data-l="Classification">${esc(s.type)}</td>
     <td class="num" data-l="Deadline"><span class="due ${soon}">${esc(duetxt)}</span></td>
@@ -1232,8 +1278,7 @@ function init(){
      <div class="cell"><div class="big" id="sl2">0</div><div class="cap">★ Shortlisted</div></div>`;
   document.getElementById('sl2').textContent=LS().length;
   const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].filter(Boolean).sort(),sel=document.getElementById('fCountry');
-  cs.forEach(c=>{const o=document.createElement('option');o.value=c;const cc=isoOf(c);
-    o.textContent=(cc&&flagEmojiSupported()?String.fromCodePoint(...[...cc].map(ch=>0x1F1E6+ch.charCodeAt(0)-65))+' ':'')+c;sel.appendChild(o);});
+  cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
   applyNight(); renderNav(); renderHelp(); renderMC(); renderAlarm(); syncMastHeight();
   refreshCounts();render();
 }
@@ -1304,27 +1349,46 @@ async function pollLive(){
 }
 function renderLive(){
   const el=document.getElementById('liveBox'); if(!el||!LIVE) return;
+  const PH={embassy:'embassy sites',sam:'SAM.gov',un:'United Nations',
+            repair:'finishing records already on the register',done:'finished'};
   if(!LIVE.bots||!LIVE.bots.length){
-    el.innerHTML='<b>Live:</b> <i>no crawl running right now.</i>'; return;
+    el.innerHTML='<b>Live:</b> <i>no crawl running. The bots go out every 4 hours — '
+      +'or press “Send the Bots” to start one now.</i>';
+    return;
   }
-  const PH={embassy:'Embassy sites',sam:'SAM.gov',un:'United Nations',
-            repair:'Finishing existing records',done:'Finished'};
+  const working=LIVE.bots.filter(b=>b.status==='in_progress');
   const rows=LIVE.bots.map(b=>{
-    const dot=b.status==='in_progress'?'<span class="mc-live on"></span>'
-             :'<span class="mc-live off"></span>';
-    if(b.status!=='in_progress')
-      return `<div class="lv">${dot}<b>Bot ${b.shard!=null?b.shard:b.job.replace(/\D/g,'')}</b>
-        <span class="lvq">${esc(b.conclusion||b.status)}</span></div>`;
-    const where=[b.post&&`${flagOf(b.country||'')}${esc(b.post)}`,
-                 PH[b.phase]||b.phase].filter(Boolean).join(' &middot; ');
-    return `<div class="lv">${dot}<b>Bot ${b.shard}</b>
-      <span class="lvw">${where||'starting'}</span>
-      <span class="lvd">${esc(b.doing||'')}</span>
-      ${b.remaining?`<span class="lvq">${esc(b.remaining)} sites left</span>`:''}
-      ${b.ai?`<span class="lvq">${esc(b.ai)} AI calls</span>`:''}</div>`;
+    const live=b.status==='in_progress';
+    const dot=live?'<span class="mc-live on"></span>':'<span class="mc-live off"></span>';
+    if(!live){
+      const c=b.conclusion==='success'?'finished its slice'
+            :(b.conclusion?esc(b.conclusion):esc(b.status||'waiting'));
+      return `<div class="lv"><div class="lvline">${dot}<b>Bot ${esc(b.shard)}</b>`
+        +`<span class="lvq">${c}${b.visited?` &middot; covered ${esc(b.visited)} post`
+        +`${b.visited>1?'s':''}`:''}</span></div></div>`;
+    }
+    const where = b.post ? `${flagOf(b.country||'')}${esc(b.post)}`
+                : (b.step ? esc(b.step) : 'starting up');
+    const doing = b.doing ? esc(b.doing)
+                : (b.phase ? 'working through '+(PH[b.phase]||esc(b.phase))
+                           : 'spinning up — no progress reported yet');
+    const bits=[];
+    if(b.phase&&b.post) bits.push(PH[b.phase]||esc(b.phase));
+    if(b.remaining) bits.push(`${esc(b.remaining)} posts still to visit`);
+    if(b.found) bits.push(`${esc(b.found)} found so far`);
+    if(b.ai) bits.push(`${esc(b.ai)} AI calls`);
+    const trail=(b.recent&&b.recent.length>1)
+      ? `<div class="lvtrail">came from: ${b.recent.slice(0,-1).map(esc).join(' → ')}</div>` : '';
+    return `<div class="lv"><div class="lvline">${dot}<b>Bot ${esc(b.shard)}</b>`
+      +`<span class="lvw">${where}</span><span class="lvd">${doing}</span></div>`
+      +`${bits.length?`<div class="lvq">${bits.join(' &nbsp;&middot;&nbsp; ')}</div>`:''}${trail}</div>`;
   }).join('');
-  el.innerHTML=`<div class="lvhead"><b>Live — where the bots are right now</b>
-      <span class="lvq">${LIVE.running?'running':'idle'} &middot; updates every 20s</span></div>${rows}`;
+  const head = LIVE.running
+    ? `<b>Live — ${working.length} of ${LIVE.bots.length} bots out in the field</b>`
+    : `<b>Last run — ${esc(LIVE.conclusion||LIVE.runStatus||'finished')}</b>`;
+  el.innerHTML=`<div class="lvhead">${head}<span class="lvq">`
+    +`${LIVE.startedAt?'started '+esc(String(LIVE.startedAt).replace('T',' ').slice(0,16))+' UTC &nbsp;&middot;&nbsp; ':''}`
+    +`refreshes every 20s</span></div>${rows}`;
 }
 function renderMC(){
   const p=document.getElementById('mcPanel'); const s=STATUS||{};
