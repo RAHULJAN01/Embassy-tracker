@@ -1,33 +1,50 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-02 19:13 UTC",
- "heartbeat": "2026-10-02 19:42 UTC",
+ "startedAt": "2026-10-02 19:54 UTC",
+ "heartbeat": "2026-10-02 20:06 UTC",
  "currentJob": "fleet run complete",
- "found": 0,
- "queued": 43,
- "aiCalls": 0,
+ "found": 21,
+ "queued": 27,
+ "aiCalls": 22,
  "aiBudget": 100,
  "providers": [
   "claude"
  ],
  "coverage": {
-  "Burkina Faso": 6,
-  "Central African Republic": 1,
-  "Cote d'Ivoire": 11
+  "China": 0,
+  "Burundi": 0,
+  "Chad": 0,
+  "Djibouti": 3,
+  "Eswatini": 0,
+  "Ghana": 0,
+  "Liberia": 3,
+  "Mauritania": 0,
+  "Namibia": 1,
+  "Senegal": 0,
+  "South Sudan": 1,
+  "Uganda": 2,
+  "Iraq": 0,
+  "Lebanon": 0,
+  "Tunisia": 0,
+  "Libya": 1,
+  "Kazakhstan": 5,
+  "Pakistan": 1,
+  "Uzbekistan": 2,
+  "Fiji": 8
  },
  "bots": 4,
  "running": false,
- "lastError": "abandoned: AI unavailable (will retry next run)",
+ "lastError": "",
  "aiDiag": {
   "ok": {
-   "claude": 24
+   "claude": 19
   },
   "errors": {},
   "model": "claude-haiku-4-5-20251001",
   "keyVar": "ANTHROPIC_API_KEY",
-  "inputTokens": 149216,
-  "outputTokens": 48000,
-  "spendUSD": 0.3892
+  "inputTokens": 44604,
+  "outputTokens": 10974,
+  "spendUSD": 0.0995
  },
  "samDiag": "SAM not queried"
 }
