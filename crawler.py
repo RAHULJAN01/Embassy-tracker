@@ -434,6 +434,18 @@ def sam_search(cfg, limit=60):
     if not key:
         print("no SAM_API_KEY — SAM skipped")
         return []
+    # SAM's per-account rate limit is small. Only ONE bot (shard 0) queries SAM,
+    # so four parallel bots don't burn the daily quota four times over.
+    if SHARDS > 1 and SHARD != 0:
+        print(f"shard {SHARD}: skipping SAM (only shard 0 queries it)")
+        return []
+    # And only at a couple of hours a day — SAM postings don't change every 2h,
+    # and querying every run would exhaust the daily key limit. SAM_HOURS overrides.
+    sam_hours = {int(h) for h in os.getenv("SAM_HOURS", "3,15").split(",") if h.strip().isdigit()}
+    hr = datetime.datetime.now(datetime.timezone.utc).hour
+    if sam_hours and hr not in sam_hours and os.getenv("FORCE_SAM", "") != "1":
+        print(f"hour {hr} UTC not a SAM window {sorted(sam_hours)} — skipping SAM this run")
+        return []
     pf = (datetime.date.today() - datetime.timedelta(days=30)).strftime("%m/%d/%Y")
     pt = datetime.date.today().strftime("%m/%d/%Y")
     base = {"api_key": key, "limit": str(limit), "postedFrom": pf, "postedTo": pt, "ptype": "o,k,r"}
