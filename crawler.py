@@ -441,7 +441,7 @@ def sam_search(cfg, limit=60):
         return []
     # And only at a couple of hours a day — SAM postings don't change every 2h,
     # and querying every run would exhaust the daily key limit. SAM_HOURS overrides.
-    sam_hours = {int(h) for h in os.getenv("SAM_HOURS", "3,15").split(",") if h.strip().isdigit()}
+    sam_hours = {int(h) for h in os.getenv("SAM_HOURS", "2,14").split(",") if h.strip().isdigit()}
     hr = datetime.datetime.now(datetime.timezone.utc).hour
     if sam_hours and hr not in sam_hours and os.getenv("FORCE_SAM", "") != "1":
         print(f"hour {hr} UTC not a SAM window {sorted(sam_hours)} — skipping SAM this run")
