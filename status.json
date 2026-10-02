@@ -1,50 +1,20 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-02 19:54 UTC",
- "heartbeat": "2026-10-02 20:06 UTC",
+ "startedAt": "",
+ "heartbeat": "",
  "currentJob": "fleet run complete",
- "found": 21,
- "queued": 27,
- "aiCalls": 22,
- "aiBudget": 100,
- "providers": [
-  "claude"
- ],
- "coverage": {
-  "China": 0,
-  "Burundi": 0,
-  "Chad": 0,
-  "Djibouti": 3,
-  "Eswatini": 0,
-  "Ghana": 0,
-  "Liberia": 3,
-  "Mauritania": 0,
-  "Namibia": 1,
-  "Senegal": 0,
-  "South Sudan": 1,
-  "Uganda": 2,
-  "Iraq": 0,
-  "Lebanon": 0,
-  "Tunisia": 0,
-  "Libya": 1,
-  "Kazakhstan": 5,
-  "Pakistan": 1,
-  "Uzbekistan": 2,
-  "Fiji": 8
- },
- "bots": 4,
+ "found": 0,
+ "queued": 0,
+ "aiCalls": 0,
+ "aiBudget": 0,
+ "providers": [],
+ "coverage": {},
+ "bots": 0,
  "running": false,
  "lastError": "",
  "aiDiag": {
-  "ok": {
-   "claude": 19
-  },
-  "errors": {},
-  "model": "claude-haiku-4-5-20251001",
-  "keyVar": "ANTHROPIC_API_KEY",
-  "inputTokens": 44604,
-  "outputTokens": 10974,
-  "spendUSD": 0.0995
+  "ok": {},
+  "errors": {}
  },
  "samDiag": "SAM not queried"
 }
