@@ -21,7 +21,7 @@ A complete record means:
     4. verification state computed from what we actually hold
     5. valued by the estimator when it is verified and doable
 """
-import time
+import re, time
 
 # AI calls a single solicitation can need: 1 adjudication (+1 retry) + 1 estimate
 COST_ADJUDICATE = 1
@@ -80,8 +80,79 @@ def _first_title(text, limit=140):
     return ""
 
 
+# Words that mean a notice is over, whatever its dates say.
+_DEAD_RX = re.compile(
+    r"\b(this (?:solicitation|rfq|rfp|itb|tender|notice) (?:has been |is |was )?"
+    r"(?:cancell?ed|withdrawn|rescinded|terminated)"
+    r"|\bcancell?ed\b[^.\n]{0,40}\b(?:solicitation|rfq|rfp|tender|notice)"
+    r"|notice of award|award(?:ed)? to\b|contract (?:has been )?awarded"
+    r"|no longer (?:open|accepting|available)|closed to (?:new )?(?:offers|bids|submissions)"
+    r"|submissions? (?:are )?closed|this opportunity (?:has )?closed"
+    r"|superseded by|replaced by (?:solicitation|rfq))\b", re.I)
+
+# Attachments worth opening first when a notice carries a pile of them.
+_WORTH_READING = re.compile(
+    r"(rfq|rfp|itb|ifb|sow|statement.of.work|scope|spec|requirement|terms|conditions"
+    r"|solicitation|tender|bid|quotation|attachment|annex|schedule|sf-?1449|sf-?18"
+    r"|amendment|addendum|instruction|evaluation|pricing|bom)", re.I)
+_LOW_VALUE = re.compile(r"(logo|banner|header|footer|map|photo|image|privacy|accessib)", re.I)
+
+
+def triage(text, today, known_live=None, sol_hint=""):
+    """The cheap gate. Runs on the page text ALONE, before a single file is
+    opened and long before the model is called — because nothing about a dead
+    solicitation is worth paying for.
+
+    Returns (verdict, detail). verdict is "" when the notice is worth working.
+    """
+    t = text or ""
+    if len(t.strip()) < 180:
+        return "thin", "the page carried almost no text"
+
+    m = _DEAD_RX.search(t)
+    if m:
+        return "dead", f"the notice says it is over: “{m.group(0)[:70]}”"
+
+    # a stated closing date already in the past
+    try:
+        import analyzer as _a
+        closing = _a.harvest_date(t, _a._DEADLINE_CUES)
+    except Exception:
+        closing = ""
+    if closing and closing < today:
+        return "expired", closing
+
+    # already on the register, finished, and nothing new to learn
+    if sol_hint and known_live and sol_hint.strip().upper() in known_live:
+        return "duplicate", f"{sol_hint} is already on the register and verified"
+    return "", ""
+
+
+def pick_attachments(urls, limit=12):
+    """Read the files that decide a bid first. A notice with 41 attachments can
+    eat a whole run in OCR alone; the scope, the terms and the forms are what
+    matter, and the site's logo never is."""
+    scored = []
+    for u in urls or []:
+        name = str(u).split("/")[-1][:120]
+        s = 0
+        if _WORTH_READING.search(name):
+            s += 10
+        if _LOW_VALUE.search(name):
+            s -= 20
+        if name.lower().endswith((".pdf", ".docx", ".doc")):
+            s += 3
+        elif name.lower().endswith((".xlsx", ".xls", ".zip")):
+            s += 2
+        elif name.lower().endswith((".jpg", ".jpeg", ".png", ".gif")):
+            s -= 8
+        scored.append((-s, u))
+    scored.sort(key=lambda x: x[0])
+    return [u for _, u in scored[:limit]]
+
+
 def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
-                fetch_attachments, status=None, label=""):
+                fetch_attachments, status=None, label="", known_live=None):
     """Take ONE solicitation all the way through. Returns (record|None, report).
 
     `unit` must carry:
@@ -92,15 +163,37 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
     """
     report = {"read_ok": 0, "read_fail": 0, "failures": [], "ai_calls": 0,
               "stage": "start", "complete": False}
+    text = unit.get("text") or ""
 
-    # ---- 1. READ EVERYTHING. No partial reads; every attachment gets opened.
+    # ---- 0. IS IT ALIVE? Decided on the page text alone: no downloads, no OCR,
+    # no model. Rahul's rule — "if it has crossed its deadline or is cancelled,
+    # just move on; no need to scan it or open any files."
+    v, detail = triage(text, today, known_live, unit.get("sol_hint", ""))
+    if v == "thin":
+        report["stage"] = "abandoned: nothing readable on the page"
+        return None, report
+    if v == "duplicate":
+        report["stage"] = f"skipped: {detail}"
+        report["duplicate"] = detail
+        return None, report
+    if v in ("dead", "expired"):
+        report["stage"] = (f"skipped before opening anything: "
+                           + (f"closed on {detail}" if v == "expired" else detail))
+        report["expired"] = detail if v == "expired" else today
+        report["deadReason"] = detail
+        report["title_guess"] = _first_title(text)
+        report["skippedFiles"] = len(unit.get("attachments") or [])
+        return None, report
+
+    # ---- 1. NOW it earns the files. Every one that matters, read in full.
     report["stage"] = "reading documents"
     if status:
         status.beat(currentJob=f"reading all documents: {label[:50]}")
-    text = unit.get("text") or ""
     if text:
         report["read_ok"] += 1
-    for url, atext, note in fetch_attachments(unit.get("attachments") or []):
+    chosen = pick_attachments(unit.get("attachments") or [])
+    report["attachments_skipped"] = max(0, len(unit.get("attachments") or []) - len(chosen))
+    for url, atext, note in fetch_attachments(chosen):
         if atext:
             text += f"\n\n[DOCUMENT: {url}]\n{atext}"
             report["read_ok"] += 1
@@ -112,18 +205,14 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = "abandoned: nothing readable"
         return None, report
 
-    # ---- 1b. IS IT ALREADY DEAD? Check the closing date BEFORE paying to think.
-    # Nearly half the first paid run was spent fully adjudicating solicitations
-    # that had closed in 2024 and 2025, only to archive them a moment later.
-    # Date harvesting is plain regex and costs nothing, so it goes first.
-    closing = ""
-    try:
-        closing = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
-    except Exception:
-        closing = ""
-    if closing and closing < today:
-        report["stage"] = f"skipped: closed on {closing}"
-        report["expired"] = closing
+    # ---- 1b. The closing date is often only inside an attachment. Check again
+    # now that we have them — still free, still before the model.
+    v2, detail2 = triage(text, today, None, "")
+    if v2 in ("dead", "expired"):
+        report["stage"] = ("skipped after reading the files: "
+                           + (f"closed on {detail2}" if v2 == "expired" else detail2))
+        report["expired"] = detail2 if v2 == "expired" else today
+        report["deadReason"] = detail2
         report["title_guess"] = _first_title(text)
         return None, report
 

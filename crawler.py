@@ -761,6 +761,11 @@ def run(mode):
 
     rows, discovered, completed, abandoned, repaired = [], 0, 0, 0, 0
     skipped_expired = 0      # closed before we reached them — archived, never adjudicated
+    skipped_dupe = 0         # already on the register, finished
+    # every reference we already hold complete: a second sighting is not re-read
+    known_live = {str(r.get("sol", "")).strip().upper()
+                  for r in prior.get("solicitations", [])
+                  if r.get("sol") and r.get("verified") == "VERIFIED" and not r.get("archived")}
 
     def repaired_fail(old, why):
         """A repair attempt that didn't land. Keep the record, count the try, and
@@ -794,12 +799,16 @@ def run(mode):
 
     def finish_unit(unit, label):
         """Run ONE solicitation end to end. Returns True if a record was stored."""
-        nonlocal completed, abandoned, skipped_expired
+        nonlocal completed, abandoned, skipped_expired, skipped_dupe
         rec, rep = pipeline.process_one(
             unit, call_ai=call, analyzer=analyzer, estimator=estimator,
             budget=budget, today=today(), fetch_attachments=read_all,
-            status=st, label=label)
+            status=st, label=label, known_live=known_live)
         if not rec:
+            if rep.get("duplicate"):
+                ledger.add(unit["hash"])
+                skipped_dupe += 1
+                return False
             # Already closed before we ever reached it. Rahul's rule is "archive
             # everything, document everything" — so it is still recorded, with the
             # date that killed it, but it never costs an AI call.
@@ -814,8 +823,10 @@ def run(mode):
                        "deadline": rep["expired"], "status": "Expired", "archived": True,
                        "archivedOn": today(), "updated": today(),
                        "verified": "UNVERIFIED",
-                       "verifyNotes": [f"closed on {rep['expired']} before the bots reached it "
-                                       f"— archived without spending an AI call on it"],
+                       "verifyNotes": [rep.get("deadReason")
+                                       or f"closed on {rep['expired']} before the bots reached it",
+                                       "archived without opening its files or spending an AI call"],
+                       "deadReason": rep.get("deadReason", ""),
                        "files": unit.get("attachments", [])[:15],
                        "fileCount": len(unit.get("attachments") or []),
                        "restrictions": [], "docs": [], "gotchas": [], "lineItems": [],
@@ -1134,6 +1145,7 @@ def run(mode):
     st.d["abandoned"] = abandoned
     st.d["repaired"] = repaired
     st.d["skippedExpired"] = skipped_expired
+    st.d["skippedDuplicate"] = skipped_dupe
     st.d["stillUnfinished"] = sum(1 for r in merged if repairable(r))
     st.finish(note=(f"done — {repaired} unfinished records completed, "
                     f"{completed} new solicitations fully processed, "

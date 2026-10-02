@@ -131,6 +131,70 @@ ok("and the realistic load (40 solicitations/day) is near $11",
    abs(40 * 30 * (IN_PER / 1e6 + OUT_PER / 1e6 * 5) - 12) < 4,
    f"${40*30*(IN_PER/1e6+OUT_PER/1e6*5):.2f}")
 
+# ============================================================ THE CHEAP GATE
+print("\n=== Nothing is opened, read or thought about on a dead notice ===")
+import pipeline as _P
+_T = "2026-10-02"
+_body = " The U.S. Embassy requires cleaning services for the chancery compound. " * 8
+for _label, _txt, _want in [
+        ("past closing date", _body + " Quotations are due by 14 September 2026.", "expired"),
+        ("cancelled", _body + " This solicitation has been cancelled.", "dead"),
+        ("withdrawn", _body + " This RFQ was withdrawn by the contracting officer.", "dead"),
+        ("already awarded", _body + " Notice of award: contract awarded to Acme Ltd.", "dead"),
+        ("closed", _body + " This opportunity has closed.", "dead"),
+        ("superseded", _body + " Superseded by solicitation 19KE5026Q0200.", "dead"),
+        ("still live", _body + " Quotations are due by 20 December 2026.", ""),
+        ("no date stated", _body, "")]:
+    _v, _d = _P.triage(_txt, _T)
+    ok(f"  {_label} -> {_want or 'worth working'}", _v == _want, f"{_v} {_d[:40]}")
+
+_calls = {"n": 0}; _opened = {"n": 0}
+
+
+def _ai(p, model=None):
+    _calls["n"] += 1
+    return {"tier": "BID", "confidence": 0.9}
+
+
+def _fetch(urls):
+    _opened["n"] += len(urls)
+    return [(u, "text " * 80, "") for u in urls]
+
+
+class _B:
+    left = 99
+
+    def spend(self, n=1):
+        pass
+
+
+_rec, _rep = _P.process_one(
+    {"text": _body + " This solicitation has been cancelled.",
+     "attachments": ["https://x/a.pdf"] * 8, "sol_hint": "X"},
+    call_ai=_ai, analyzer=analyzer, estimator=estimator, budget=_B(), today=_T,
+    fetch_attachments=_fetch)
+ok("a dead notice costs ZERO AI calls", _calls["n"] == 0, str(_calls["n"]))
+ok("a dead notice downloads ZERO files", _opened["n"] == 0, str(_opened["n"]))
+ok("but it is still archived and documented",
+   bool(_rep.get("expired")) and bool(_rep.get("deadReason")))
+# the parameter name appears in the signature, so compare against the real CALL
+_src = inspect.getsource(_P.process_one)
+ok("the triage gate runs BEFORE any download",
+   _src.index("triage(text, today") < _src.index("fetch_attachments(chosen)"))
+
+ok("a reference already finished is not opened a second time",
+   _P.triage(_body + " due 20 December 2026.", _T, {"ABC123"}, "abc123")[0] == "duplicate")
+
+_urls = ["https://x/logo.png", "https://x/RFQ-Statement-of-Work.pdf", "https://x/banner.jpg",
+         "https://x/Pricing-Schedule.xlsx"] + [f"https://x/misc{i}.pdf" for i in range(30)]
+_pick = _P.pick_attachments(_urls)
+ok("the files that decide a bid are read first",
+   "Statement-of-Work" in _pick[0] or "Pricing" in _pick[0], _pick[0].split("/")[-1])
+ok("logos and banners are never opened",
+   not any(x in " ".join(_pick).lower() for x in ("logo", "banner")))
+ok("a pile of attachments is capped", len(_pick) <= 12, str(len(_pick)))
+
+
 print("\n" + "=" * 64)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
 print("=" * 64)
