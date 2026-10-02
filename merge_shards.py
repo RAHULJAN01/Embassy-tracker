@@ -287,12 +287,28 @@ def main(shard_dir):
            "lastError": next((s.get("lastError") for s in statuses if s.get("lastError")), ""),
            "aiDiag": {"ok": {}, "errors": {}},
            "samDiag": next((x.get("samDiag") for x in statuses if x.get("samDiag") and "not queried" not in str(x.get("samDiag"))), "SAM not queried")}
+    # Claude's health, model, token spend and — most importantly — any DOWN
+    # reason must survive the fleet merge. The portal's alarm reads `down` from
+    # here; if it were dropped the register could fail silently, which is the one
+    # thing a single-provider setup must never do.
+    tin = tout = 0
     for s in statuses:
         dg = s.get("aiDiag") or {}
         for k, v in (dg.get("ok") or {}).items():
             agg["aiDiag"]["ok"][k] = agg["aiDiag"]["ok"].get(k, 0) + v
         for k, v in (dg.get("errors") or {}).items():
             agg["aiDiag"]["errors"][k] = v
+        for f in ("model", "keyVar"):
+            if dg.get(f) and not agg["aiDiag"].get(f):
+                agg["aiDiag"][f] = dg[f]
+        if dg.get("down") and not agg["aiDiag"].get("down"):
+            agg["aiDiag"]["down"] = dg["down"]          # any bot down = alarm
+        tin += int(dg.get("inputTokens") or 0)
+        tout += int(dg.get("outputTokens") or 0)
+    if tin or tout:
+        agg["aiDiag"]["inputTokens"] = tin
+        agg["aiDiag"]["outputTokens"] = tout
+        agg["aiDiag"]["spendUSD"] = round(tin / 1e6 * 1.00 + tout / 1e6 * 5.00, 4)
 
     counts = {"active": 0, "bid": 0, "mid": 0, "no": 0, "review": 0, "archived": 0,
               "verified": 0, "unverified": 0, "deleted": 0, "hidden": 0}
