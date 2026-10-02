@@ -1,20 +1,38 @@
 {
  "mode": "roots",
- "startedAt": "",
- "heartbeat": "",
+ "startedAt": "2026-10-02 18:21 UTC",
+ "heartbeat": "2026-10-02 18:30 UTC",
  "currentJob": "fleet run complete",
- "found": 0,
- "queued": 0,
- "aiCalls": 0,
- "aiBudget": 0,
- "providers": [],
- "coverage": {},
- "bots": 0,
+ "found": 46,
+ "queued": 122,
+ "aiCalls": 72,
+ "aiBudget": 100,
+ "providers": [
+  "claude"
+ ],
+ "coverage": {
+  "Algeria": 4,
+  "Burkina Faso": 6,
+  "Central African Republic": 5,
+  "Cote d'Ivoire": 7,
+  "Angola": 1,
+  "Burundi": 6,
+  "Benin": 9,
+  "Botswana": 0,
+  "Cameroon": 0,
+  "Republic of the Congo": 1,
+  "Equatorial Guinea": 1,
+  "Gabon": 0,
+  "Kenya": 9
+ },
+ "bots": 4,
  "running": false,
- "lastError": "",
+ "lastError": "abandoned: AI unavailable (will retry next run)",
  "aiDiag": {
-  "ok": {},
+  "ok": {
+   "claude": 76
+  },
   "errors": {}
  },
- "samDiag": "SAM not queried"
+ "samDiag": "HTTP 429 | total=? | got=0 | Message throttled out"
 }

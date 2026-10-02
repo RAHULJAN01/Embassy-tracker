@@ -1,4 +1,329 @@
 {
- "sites": [],
- "updated": "2026-10-02 18:17 UTC"
+ "sites": [
+  {
+   "host": "www.iom.int",
+   "post": "IOM",
+   "platform": "UN",
+   "url": "https://www.iom.int/procurement-opportunities",
+   "reason": "the site refused the bot (challenge or IP block) — open it once in your browser so it lets us through",
+   "need": "the site refused the bot (challenge or IP block) — open it once in your browser so it lets us through",
+   "since": "2026-10-02 18:22 UTC"
+  },
+  {
+   "host": "mw.usembassy.gov",
+   "post": "U.S. Embassy Malawi",
+   "platform": "USGOV",
+   "url": "https://mw.usembassy.gov",
+   "reason": "HTTP 403 at https://mw.usembassy.gov",
+   "need": "HTTP 403 at https://mw.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ma.usembassy.gov",
+   "post": "U.S. Embassy Morocco",
+   "platform": "USGOV",
+   "url": "https://ma.usembassy.gov",
+   "reason": "HTTP 403 at https://ma.usembassy.gov",
+   "need": "HTTP 403 at https://ma.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ng.usembassy.gov",
+   "post": "U.S. Embassy Nigeria",
+   "platform": "USGOV",
+   "url": "https://ng.usembassy.gov",
+   "reason": "HTTP 403 at https://ng.usembassy.gov",
+   "need": "HTTP 403 at https://ng.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "so.usembassy.gov",
+   "post": "U.S. Embassy Somalia",
+   "platform": "USGOV",
+   "url": "https://so.usembassy.gov",
+   "reason": "HTTP 403 at https://so.usembassy.gov",
+   "need": "HTTP 403 at https://so.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "tz.usembassy.gov",
+   "post": "U.S. Embassy Tanzania",
+   "platform": "USGOV",
+   "url": "https://tz.usembassy.gov",
+   "reason": "HTTP 403 at https://tz.usembassy.gov",
+   "need": "HTTP 403 at https://tz.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "zw.usembassy.gov",
+   "post": "U.S. Embassy Zimbabwe",
+   "platform": "USGOV",
+   "url": "https://zw.usembassy.gov",
+   "reason": "HTTP 403 at https://zw.usembassy.gov",
+   "need": "HTTP 403 at https://zw.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "jo.usembassy.gov",
+   "post": "U.S. Embassy Jordan",
+   "platform": "USGOV",
+   "url": "https://jo.usembassy.gov",
+   "reason": "HTTP 403 at https://jo.usembassy.gov",
+   "need": "HTTP 403 at https://jo.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "qa.usembassy.gov",
+   "post": "U.S. Embassy Qatar",
+   "platform": "USGOV",
+   "url": "https://qa.usembassy.gov",
+   "reason": "HTTP 403 at https://qa.usembassy.gov",
+   "need": "HTTP 403 at https://qa.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ae.usembassy.gov",
+   "post": "U.S. Embassy United Arab Emirates",
+   "platform": "USGOV",
+   "url": "https://ae.usembassy.gov",
+   "reason": "HTTP 403 at https://ae.usembassy.gov",
+   "need": "HTTP 403 at https://ae.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "bd.usembassy.gov",
+   "post": "U.S. Embassy Bangladesh",
+   "platform": "USGOV",
+   "url": "https://bd.usembassy.gov",
+   "reason": "HTTP 403 at https://bd.usembassy.gov",
+   "need": "HTTP 403 at https://bd.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "mv.usembassy.gov",
+   "post": "U.S. Embassy Maldives",
+   "platform": "USGOV",
+   "url": "https://mv.usembassy.gov",
+   "reason": "HTTP 403 at https://mv.usembassy.gov",
+   "need": "HTTP 403 at https://mv.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "tj.usembassy.gov",
+   "post": "U.S. Embassy Tajikistan",
+   "platform": "USGOV",
+   "url": "https://tj.usembassy.gov",
+   "reason": "HTTP 403 at https://tj.usembassy.gov",
+   "need": "HTTP 403 at https://tj.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "kh.usembassy.gov",
+   "post": "U.S. Embassy Cambodia",
+   "platform": "USGOV",
+   "url": "https://kh.usembassy.gov",
+   "reason": "HTTP 403 at https://kh.usembassy.gov",
+   "need": "HTTP 403 at https://kh.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "jp.usembassy.gov",
+   "post": "U.S. Embassy Japan",
+   "platform": "USGOV",
+   "url": "https://jp.usembassy.gov",
+   "reason": "HTTP 403 at https://jp.usembassy.gov",
+   "need": "HTTP 403 at https://jp.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "fm.usembassy.gov",
+   "post": "U.S. Embassy Micronesia",
+   "platform": "USGOV",
+   "url": "https://fm.usembassy.gov",
+   "reason": "HTTP 403 at https://fm.usembassy.gov",
+   "need": "HTTP 403 at https://fm.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "pw.usembassy.gov",
+   "post": "U.S. Embassy Palau",
+   "platform": "USGOV",
+   "url": "https://pw.usembassy.gov",
+   "reason": "HTTP 403 at https://pw.usembassy.gov",
+   "need": "HTTP 403 at https://pw.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "sg.usembassy.gov",
+   "post": "U.S. Embassy Singapore",
+   "platform": "USGOV",
+   "url": "https://sg.usembassy.gov",
+   "reason": "HTTP 403 at https://sg.usembassy.gov",
+   "need": "HTTP 403 at https://sg.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "bn.usembassy.gov",
+   "post": "U.S. Embassy Brunei",
+   "platform": "USGOV",
+   "url": "https://bn.usembassy.gov",
+   "reason": "HTTP 403 at https://bn.usembassy.gov",
+   "need": "HTTP 403 at https://bn.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "az.usembassy.gov",
+   "post": "U.S. Embassy Azerbaijan",
+   "platform": "USGOV",
+   "url": "https://az.usembassy.gov",
+   "reason": "HTTP 403 at https://az.usembassy.gov",
+   "need": "HTTP 403 at https://az.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "hr.usembassy.gov",
+   "post": "U.S. Embassy Croatia",
+   "platform": "USGOV",
+   "url": "https://hr.usembassy.gov",
+   "reason": "HTTP 403 at https://hr.usembassy.gov",
+   "need": "HTTP 403 at https://hr.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ee.usembassy.gov",
+   "post": "U.S. Embassy Estonia",
+   "platform": "USGOV",
+   "url": "https://ee.usembassy.gov",
+   "reason": "HTTP 403 at https://ee.usembassy.gov",
+   "need": "HTTP 403 at https://ee.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "de.usembassy.gov",
+   "post": "U.S. Embassy Germany",
+   "platform": "USGOV",
+   "url": "https://de.usembassy.gov",
+   "reason": "HTTP 403 at https://de.usembassy.gov",
+   "need": "HTTP 403 at https://de.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ie.usembassy.gov",
+   "post": "U.S. Embassy Ireland",
+   "platform": "USGOV",
+   "url": "https://ie.usembassy.gov",
+   "reason": "HTTP 403 at https://ie.usembassy.gov",
+   "need": "HTTP 403 at https://ie.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "lt.usembassy.gov",
+   "post": "U.S. Embassy Lithuania",
+   "platform": "USGOV",
+   "url": "https://lt.usembassy.gov",
+   "reason": "HTTP 403 at https://lt.usembassy.gov",
+   "need": "HTTP 403 at https://lt.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "me.usembassy.gov",
+   "post": "U.S. Embassy Montenegro",
+   "platform": "USGOV",
+   "url": "https://me.usembassy.gov",
+   "reason": "HTTP 403 at https://me.usembassy.gov",
+   "need": "HTTP 403 at https://me.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "pl.usembassy.gov",
+   "post": "U.S. Embassy Poland",
+   "platform": "USGOV",
+   "url": "https://pl.usembassy.gov",
+   "reason": "HTTP 403 at https://pl.usembassy.gov",
+   "need": "HTTP 403 at https://pl.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "sk.usembassy.gov",
+   "post": "U.S. Embassy Slovakia",
+   "platform": "USGOV",
+   "url": "https://sk.usembassy.gov",
+   "reason": "HTTP 403 at https://sk.usembassy.gov",
+   "need": "HTTP 403 at https://sk.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "ch.usembassy.gov",
+   "post": "U.S. Embassy Switzerland",
+   "platform": "USGOV",
+   "url": "https://ch.usembassy.gov",
+   "reason": "HTTP 403 at https://ch.usembassy.gov",
+   "need": "HTTP 403 at https://ch.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "bs.usembassy.gov",
+   "post": "U.S. Embassy Bahamas",
+   "platform": "USGOV",
+   "url": "https://bs.usembassy.gov",
+   "reason": "HTTP 403 at https://bs.usembassy.gov",
+   "need": "HTTP 403 at https://bs.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "br.usembassy.gov",
+   "post": "U.S. Embassy Brazil",
+   "platform": "USGOV",
+   "url": "https://br.usembassy.gov",
+   "reason": "HTTP 403 at https://br.usembassy.gov",
+   "need": "HTTP 403 at https://br.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "cr.usembassy.gov",
+   "post": "U.S. Embassy Costa Rica",
+   "platform": "USGOV",
+   "url": "https://cr.usembassy.gov",
+   "reason": "HTTP 403 at https://cr.usembassy.gov",
+   "need": "HTTP 403 at https://cr.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "sv.usembassy.gov",
+   "post": "U.S. Embassy El Salvador",
+   "platform": "USGOV",
+   "url": "https://sv.usembassy.gov",
+   "reason": "HTTP 403 at https://sv.usembassy.gov",
+   "need": "HTTP 403 at https://sv.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "hn.usembassy.gov",
+   "post": "U.S. Embassy Honduras",
+   "platform": "USGOV",
+   "url": "https://hn.usembassy.gov",
+   "reason": "HTTP 403 at https://hn.usembassy.gov",
+   "need": "HTTP 403 at https://hn.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "pa.usembassy.gov",
+   "post": "U.S. Embassy Panama",
+   "platform": "USGOV",
+   "url": "https://pa.usembassy.gov",
+   "reason": "HTTP 403 at https://pa.usembassy.gov",
+   "need": "HTTP 403 at https://pa.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  },
+  {
+   "host": "tt.usembassy.gov",
+   "post": "U.S. Embassy Trinidad and Tobago",
+   "platform": "USGOV",
+   "url": "https://tt.usembassy.gov",
+   "reason": "HTTP 403 at https://tt.usembassy.gov",
+   "need": "HTTP 403 at https://tt.usembassy.gov",
+   "since": "2026-10-02 18:28 UTC"
+  }
+ ],
+ "updated": "2026-10-02 18:30 UTC"
 }
