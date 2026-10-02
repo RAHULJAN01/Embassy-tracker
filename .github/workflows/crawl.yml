@@ -102,26 +102,17 @@ jobs:
           EOF
       - name: Run crawler (shard ${{ matrix.shard }})
         env:
-          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_API_KEY_2:   ${{ secrets.GEMINI_API_KEY_2 }}
-          GEMINI_API_KEY_3:   ${{ secrets.GEMINI_API_KEY_3 }}
-          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
-          MISTRAL_API_KEY:    ${{ secrets.MISTRAL_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GH_MODELS_TOKEN:    ${{ secrets.GH_MODELS_TOKEN }}
-          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
-          CEREBRAS_API_KEY:   ${{ secrets.CEREBRAS_API_KEY }}
-          SAMBANOVA_API_KEY:  ${{ secrets.SAMBANOVA_API_KEY }}
-          NVIDIA_API_KEY:     ${{ secrets.NVIDIA_API_KEY }}
-          HF_API_KEY:         ${{ secrets.HF_API_KEY }}
+          # ONE reliable AI. The eleven free providers are gone — they gave a
+          # different judgment every run and starved the register of calls.
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           SAM_API_KEY:        ${{ secrets.SAM_API_KEY }}
           FORCE_SAM:          ${{ (github.event.inputs.force_sam == 'true') && '1' || '0' }}
           UNGM_USER:          ${{ secrets.UNGM_USER }}
           UNGM_PASS:          ${{ secrets.UNGM_PASS }}
           SHARD:              ${{ matrix.shard }}
           SHARDS:             "4"
-          MAX_AI_CALLS:       "8"      # 6 runs x 4 shards x 8 = 192 calls/day
+          MAX_AI_CALLS:       "25"     # a CEILING, not a target: only spent if
+                                       # there is real work. Console spend cap is the backstop.
           TIME_BUDGET_S:      "1400"
           REPAIR_SHARE:       "0.65"   # finish existing records before finding new ones
           MAX_REPAIR_TRIES:   "3"      # then stop asking and flag it for a human

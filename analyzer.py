@@ -51,6 +51,17 @@ ADJUDICATE_PROMPT = (
     "  * Illegal / sanctioned counterparty or destination.\n"
     "  NOTE: bonding, on-site labour, installation, local licences, past-performance demands and "
     "RFP narrative scoring are NOT fatal. They are GAPS -> handle them in Stage 3.\n\n"
+    "REGISTRATION IS NOT A RESTRICTION — READ THIS CAREFULLY:\n"
+    "  M&M already holds UEI XWL3YN7QNKT7 and an EIN, and its SAM.gov registration is in "
+    "progress. A clause requiring SAM.gov registration (FAR 52.204-7), an active SAM record, "
+    "a UEI, a CAGE code, an NCAGE code, or registration on a buyer's own vendor portal is "
+    "ROUTINE ADMINISTRATIVE BOILERPLATE that appears on virtually every U.S. government "
+    "solicitation. It is paperwork M&M is already completing, not a barrier.\n"
+    "  * NEVER let a registration requirement make the tier MID or NO.\n"
+    "  * NEVER list it as a controlling restriction. If you list it at all, use kind \"boiler\".\n"
+    "  * Judge the solicitation as if the registration were already active.\n"
+    "  * The ONLY time it matters is if the closing date is so near that registration could not "
+    "be active in time — in that case mention it under gotchas, and still do not change the tier.\n\n"
     "SERVICES & CONSTRUCTION — decide experience exactly like this:\n"
     "  * No past-performance/experience requirement at all -> BID.\n"
     "  * Experience required BUT the solicitation allows a subcontractor's, partner's, JV's or\n"
@@ -88,10 +99,26 @@ ADJUDICATE_PROMPT = (
     "When torn between MID and NO with no fatal trigger present, choose MID.\n\n"
     "DATES ARE MANDATORY: find posted / closing(deadline) / Q&A-due dates in the text. Convert any "
     "format to YYYY-MM-DD. If a date genuinely is not stated anywhere, return \"\" for it.\n\n"
+    "WRITE THE BRIEF LIKE A HUMAN WOULD SAY IT. `brief` is one plain sentence a busy person "
+    "can read in two seconds and know whether to care: who is buying, what exactly, how many, "
+    "and by when. Example: \"U.S. Embassy Kathmandu wants 120 office chairs and 60 desks "
+    "delivered to the chancery, quotes close 15 Dec 2026.\" No jargon, no restating the title.\n\n"
     "Return ONLY a JSON object with keys:\n"
+    '  brief (one plain sentence, as described above),\n'
     '  title, sol, posted (YYYY-MM-DD|""), closing (YYYY-MM-DD|""), qa_due (YYYY-MM-DD|""),\n'
     '  sector ("COTS"|"SERVICES"|"CONSTRUCTION"|"MIXED"),\n'
     '  classification, scope, est_value, shipping, payment, ship_after, setaside, license,\n'
+    '  line_items (array of strings: the actual things wanted WITH quantities, e.g.\n'
+    '      "120 x ergonomic task chair, mesh back"; [] if the notice never itemises),\n'
+    '  submit_how (how a quote is submitted: email / portal / hand delivery, with the address\n'
+    '      or URL if stated; "" if not stated),\n'
+    '  submit_to (the contracting officer, office or email to send it to; "" if not stated),\n'
+    '  submit_forms (array: specific forms or documents that MUST accompany the quote,\n'
+    '      e.g. "SF-1449", "signed SF-18", "manufacturer authorization letter"),\n'
+    '  award_basis (how they choose: "lowest price technically acceptable", "best value",\n'
+    '      "trade-off", etc; "" if not stated),\n'
+    '  gotchas (array of SHORT plain-language warnings about anything unusual, easy to miss,\n'
+    '      or likely to disqualify a careless bidder; [] if nothing stands out),\n'
     '  docs (array of strings),\n'
     '  tier ("BID"|"MID"|"NO"),\n'
     '  restrictions (array of {text, kind:("real"|"boiler"|"fix"), note}),\n'
@@ -217,6 +244,13 @@ def _coerce(data):
     if sector not in SECTORS:
         sector = ""
     rec = {
+        "brief": str(g("brief"))[:300],
+        "line_items": [str(x)[:120] for x in (g("line_items", []) or [])][:20],
+        "submit_how": str(g("submit_how"))[:240],
+        "submit_to": str(g("submit_to"))[:160],
+        "submit_forms": [str(x)[:90] for x in (g("submit_forms", []) or [])][:12],
+        "award_basis": str(g("award_basis"))[:120],
+        "gotchas": [str(x)[:180] for x in (g("gotchas", []) or [])][:8],
         "title": str(g("title"))[:200], "sol": str(g("sol")).upper()[:60],
         "posted": str(g("posted"))[:10], "closing": str(g("closing"))[:10],
         "qa_due": str(g("qa_due"))[:10], "sector": sector,
@@ -242,6 +276,39 @@ def _coerce(data):
     if rec["tier"] not in TIERS:
         rec["tier"] = "REVIEW"
     rec["confidence"] = max(0.0, min(1.0, rec["confidence"]))
+    return rec
+
+
+# Registration paperwork M&M is already completing. These words in a restriction
+# never make something less biddable, and the model is not allowed to pretend
+# otherwise — this is the deterministic backstop behind the prompt rule.
+_REGISTRATION_RX = re.compile(
+    r"\b(sam\.gov|system for award management|far\s*52\.204-7|unique entity (id|identifier)"
+    r"|\buei\b|cage code|ncage|duns|vendor (portal )?registration|register(ed)? in sam)\b", re.I)
+
+
+def declassify_registration(rec):
+    """A SAM / UEI / CAGE / NCAGE clause is boilerplate, not a controlling restriction.
+
+    Rahul: "remove the restriction which requires SAM registration, it is causing
+    fully biddable ones to sit in BNB." He is right — it is paperwork already under
+    way, and it was demoting work he can actually win.
+    """
+    moved = 0
+    for r in rec.get("restrictions") or []:
+        if r.get("kind") == "real" and _REGISTRATION_RX.search(r.get("text", "") or ""):
+            r["kind"] = "boiler"
+            r["note"] = ("Routine registration boilerplate — M&M holds a UEI and its SAM "
+                         "record is in progress. Not a barrier to bidding.")
+            moved += 1
+    # If registration was the ONLY thing holding it at MID, it belongs at BID.
+    if moved and rec.get("tier") == "MID":
+        real_left = [r for r in (rec.get("restrictions") or []) if r.get("kind") == "real"]
+        route = (rec.get("route") or "")
+        route_is_registration = bool(route) and bool(_REGISTRATION_RX.search(route))
+        if not real_left and (not route or route_is_registration):
+            rec["tier"] = "BID"
+            rec["promoted_from_mid"] = "registration paperwork is not a barrier"
     return rec
 
 
@@ -286,6 +353,7 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     rec = _coerce(data)
     rec["_evidence"] = evidence
     rec["review_reason"] = ""
+    declassify_registration(rec)      # registration paperwork never costs us a bid
 
     # --- DATES ARE MANDATORY: back-fill anything the model missed, from the raw text
     if not rec["closing"]:
