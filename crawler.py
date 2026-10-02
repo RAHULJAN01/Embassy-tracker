@@ -102,13 +102,29 @@ def root_host(url):
         return ""
 
 
-def _raise_help(blocked_sites, blocked_hosts, st, label, url, need, platform="USGOV"):
-    """Record a hold-the-door request so the red HELP banner can ask Rahul."""
+def _raise_help(blocked_sites, blocked_hosts, st, label, url, need, platform="USGOV",
+                kind="unknown"):
+    """Record a blocked site, and be HONEST about whether a human can fix it.
+
+    Two very different things used to be shown identically, which was useless:
+      * a LOGIN wall  — a real door. Giving the bots credentials opens it.
+      * a BOT wall    — the site's CDN refusing data-centre traffic. Opening it
+                        in your own browser does nothing for a bot running in
+                        GitHub's data centre: different machine, different IP,
+                        different session. Nothing you click can help.
+    """
     host = root_host(url) or label
     if host in blocked_hosts:
         return
+    if kind == "unknown":
+        low = (need or "").lower()
+        kind = ("login" if ("sign-in" in low or "login" in low or "401" in low)
+                else "botwall" if "403" in low or "cdn" in low or "refusing" in low
+                else "ratelimit" if "429" in low or "slow down" in low else "unknown")
+    actionable = kind == "login"      # only a login is something Rahul can open
     blocked_sites.append({"host": host, "post": label, "platform": platform,
-                          "url": url, "reason": need, "need": need, "since": now_utc()})
+                          "url": url, "reason": need, "need": need,
+                          "kind": kind, "canHelp": actionable, "since": now_utc()})
     blocked_hosts.add(host)
     st.beat(blockedSites=blocked_sites)
 
@@ -1023,7 +1039,8 @@ def run(mode):
                         st.d["lastError"] = f"{root['post']}: {str(e)[:70]}"
             except fetcher.Blocked as b:
                 _raise_help(blocked_sites, blocked_hosts, st, root["post"],
-                            root["base"], str(b), platform="USGOV")
+                            root["base"], getattr(b, "detail", "") or str(b),
+                            platform="USGOV", kind=getattr(b, "kind", "unknown"))
             except Exception as e:
                 st.d["lastError"] = f"{root['post']}: {str(e)[:70]}"
         if full_pass:

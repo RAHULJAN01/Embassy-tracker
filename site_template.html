@@ -965,20 +965,39 @@ function renderHelp(){
   const el=document.getElementById('helpBanner');
   const sites=(BLOCKED&&BLOCKED.sites)||[];
   if(!sites.length){ el.style.display='none'; return; }
-  const list=sites.slice(0,8).map((b,i)=>{
-    const need=b.need||b.reason||'blocked';
-    const label=esc(b.post||b.host);
-    return `<div class="hb-row">
-      <div><b>${label}</b> — ${esc(need)}</div>
-      <div class="hb-cta">
-        <a class="hb-btn" href="${esc(b.url)}" target="_blank" rel="noopener">① Open the portal ↗</a>
-        <button class="hb-btn" onclick="giveAccess('${esc(b.post||b.host)}')">② Give the bots my login ⚿</button>
-        <button class="hb-btn solid" onclick="doneHelping()">③ Done — bots, carry on ▶</button>
-      </div></div>`;
-  }).join('');
-  el.innerHTML=`<div style="width:100%">
-      <div style="margin-bottom:8px">⚠ HELP NEEDED — ${sites.length} platform${sites.length>1?'s':''} need a door opened.</div>
-      <div class="hb-sites" style="width:100%">${list}</div></div>`;
+  // Only a LOGIN is a door you can open. A CDN refusing data-centre traffic is
+  // not — your browser and the bot's are different machines, and clicking
+  // anything here would do nothing. Saying otherwise just wastes your time.
+  const canHelp=sites.filter(b=>b.canHelp||b.kind==='login');
+  const cannot=sites.filter(b=>!(b.canHelp||b.kind==='login'));
+  let h='<div style="width:100%">';
+
+  if(canHelp.length){
+    h+=`<div style="margin-bottom:8px">⚠ ${canHelp.length} site${canHelp.length>1?'s':''} `
+      +`need${canHelp.length>1?'':'s'} a login — these you CAN open.</div><div class="hb-sites" style="width:100%">`;
+    h+=canHelp.slice(0,8).map(b=>`<div class="hb-row">
+        <div><b>${esc(b.post||b.host)}</b> — ${esc(b.need||b.reason||'sign-in required')}</div>
+        <div class="hb-cta">
+          <a class="hb-btn" href="${esc(b.url)}" target="_blank" rel="noopener">① Open the portal ↗</a>
+          <button class="hb-btn" onclick="giveAccess('${esc(b.post||b.host)}')">② Give the bots my login ⚿</button>
+          <button class="hb-btn solid" onclick="doneHelping()">③ Done — bots, carry on ▶</button>
+        </div></div>`).join('')+'</div>';
+  }
+
+  if(cannot.length){
+    const hosts=cannot.slice(0,40).map(b=>esc(b.post||b.host)).join(' · ');
+    h+=`<div style="margin-top:${canHelp.length?'10px':'0'};padding-top:${canHelp.length?'8px':'0'};`
+      +`${canHelp.length?'border-top:1px solid rgba(255,255,255,.35)':''}">`
+      +`<div style="margin-bottom:6px">⛔ ${cannot.length} site${cannot.length>1?'s are':' is'} `
+      +`blocking the bots themselves — <b>there is nothing for you to click.</b></div>`
+      +`<div class="hb-sites">These sites sit behind a CDN that refuses traffic from the data centre `
+      +`the bots run in. Opening them in your own browser does not help: that is your computer and `
+      +`your network, not theirs. I am fixing this on the engine side — and most of these notices `
+      +`also appear on SAM.gov, which is the real way in.<br><br>`
+      +`<i>${hosts}${cannot.length>40?' …':''}</i></div></div>`;
+  }
+  h+='</div>';
+  el.innerHTML=h;
   el.style.display='flex';
 }
 
