@@ -163,6 +163,43 @@ def normalize(r):
     return r
 
 
+def apply_operator(rows):
+    """The operator's own decisions outrank the bots'.
+
+    DELETE  -> off the active register for good, into History, stamped with the
+               date and time it was deleted. Never shown as active again.
+    HIDE    -> out of sight in the Hidden cart until it is un-hidden, or until it
+               expires or is cancelled, at which point it joins History.
+    SWITCH  -> the tier the operator chose, which no re-scan may overwrite.
+    """
+    op = load(HERE / "operator.json", {})
+    dele, hid, sw = op.get("deleted") or {}, op.get("hidden") or {}, op.get("switched") or {}
+    if not (dele or hid or sw):
+        return rows
+    for r in rows:
+        for k in (r.get("sol"), r.get("link")):
+            if not k:
+                continue
+            if k in dele:
+                r["deleted"] = True
+                r["deletedOn"] = dele[k].get("on", "")
+                r["archived"] = True
+            if k in hid:
+                r["hidden"] = True
+                r["hiddenOn"] = hid[k].get("on", "")
+            if k in sw and sw[k].get("tier") in ("BID", "MID", "NO", "REVIEW"):
+                r["tier"] = sw[k]["tier"]
+                r["switched"] = True
+                r["switchedOn"] = sw[k].get("on", "")
+            break
+        # a hidden solicitation that has since expired or been cancelled stops
+        # hiding and goes into History, documented — nothing is silently dropped
+        if r.get("hidden") and r.get("archived") and not r.get("deleted"):
+            r["hidden"] = False
+            r["unhiddenBecause"] = "expired or cancelled while hidden"
+    return rows
+
+
 def main(shard_dir):
     base = HERE / "data.json"
     merged = {}
@@ -208,6 +245,7 @@ def main(shard_dir):
 
     rows = [normalize(clean_sol(r)) for r in merged.values() if not is_junk(clean_sol(r))]
     dropped = len(merged) - len(rows)
+    rows = apply_operator(rows)
 
     # fleet-wide status roll-up for Mission Control
     agg = {"mode": (statuses[0].get("mode") if statuses else "roots"),
@@ -232,8 +270,12 @@ def main(shard_dir):
             agg["aiDiag"]["errors"][k] = v
 
     counts = {"active": 0, "bid": 0, "mid": 0, "no": 0, "review": 0, "archived": 0,
-              "verified": 0, "unverified": 0}
+              "verified": 0, "unverified": 0, "deleted": 0, "hidden": 0}
     for r in rows:
+        if r.get("deleted"):
+            counts["deleted"] += 1; continue
+        if r.get("hidden"):
+            counts["hidden"] += 1; continue
         if r.get("archived"):
             counts["archived"] += 1; continue
         counts["active"] += 1

@@ -18,6 +18,11 @@
  *   POST /stop          -> halt the whole fleet
  *   POST /resume        -> let the fleet run again
  *   POST /verify        -> { sol: "..." } re-verify one solicitation
+ *   GET  /operator      -> the operator's own actions (delete / hide / switch)
+ *   POST /operator      -> { action, sol, tier? } record one, on the SERVER, so
+ *                          a solicitation you delete on your phone is deleted on
+ *                          your laptop too — and the bots honour it as well.
+ *                          action: delete | restore | hide | unhide | switch | clear
  */
 
 const CORS = {
@@ -115,6 +120,16 @@ export default {
         return json({ ok: true, running: !!live, current: live || null, recent: list, snapshot });
       }
 
+      // ---- read the operator's decisions without waiting for a rebuild ----
+      if (path === "/operator" && request.method === "GET") {
+        const f = await gh(env, "/contents/operator.json");
+        if (!f.ok) return json({ ok: true, state: { deleted: {}, hidden: {}, switched: {} } });
+        const j = await f.json();
+        let state = { deleted: {}, hidden: {}, switched: {} };
+        try { state = JSON.parse(atob(j.content.replace(/\n/g, ""))); } catch (e) {}
+        return json({ ok: true, state });
+      }
+
       if (request.method !== "POST")
         return json({ ok: false, error: "use POST" }, 405);
 
@@ -133,6 +148,45 @@ export default {
       if (path === "/verify") {
         // a targeted re-check; the crawler re-reads and re-adjudicates
         return json(await dispatch(env, "crawl.yml", { mode: "live" }));
+      }
+
+      // ---- the operator's own decisions, kept on the server ----
+      if (path === "/operator") {
+        const sol = String(body.sol || "").trim();
+        const action = String(body.action || "").trim();
+        if (!sol || !action) return json({ ok: false, error: "need sol and action" }, 400);
+
+        const f = await gh(env, "/contents/operator.json");
+        let state = { deleted: {}, hidden: {}, switched: {}, updated: "" };
+        let sha;
+        if (f.ok) {
+          const j = await f.json();
+          sha = j.sha;
+          try { state = { ...state, ...JSON.parse(atob(j.content.replace(/\n/g, ""))) }; } catch (e) {}
+        }
+        const stamp = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+        if (action === "delete")       state.deleted[sol]  = { on: stamp };
+        else if (action === "restore") delete state.deleted[sol];
+        else if (action === "hide")    state.hidden[sol]   = { on: stamp };
+        else if (action === "unhide")  delete state.hidden[sol];
+        else if (action === "switch")  state.switched[sol] = { tier: String(body.tier || "").toUpperCase(), on: stamp };
+        else if (action === "clear")   delete state.switched[sol];
+        else return json({ ok: false, error: "unknown action" }, 400);
+        state.updated = stamp;
+
+        const put = await gh(env, "/contents/operator.json", {
+          method: "PUT",
+          body: JSON.stringify({
+            message: `operator: ${action} ${sol}`,
+            content: btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 1)))),
+            ...(sha ? { sha } : {}),
+          }),
+        });
+        if (!put.ok)
+          return json({ ok: false, status: put.status, msg: (await put.text()).slice(0, 180) }, 502);
+        // rebuild the page so every device sees it
+        await dispatch(env, "deploy.yml", {});
+        return json({ ok: true, state, stamp });
       }
 
       return json({ ok: false, error: "unknown endpoint" }, 404);

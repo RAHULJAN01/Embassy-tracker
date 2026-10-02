@@ -202,12 +202,110 @@
   .gatebox input{width:100%;height:40px;border:1px solid #999;border-radius:2px;padding:0 10px;font-family:Arial;font-size:14px;margin-bottom:10px}
   .gatebox button{width:100%;height:42px;background:#111;color:#fff;border:none;border-radius:2px;font-weight:700;font-size:14px;cursor:pointer}
   .gatebox .gerr{color:#c62828;font-size:12px;font-weight:700;margin-top:10px;min-height:16px}
+  .gatebox .glogo{display:block;margin:0 auto 16px;min-height:4px}
+  .gatebox .glogo-svg{width:172px;max-width:72%;height:auto;display:block;margin:0 auto}
+  body.night .gatebox .glogo-svg{filter:invert(1)}
+
+  /* ---------- operator actions: DELETE / SWITCH / HIDE ---------- */
+  .ibtn.del:hover{border-color:var(--red);color:var(--red)}
+  .ibtn.hide:hover{border-color:var(--orange);color:var(--orange)}
+  .ibtn.sw:hover{border-color:var(--green);color:var(--green)}
+  .opnote{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;
+    padding:2px 7px;border:1px solid var(--red);color:var(--red);background:var(--redbg);white-space:normal}
+  .opnote.hid{border-color:var(--orange);color:var(--orange);background:var(--orangebg)}
+  .opnote.swd{border-color:var(--green);color:var(--green);background:var(--greenbg)}
+  .swmenu{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .swmenu button{font-family:inherit;font-size:12px;font-weight:700;padding:7px 13px;
+    border:1px solid var(--line2);background:var(--bg);color:var(--ink);border-radius:2px;cursor:pointer}
+  .swmenu button.g{border-color:var(--green);color:var(--green)}
+  .swmenu button.o{border-color:var(--orange);color:var(--orange)}
+  .swmenu button.r{border-color:var(--red);color:var(--red)}
+  .swmenu button.cur{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+  /* ---------- company information page ---------- */
+  .co-panel{border:1px solid var(--ink);margin-top:22px;background:var(--bg);color:var(--ink)}
+  .co-panel > h2{margin:0;background:var(--ink);color:var(--bg);font-size:14px;font-weight:700;
+    letter-spacing:.4px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .co-body{padding:16px 18px}
+  .co-note{font-size:12px;color:var(--mute);font-style:italic;margin:0 0 14px}
+  .co-grp{margin-bottom:16px}
+  .co-grp h3{margin:0 0 0;font-size:11px;text-transform:uppercase;letter-spacing:.7px;
+    color:var(--bg);background:var(--ink);padding:7px 11px}
+  table.co{width:100%;border-collapse:collapse;table-layout:fixed}
+  table.co th{width:38%;text-align:left;vertical-align:top;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.4px;color:var(--mute);font-weight:700;padding:8px 11px;border:1px solid var(--line);
+    background:var(--bg);overflow-wrap:anywhere}
+  table.co td{padding:8px 11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+    font-size:13.5px;overflow-wrap:anywhere}
+  table.co td.need{color:var(--orange);font-style:italic;font-size:12.5px}
+  table.co td.val{font-weight:700}
+
+  /* ---------- PHONE: the register becomes stacked cards, never a crushed table ---------- */
+  @media(max-width:760px){
+    body{font-size:14px}
+    .wrap,.shell{padding-left:12px;padding-right:12px}
+    .mast{flex-direction:column;align-items:flex-start;gap:10px;padding:12px 0 10px}
+    .mhead-right{flex-wrap:wrap;gap:6px;text-align:left;width:100%}
+    .mhead-right .btn{flex:1 1 calc(50% - 3px);justify-content:center;min-width:0;padding:0 8px;font-size:12px}
+    .mmeta{width:100%;font-size:11px}
+    .brand{gap:10px} .flag{height:34px}
+    .brand .bt{padding-left:10px} .brand .bt .n{font-size:15px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
+    .toolbar{gap:6px;padding:10px 0}
+    .toolbar .grp{flex-wrap:wrap;width:100%}
+    .toolbar input,.toolbar select,.toolbar .btn{flex:1 1 auto;min-width:0}
+    .toolbar input{min-width:100%}
+    .toolbar .dd,.toolbar .dd .btn{width:100%}
+    .dd-menu{min-width:100%;left:0;right:0}
+    .summary{grid-template-columns:repeat(2,1fr)}
+    .summary .big{font-size:24px}
+    .nav-tab{flex:1 1 auto;text-align:center;padding:10px 10px;font-size:11.5px}
+    .subnav .nav-tab{font-size:11px;padding:8px 10px}
+    .section{margin-top:16px}
+    .section > h2{font-size:12.5px;padding:9px 11px;gap:8px}
+
+    /* the table stops being a table */
+    table.reg{table-layout:auto;display:block;font-size:13px}
+    table.reg colgroup,table.reg thead{display:none}
+    table.reg tbody{display:block}
+    table.reg tbody tr.row{display:block;padding:11px 12px 12px;border-bottom:2px solid var(--line2);position:relative}
+    table.reg tbody tr.row td{display:flex;gap:10px;align-items:flex-start;width:auto;
+      padding:3px 0;border:none;text-align:left!important;white-space:normal}
+    table.reg tbody tr.row td.hidecol{display:flex}      /* phones show everything, stacked */
+    table.reg tbody tr.row td::before{content:attr(data-l);flex:0 0 38%;max-width:38%;
+      font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--mute);
+      padding-top:2px}
+    table.reg tbody tr.row td.titlecell{display:block;padding-bottom:7px}
+    table.reg tbody tr.row td.titlecell::before{display:none}
+    table.reg tbody tr.row td.titlecell .ttl{font-size:14.5px;line-height:1.35}
+    table.reg tbody tr.row td.act{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px;
+      margin-top:8px;border-top:1px solid var(--line)}
+    table.reg tbody tr.row td.act::before{display:none}
+    .act .ibtn{margin-right:0;padding:9px 11px;font-size:13px}
+    table.reg tbody tr.sector-row td{padding:0}
+    .sector-head{display:block;padding:8px 12px}
+    tr.dossier{display:block} tr.dossier > td{display:block;padding:0}
+    tr.dossier.hidden{display:none}
+    .dwrap{padding:12px 12px}
+    table.kv{table-layout:auto} table.kv th{width:42%;font-size:10px;padding:6px 8px}
+    table.kv td{font-size:13px;padding:6px 8px}
+    table.co{table-layout:auto} table.co th{width:44%;font-size:10.5px;padding:7px 9px}
+    table.co td{font-size:13px;padding:7px 9px}
+    .co-body{padding:12px}
+    .mc-grid{grid-template-columns:repeat(2,1fr)}
+    .modal{width:94%}
+    .help-banner{font-size:12.5px;padding:10px 12px}
+  }
+  @media(max-width:420px){
+    .summary{grid-template-columns:1fr 1fr}
+    .mhead-right .btn{min-width:100%}
+    table.reg tbody tr.row td::before{flex-basis:44%;max-width:44%}
+  }
 </style>
 </head>
 <body>
 <div class="gate" id="gate">
   <div class="gatebox">
-    <div class="gseal">M&amp;M</div>
+    <div class="glogo" id="glogo" aria-label="Madison &amp; Main LLC"></div>
     <h2>Solicitation Register</h2>
     <p>Restricted &middot; enter access password</p>
     <input type="password" id="gpw" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
@@ -224,6 +322,7 @@
     <div class="mhead-right">
       <button class="btn sec" style="height:36px" onclick="refreshPage()">↻ Refresh</button>
       <button class="btn sec" style="height:36px" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
+      <button class="btn sec" style="height:36px" onclick="toggleCompany()" title="Company Information" id="coBtn">▦ Company Info</button>
       <button class="btn sec" style="height:36px" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
       <button class="btn sec" style="height:36px" onclick="lock()" title="Log out now">🔒 Lock</button>
       <div class="mmeta">
@@ -239,17 +338,19 @@
 
   <div id="helpBanner" class="help-banner" style="display:none"></div>
   <div id="mcPanel" class="mc-panel" style="display:none"></div>
+  <div id="coPanel" class="co-panel" style="display:none"></div>
 
   <div class="toolbar">
     <div class="grp">
       <div class="dd" id="ddUpdate">
-        <button class="btn" onclick="document.getElementById('ddUpdate').classList.toggle('open')">Run Update ▾</button>
+        <button class="btn" onclick="document.getElementById('ddUpdate').classList.toggle('open')">Send the Bots ▾</button>
         <div class="dd-menu">
-          <button onclick="confirmAction('roots')">Full Re-crawl (Roots)<span class="last" id="lrRoots"></span></button>
-          <button onclick="confirmAction('live')">Live Status Check<span class="last" id="lrLive"></span></button>
+          <button onclick="confirmAction('roots')">DEEP RE-SCAN — read every file again<span class="last" id="lrRoots"></span></button>
+          <button onclick="confirmAction('live')">QUICK CHECK — statuses &amp; timestamps only<span class="last" id="lrLive"></span></button>
         </div>
       </div>
       <button class="btn danger" onclick="confirmAction('abort')">Abort</button>
+      <button class="btn sec" onclick="collapseAll()" title="Reset every section back to the default view">⊟ Collapse All</button>
       <button class="btn sec" id="shortlistBtn" onclick="toggleShortlistView()">★ Shortlist (<span id="scount">0</span>)</button>
     </div>
     <div class="spacer"></div>
@@ -280,7 +381,7 @@
 <script>
 /*__ENC__*/
 const LOCKED=/*__LOCKED__*/;
-let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false;
+let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false, COMPANY={};
 const REPO="RAHULJAN01/embassy-tracker";
 let CONTROL_URL="";   // set from control.json at build time
 
@@ -295,6 +396,89 @@ function isSaved(sol){return LS().includes(sol)}
 function toggleSave(sol){let a=LS();a.includes(sol)?a=a.filter(x=>x!==sol):a.push(sol);LSset(a);refreshCounts();render();}
 function setDecision(sol,d){let o=DEC();o[sol]=o[sol]===d?null:d;DECset(o);render();}
 function toggleShortlistView(){viewSaved=!viewSaved;document.getElementById('shortlistBtn').classList.toggle('on',viewSaved);render();}
+
+/* ================= OPERATOR ACTIONS — DELETE / SWITCH / HIDE =================
+   Your decisions, not the bots'. They are written to the SERVER so a solicitation
+   you delete on your phone is deleted on your laptop too, and the bots stop
+   working on it. A local copy is applied instantly so the page never feels slow,
+   and is reconciled with the server copy on every load.                        */
+let OPERATOR={deleted:{},hidden:{},switched:{}};     // server state (from the payload)
+function OPL(){try{return JSON.parse(localStorage.getItem('mm_op')||'{"deleted":{},"hidden":{},"switched":{}}')}catch(e){return{deleted:{},hidden:{},switched:{}}}}
+function OPLset(o){try{localStorage.setItem('mm_op',JSON.stringify(o))}catch(e){}}
+function opKey(s){return s.sol||s.link||'';}
+function opState(){ // server state with any not-yet-synced local action layered on top
+  const l=OPL(),o={deleted:{...OPERATOR.deleted},hidden:{...OPERATOR.hidden},switched:{...OPERATOR.switched}};
+  ['deleted','hidden','switched'].forEach(b=>{
+    Object.keys(l[b]||{}).forEach(k=>{ l[b][k]&&l[b][k].removed ? delete o[b][k] : o[b][k]=l[b][k]; });
+  });
+  return o;
+}
+function isDeleted(s){return !!opState().deleted[opKey(s)];}
+function isHidden(s){return !!opState().hidden[opKey(s)];}
+function opInfo(s,bucket){return opState()[bucket][opKey(s)]||null;}
+function opBadge(s){
+  const d=opInfo(s,'deleted'); if(d) return `<br><span class="opnote">I WAS DELETED ON ${esc(d.on||'an earlier date')}</span>`;
+  const h=opInfo(s,'hidden');  if(h) return `<br><span class="opnote hid">HIDDEN BY YOU ON ${esc(h.on||'an earlier date')}</span>`;
+  const w=opInfo(s,'switched');if(w) return `<br><span class="opnote swd">MOVED BY YOU TO ${esc(w.tier||'')} ON ${esc(w.on||'')}</span>`;
+  return '';
+}
+function stampNow(){const d=new Date();return d.toISOString().replace('T',' ').slice(0,16)+' UTC';}
+// the tier the row should SIT IN right now: your switch wins over the bots'
+function effTier(s){const w=opState().switched[opKey(s)];return (w&&w.tier)||s.tier||'REVIEW';}
+// once the server copy agrees with a local action, stop carrying the local one
+function pruneLocalOps(){
+  const l=OPL(); let changed=false;
+  ['deleted','hidden','switched'].forEach(b=>{
+    Object.keys(l[b]||{}).forEach(k=>{
+      const loc=l[b][k], srv=(OPERATOR[b]||{})[k];
+      const agree = loc && loc.removed ? !srv
+                  : !!srv && (b!=='switched' || srv.tier===loc.tier);
+      if(agree){ delete l[b][k]; changed=true; }
+    });
+  });
+  if(changed) OPLset(l);
+}
+
+async function opAction(action,key,tier){
+  const l=OPL(), stamp=stampNow();
+  if(action==='delete')       l.deleted[key]={on:stamp};
+  else if(action==='restore') l.deleted[key]={removed:true};
+  else if(action==='hide')    l.hidden[key]={on:stamp};
+  else if(action==='unhide')  l.hidden[key]={removed:true};
+  else if(action==='switch')  l.switched[key]={tier:tier,on:stamp};
+  else if(action==='clear')   l.switched[key]={removed:true};
+  OPLset(l); render(); refreshCounts();                  // instant, no waiting
+  const r=await srvCall('/operator',{action:action,sol:key,tier:tier||''});
+  const el=document.getElementById('opSync');
+  if(r&&r.ok){ if(r.state) OPERATOR=r.state; if(el) el.textContent='Saved to the register.'; }
+  else if(el) el.textContent='Saved on this device only — the control server did not answer.';
+}
+function openSwitch(key){
+  const s=SOLICITATIONS.find(x=>opKey(x)===key)||{};
+  document.getElementById('mTitle').textContent="Move this solicitation yourself";
+  document.getElementById('mBody').innerHTML=
+    `<div>${esc(s.title||key)}</div>`
+    +`<div style="margin-top:8px;color:var(--mute);font-size:12.5px">The bots put this in `
+    +`<b>${esc(TIERNAME[s.tier]||s.tier||'—')}</b>. Choose where it really belongs — your choice wins, `
+    +`and no re-scan will overwrite it.</div>`
+    +`<div class="swmenu">`
+    +['BID','MID','NO','REVIEW'].map(t=>`<button class="${TIERCLS[t]} ${s.tier===t?'cur':''}" onclick="closeModal();opAction('switch','${esc(key)}','${t}')">${TIERNAME[t]}</button>`).join('')
+    +`</div>`
+    +(opInfo(s,'switched')?`<div class="swmenu"><button onclick="closeModal();opAction('clear','${esc(key)}')">↩ Give it back to the bots</button></div>`:'');
+  document.getElementById('mOk').style.display='none';
+  document.getElementById('ovl').classList.add('on');
+}
+const TIERNAME={BID:'BID-ELIGIBLE',MID:'CONDITIONAL',NO:'NON-ELIGIBLE',REVIEW:'UNDER REVIEW'};
+const TIERCLS={BID:'g',MID:'o',NO:'r',REVIEW:''};
+
+function collapseAll(){
+  document.querySelectorAll('.section').forEach(el=>el.classList.add('collapsed'));
+  document.querySelectorAll('tr.dossier').forEach(el=>el.classList.add('hidden'));
+  const mc=document.getElementById('mcPanel'); if(mc) mc.style.display='none';
+  const co=document.getElementById('coPanel'); if(co) co.style.display='none';
+  document.querySelectorAll('.dd').forEach(el=>el.classList.remove('open'));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 
 const SMAP={BID:{cls:"g",label:"SECTION I — BID-ELIGIBLE"},MID:{cls:"o",label:"SECTION II — CONDITIONAL (BID / NO-BID)"},NO:{cls:"r",label:"SECTION III — NON-ELIGIBLE (NO-BID)"},REVIEW:{cls:"n",label:"SECTION IV — UNDER REVIEW (needs a human look)"}};
 const SRCLABEL={"SAM":"SAM","Site":"SITE","Site+SAM":"SAM+SITE"};
@@ -343,23 +527,33 @@ function rowHTML(s,i){
   const dl=dleft(s.deadline);
   const duetxt=s.deadline?(dl!=null&&dl<0?"Closed":(dl!=null&&dl<=7?`${dl} day${dl==1?'':'s'}`:s.deadline)):"—";
   const soon=dl!=null&&dl>=0&&dl<=7?'soon':'';
-  const st=(s.status==="Cancelled"||s.status==="Removed")?'r':((SMAP[s.tier]||{cls:'n'}).cls);
+  const st=(s.status==="Cancelled"||s.status==="Removed")?'r':((SMAP[effTier(s)]||{cls:'n'}).cls);
   const saved=isSaved(s.sol);
+  const k=opKey(s);
+  const del=isDeleted(s), hid=isHidden(s);
   return `<tr class="row" onclick="tgl(${i})">
-    <td class="ref">${esc(s.sol||'—')}</td>
-    <td><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
-    <td class="tcell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}</td>
-    <td class="pop tcell hidecol">${esc(s.post)}<br><span class="c">${esc(s.country)}</span></td>
-    <td class="hidecol">${esc(s.type)}</td>
-    <td class="num"><span class="due ${soon}">${esc(duetxt)}</span></td>
-    <td class="num valcell hidecol">${s.estimate?`<span class="estv" title="Estimated by the valuation bot — not stated in the notice">EST</span> `:''}${esc(s.value||'—')}</td>
-    <td><span class="status ${st}">${esc(s.status)}</span></td>
-    <td>${verifyBadge(s)}</td>
-    <td class="upd hidecol">${esc(s.updated||'—')}</td>
+    <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}</td>
+    <td data-l="Source"><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
+    <td class="tcell titlecell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}${opBadge(s)}</td>
+    <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${esc(s.country)}</span></td>
+    <td class="hidecol" data-l="Classification">${esc(s.type)}</td>
+    <td class="num" data-l="Deadline"><span class="due ${soon}">${esc(duetxt)}</span></td>
+    <td class="num valcell hidecol" data-l="Est. Value">${s.estimate?`<span class="estv" title="Estimated by the valuation bot — not stated in the notice">EST</span> `:''}${esc(s.value||'—')}</td>
+    <td data-l="Status"><span class="status ${st}">${esc(s.status)}</span></td>
+    <td data-l="Verified">${verifyBadge(s)}</td>
+    <td class="upd hidecol" data-l="Last Updated">${esc(s.updated||'—')}</td>
     <td class="act">
       <button class="ibtn star ${saved?'saved':''}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${esc(s.sol)}')">${saved?'★':'☆'}</button>
       <a class="ibtn" title="Open on source site" href="${esc(s.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>
-      <button class="ibtn" title="Re-verify this solicitation" onclick="event.stopPropagation();confirmAction('reverify','${esc(s.sol)}')">⟳</button>
+      <button class="ibtn" title="DEEP RE-SCAN — download and read every attached file again, then re-adjudicate" onclick="event.stopPropagation();confirmAction('deepscan','${esc(k)}')">⟳ Deep</button>
+      <button class="ibtn" title="QUICK CHECK — only refresh the status and the Last-Updated date" onclick="event.stopPropagation();confirmAction('touch','${esc(k)}')">◷ Check</button>
+      <button class="ibtn sw" title="SWITCH — move this to a different section yourself" onclick="event.stopPropagation();openSwitch('${esc(k)}')">⇄ Switch</button>
+      ${del
+        ? `<button class="ibtn" title="Put this back on the register" onclick="event.stopPropagation();opAction('restore','${esc(k)}')">↩ Restore</button>`
+        : hid
+        ? `<button class="ibtn" title="Bring this back out of the Hidden cart" onclick="event.stopPropagation();opAction('unhide','${esc(k)}')">👁 Unhide</button>`
+        : `<button class="ibtn hide" title="HIDE — move to the Hidden cart until you bring it back" onclick="event.stopPropagation();opAction('hide','${esc(k)}')">⊘ Hide</button>
+           <button class="ibtn del" title="DELETE — move to History; it will never be shown as active again" onclick="event.stopPropagation();confirmAction('delete','${esc(k)}')">✕ Delete</button>`}
     </td></tr>
     <tr class="dossier hidden" id="d${i}"><td colspan="11">${dossier(s)}</td></tr>`;
 }
@@ -439,32 +633,49 @@ function render(){
   list.sort((a,b)=>sort==='val'?(parseInt((b.s.value||'').replace(/[^0-9]/g,'')||0)-parseInt((a.s.value||'').replace(/[^0-9]/g,'')||0))
     :sort==='new'?((b.s.posted||'').localeCompare(a.s.posted||'')):((a.s.deadline||'9999').localeCompare(b.s.deadline||'9999')));
 
-  const active=list.filter(({s})=>!s.archived), archived=list.filter(({s})=>s.archived);
+  // the operator's own decisions come first: deleted leaves the register for
+  // good, hidden steps aside until it is brought back.
+  const deleted=list.filter(({s})=>isDeleted(s));
+  const rest=list.filter(({s})=>!isDeleted(s));
+  const hidden=rest.filter(({s})=>isHidden(s)&&!s.archived);
+  const shown=rest.filter(({s})=>!(isHidden(s)&&!s.archived));
+  const active=shown.filter(({s})=>!s.archived), archived=shown.filter(({s})=>s.archived);
   const cols='<colgroup><col class="c-ref"><col class="c-src"><col><col class="c-pop hidecol"><col class="c-cls hidecol"><col class="c-dl"><col class="c-val hidecol"><col class="c-st"><col class="c-vf"><col class="c-up hidecol"><col class="c-act"></colgroup>';
   const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th><th>Actions</th></tr></thead>`;
 
   // a tier section, sub-grouped by sector: COTS -> Services -> Construction
   function tierSection(tr){
-    const items=active.filter(({s})=>s.tier===tr); if(!items.length)return '';
+    const items=active.filter(({s})=>effTier(s)===tr); if(!items.length)return '';
     const m=SMAP[tr];
     let h=`<div class="section"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
     h+=`<table class="reg">${cols}${thead}<tbody>`;
     SECTOR_ORDER.forEach(sec=>{
       const grp=items.filter(({s})=>(s.sector||'')===sec); if(!grp.length)return;   // no empty sector blocks
-      h+=`<tr><td class="sector-head" colspan="11">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
+      h+=`<tr class="sector-row"><td class="sector-head" colspan="11">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
       grp.forEach(({s,i})=>h+=rowHTML(s,i));
     });
+    return h+'</tbody></table></div>';
+  }
+  function plainSection(items,cls,label,sub,collapsed){
+    if(!items.length)return '';
+    let h=`<div class="section${collapsed?' collapsed':''}"><h2 onclick="this.parentNode.classList.toggle('collapsed')">`
+      +`<span><span class="dot ${cls}"></span>${label}</span><span>${items.length} &nbsp;▾</span></h2>`;
+    if(sub)h+=`<div style="padding:9px 14px;font-size:12px;color:var(--mute);font-style:italic;border-bottom:1px solid var(--line)">${sub}</div>`;
+    h+=`<table class="reg">${cols}${thead}<tbody>`;
+    items.forEach(({s,i})=>h+=rowHTML(s,i));
     return h+'</tbody></table></div>';
   }
 
   let html=['BID','MID','NO','REVIEW'].map(tierSection).join('');
 
-  if(archived.length){
-    html+=`<div class="section collapsed"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot n"></span>ARCHIVE — CLOSED, EXPIRED &amp; CANCELLED</span><span>${archived.length} &nbsp;▾</span></h2>`;
-    html+=`<table class="reg">${cols}${thead}<tbody>`;
-    archived.forEach(({s,i})=>html+=rowHTML(s,i));
-    html+='</tbody></table></div>';
-  }
+  html+=plainSection(hidden,'o','HIDDEN — SET ASIDE BY YOU',
+    'Out of the way until you bring them back. If one expires or is cancelled while hidden it moves to History automatically, documented.',true);
+
+  html+=plainSection(archived,'n','ARCHIVE — CLOSED, EXPIRED &amp; CANCELLED',
+    'Past their deadline or withdrawn. Kept in full, nothing discarded.',true);
+
+  html+=plainSection(deleted,'r','HISTORY — DELETED BY YOU',
+    'Removed from the active register by you. Each one carries the date and time it was deleted and is never shown as active again — but it is kept here, and you can put it back.',true);
 
   if(viewSaved&&!list.length) html='<p style="color:var(--mute);padding:24px 0"><i>No solicitations saved to your shortlist yet. Use the ☆ button on any row.</i></p>';
   document.getElementById('sections').innerHTML=html||'<p style="color:var(--mute);padding:24px 0"><i>No solicitations on this platform yet.</i></p>';
@@ -482,19 +693,69 @@ function applyNight(){
 }
 function refreshCounts(){document.getElementById('scount').textContent=LS().length;}
 
+/* ---------- Company Information: the entity record, behind the password ---------- */
+function toggleCompany(){
+  const p=document.getElementById('coPanel');
+  const open=p.style.display==='none';
+  p.style.display=open?'block':'none';
+  document.getElementById('coBtn').classList.toggle('on',open);
+  if(open){ renderCompany(); p.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+function renderCompany(){
+  const c=COMPANY||{};
+  const el=document.getElementById('coPanel');
+  if(!c.groups||!c.groups.length){
+    el.innerHTML='<h2><span>COMPANY INFORMATION</span></h2><div class="co-body">'
+      +'<p class="co-note">No company record has been loaded yet.</p></div>';
+    return;
+  }
+  let h=`<h2><span>${esc(c.name||'COMPANY INFORMATION')}</span>`
+       +`<button class="btn sec" style="height:28px;font-size:11px" onclick="toggleCompany()">Close ✕</button></h2>`
+       +`<div class="co-body">`;
+  if(c.tagline) h+=`<div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--sub);font-weight:700;margin-bottom:10px">${esc(c.tagline)}</div>`;
+  if(c.note)    h+=`<p class="co-note">${esc(c.note)}</p>`;
+  c.groups.forEach(g=>{
+    h+=`<div class="co-grp"><h3>${esc(g.title)}</h3><table class="co"><tbody>`;
+    (g.rows||[]).forEach(r=>{
+      const [k,v,need]=r;
+      h+=`<tr><th>${esc(k)}</th>`
+        +(v?`<td class="val">${esc(v)}</td>`
+           :`<td class="need">${esc(need||'not recorded yet')}</td>`)
+        +`</tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  });
+  const missing=[].concat(...c.groups.map(g=>(g.rows||[]).filter(r=>!r[1]).map(r=>r[0])));
+  if(missing.length) h+=`<p class="co-note">Still to be filled in: <b>${missing.map(esc).join(' · ')}</b>. `
+    +`Send me the values and they go straight in.</p>`;
+  h+=`</div>`;
+  el.innerHTML=h;
+}
+
 function confirmAction(action,id){
   document.getElementById('ddUpdate').classList.remove('open');
-  const M={roots:["Full Re-crawl (Roots)","Revisit every portal and re-read all files from scratch. Long-running; the register stays available and you may Abort anytime. Proceed?"],
-    live:["Live Status Check","Quick pass over the register: detect newly posted, removed and amended solicitations, and update statuses and Last-Updated dates. Proceed?"],
-    abort:["Abort Running Update","Signal the running update to stop at the next checkpoint. Nothing already written is lost. Proceed?"],
-    reverify:["Re-verify Solicitation","Re-check this solicitation ("+(id||'')+") against its source and update its data and Last-Updated date. Proceed?"]};
+  document.getElementById('mOk').style.display='';
+  const M={
+    roots:["DEEP RE-SCAN — read every file again",
+      "The bots go back out to every portal, download each solicitation's attachments again, read them in full (including scanned PDFs), and re-adjudicate from scratch. This is the thorough one and it takes a while. The register stays usable throughout and you can Abort at any time. Proceed?"],
+    live:["QUICK CHECK — statuses and timestamps only",
+      "A fast pass over the register: spot newly posted, amended, withdrawn and expired solicitations and refresh their status and Last-Updated date. It does NOT re-read the attached files. Proceed?"],
+    abort:["Abort Running Update",
+      "Signal the running update to stop at the next checkpoint. Nothing already written is lost. Proceed?"],
+    deepscan:["DEEP RE-SCAN this solicitation",
+      "Go back to the source for "+(id||'this solicitation')+", download and read every attached file again from scratch, and re-adjudicate it. Use this when something is marked UNVERIFIED or looks wrong. Proceed?"],
+    touch:["QUICK CHECK this solicitation",
+      "Re-check "+(id||'this solicitation')+" at its source and refresh its status and Last-Updated date only. The attached files are NOT re-read. Proceed?"],
+    delete:["DELETE this solicitation",
+      "This moves "+(id||'it')+" off the active register and into History, stamped with today's date and time. It will never be shown as active again — but it is kept, and you can restore it from History. Proceed?"]};
   const m=M[action];document.getElementById('mTitle').textContent=m[0];document.getElementById('mBody').textContent=m[1];
   document.getElementById('mOk').onclick=async()=>{
     closeModal();
+    if(action==='delete'){ opAction('delete',id); return; }
     let r;
-    if(action==='abort')          r=await ghDispatch('control.yml',{action:'stop'});
-    else if(action==='reverify')  r=await ghDispatch('crawl.yml',{mode:'live'});
-    else                          r=await ghDispatch('crawl.yml',{mode:action});   // roots | live
+    if(action==='abort')                        r=await ghDispatch('control.yml',{action:'stop'});
+    else if(action==='deepscan'||action==='roots') r=await ghDispatch('crawl.yml',{mode:'roots'});
+    else                                        r=await ghDispatch('crawl.yml',{mode:'live'});
     const el=document.getElementById('fleetState');
     if(r&&r.ok){ if(el) el.innerHTML='<b style="color:var(--green)">Request sent.</b>'; alert("Request sent to the bots."); }
     else { alert("Could not send the request"+(r&&r.msg?" ("+r.msg+")":"")+". Check the token has Actions write access."); }
@@ -512,11 +773,14 @@ function init(){
   document.getElementById('lastDeep').textContent=META.lastDeep;
   document.getElementById('lrRoots').textContent="Last run: "+META.lastRoots;
   document.getElementById('lrLive').textContent="Last run: "+META.lastLive;
-  const act=SOLICITATIONS.filter(s=>!s.archived);
-  const bid=act.filter(s=>s.tier==='BID').length,mid=act.filter(s=>s.tier==='MID').length,no=act.filter(s=>s.tier==='NO').length;
-  const arch=SOLICITATIONS.filter(s=>s.archived).length;
+  const act=SOLICITATIONS.filter(s=>!s.archived&&!isDeleted(s)&&!isHidden(s));
+  const bid=act.filter(s=>effTier(s)==='BID').length,mid=act.filter(s=>effTier(s)==='MID').length,no=act.filter(s=>effTier(s)==='NO').length;
+  const arch=SOLICITATIONS.filter(s=>s.archived&&!isDeleted(s)).length;
+  const delN=SOLICITATIONS.filter(s=>isDeleted(s)).length, hidN=SOLICITATIONS.filter(s=>isHidden(s)&&!s.archived&&!isDeleted(s)).length;
   const ver=act.filter(s=>s.verified==='VERIFIED').length;
-  document.getElementById('cov').innerHTML="<b>"+act.length+"</b> active &middot; <b>"+ver+"</b> verified &middot; <b>"+arch+"</b> archived";
+  document.getElementById('cov').innerHTML="<b>"+act.length+"</b> active &middot; <b>"+ver+"</b> verified &middot; <b>"+arch+"</b> archived"
+    +(hidN?" &middot; <b>"+hidN+"</b> hidden":"")+(delN?" &middot; <b>"+delN+"</b> deleted":"")
+    +"<br><span id='opSync' style='font-style:italic'></span>";
   document.getElementById('summary').innerHTML=
     `<div class="cell total"><div class="big">${act.length}</div><div class="cap">Total Active Solicitations</div></div>
      <div class="cell"><div class="big" style="color:var(--green)">${bid}</div><div class="cap"><span class="dot g"></span>Bid-Eligible</div></div>
@@ -727,6 +991,9 @@ async function unlock(pwArg){
     STATUS=payload.status||{}; BLOCKED=payload.blocked||{sites:[]};
     PAUSED=!!((payload.control||{}).paused);
     CONTROL_URL=((payload.control||{}).controlUrl)||CONTROL_URL;
+    OPERATOR=Object.assign({deleted:{},hidden:{},switched:{}}, payload.operator||{});
+    COMPANY=payload.company||{};
+    pruneLocalOps();
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();
     ['click','keydown','scroll','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,_touch,{passive:true}));
@@ -736,6 +1003,10 @@ async function unlock(pwArg){
 }
 
 // bootstrap: unlocked build -> open; locked build -> try cached session, else show gate
+(function(){   // put the LLC logo on the password page, from the masthead's own vector
+  try{ const src=document.querySelector('.mast .logo'), box=document.getElementById('glogo');
+       if(src&&box){ const c=src.cloneNode(true); c.removeAttribute('class'); c.setAttribute('class','glogo-svg'); box.appendChild(c); } }catch(e){}
+})();
 (function(){
   if(!LOCKED){ unlock(); return; }
   let cachedPw=null, last=0;

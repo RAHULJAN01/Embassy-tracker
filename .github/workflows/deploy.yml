@@ -7,6 +7,8 @@ on:
       - data.json
       - status.json
       - blocked.json
+      - operator.json      # your DELETE / HIDE / SWITCH decisions
+      - company.json       # the company record
       - site_template.html
       - build_site.py
       - .github/workflows/deploy.yml

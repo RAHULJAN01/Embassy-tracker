@@ -44,6 +44,11 @@ def main():
         "status": _opt("status.json", {}),
         "blocked": _opt("blocked.json", {"sites": []}),
         "control": _opt("control.json", {"paused": False}),
+        # the operator's own delete / hide / switch decisions, and the company
+        # record — both sit INSIDE the encrypted payload, so they are only
+        # readable after the register password is entered
+        "operator": _opt("operator.json", {"deleted": {}, "hidden": {}, "switched": {}}),
+        "company": _opt("company.json", {}),
     }
     data = json.dumps(payload, ensure_ascii=False)
     template = (HERE / "site_template.html").read_text(encoding="utf-8")
