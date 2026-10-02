@@ -18,7 +18,7 @@ v2 rules, per Rahul:
 """
 import os, sys, json, time, hashlib, re, pathlib, datetime, urllib.parse
 
-import analyzer, ai, fetcher, un_sources, estimator
+import analyzer, ai, fetcher, un_sources, estimator, pipeline, docreader
 
 HERE = pathlib.Path(__file__).parent
 ROOTS = HERE / "roots.json"
@@ -617,6 +617,49 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
 
 
 # --------------------------------------------------------------------------
+# REPAIR: finish what we already hold before hunting for anything new.
+# This is what stops the register sitting at "everything pending verification":
+# an incomplete record is re-crawled, re-read and re-adjudicated from scratch,
+# and it gets a bounded number of attempts so it can never churn the budget.
+MAX_REPAIR_TRIES = int(os.getenv("MAX_REPAIR_TRIES", "3"))
+REPAIR_SHARE = float(os.getenv("REPAIR_SHARE", "0.65"))   # of the AI budget
+
+
+def repairable(row):
+    """Is this record incomplete in a way a re-crawl could actually fix?"""
+    if row.get("archived") or row.get("deleted") or row.get("hidden"):
+        return False
+    if row.get("verified") == "VERIFIED":
+        return False
+    if int(row.get("repairTries", 0) or 0) >= MAX_REPAIR_TRIES:
+        return False
+    return bool(row.get("link") or row.get("files"))
+
+
+def repair_rank(row):
+    """Worst-but-most-fixable first: an un-adjudicated record with documents we
+    can still download is the highest-value call we can make."""
+    notes = " ".join(row.get("verifyNotes") or []).lower()
+    score = 0
+    if "not adjudicated" in notes or row.get("tier") == "REVIEW":
+        score += 40
+    if "no closing date" in notes:
+        score += 25
+    if "no title" in notes:
+        score += 10
+    if "unreadable" in notes:
+        score += 15
+    score += min(int(row.get("fileCount", 0) or 0), 6) * 2      # docs to mine
+    score -= int(row.get("repairTries", 0) or 0) * 12           # stop flogging it
+    return -score                                               # ascending sort
+
+
+def repair_queue(rows):
+    q = [r for r in rows if repairable(r)]
+    q.sort(key=repair_rank)
+    return [r for i, r in enumerate(q) if SHARDS <= 1 or i % SHARDS == SHARD]
+
+
 def run(mode):
     cfg = load(ROOTS, {})
     if not cfg:
@@ -630,71 +673,206 @@ def run(mode):
 
     prior = load(DATA, {"meta": {}, "solicitations": []})
     prior_rows = {r.get("sol") or r.get("link"): r for r in prior.get("solicitations", [])}
-    ledger = set(prior.get("meta", {}).get("ledger", []))     # content hashes already adjudicated
+    ledger = set(prior.get("meta", {}).get("ledger", []))
     state = load(STATE, {"root_idx": 0})
     rotator, call = ai.make_caller()
     st = Status(mode, rotator.names())
-    t0 = time.time()
+    budget = pipeline.Budget(MAX_AI_CALLS, TIME_BUDGET_S)
     blocked_sites = load(BLOCKED, {"sites": []}).get("sites", [])
     blocked_hosts = {b["host"] for b in blocked_sites}
 
-    rows, found, ai_calls = [], 0, 0
+    rows, discovered, completed, abandoned, repaired = [], 0, 0, 0, 0
 
-    def budget_left():
-        return ai_calls < MAX_AI_CALLS and (time.time() - t0) < TIME_BUDGET_S and not paused()
+    def repaired_fail(old, why):
+        """A repair attempt that didn't land. Keep the record, count the try, and
+        say plainly why — after MAX_REPAIR_TRIES it stops asking for budget and
+        tells the operator it needs a human look instead of churning forever."""
+        row = dict(old)
+        row["prevKey"] = old.get("sol") or old.get("link") or ""
+        row["repairTries"] = int(old.get("repairTries", 0) or 0) + 1
+        row["lastDeepScan"] = now_utc()
+        notes = [n for n in (row.get("verifyNotes") or [])
+                 if not n.startswith(("re-scan", "auto-complete"))]
+        if row["repairTries"] >= MAX_REPAIR_TRIES:
+            notes.append(f"auto-complete gave up after {row['repairTries']} deep "
+                         f"re-scans — needs a human look ({why})")
+        else:
+            notes.append(f"re-scan {row['repairTries']}/{MAX_REPAIR_TRIES} did not "
+                         f"complete it ({why})")
+        row["verifyNotes"] = notes[:6]
+        row["verified"] = "UNVERIFIED"
+        row["fp"] = fingerprint(row)
+        rows.append(row)
 
-    def adjudicate_unit(text, meta):
-        nonlocal ai_calls
-        rec = analyzer.adjudicate(text, call, today=today())
-        ai_calls += 1
-        st.beat(aiCalls=ai_calls, done=len(rows), found=found,
-                currentJob=f"adjudicating: {meta[:60]}")
-        return rec
+    def read_all(urls):
+        """Read EVERY attachment fully. Returns [(url, text, note)]."""
+        out = []
+        for u in (urls or [])[:15]:
+            t, note = fetcher.read_attachment_full(u)
+            out.append((u, t, note))
+            time.sleep(PAGE_PAUSE)
+        return out
 
-    def transient(rec):
-        rr = (rec.get("review_reason") or "").lower()
-        return rec.get("tier") == "REVIEW" and (rr.startswith("ai") or "provider" in rr
-                                                or "quota" in rr or "cooling" in rr)
+    def finish_unit(unit, label):
+        """Run ONE solicitation end to end. Returns True if a record was stored."""
+        nonlocal completed, abandoned
+        rec, rep = pipeline.process_one(
+            unit, call_ai=call, analyzer=analyzer, estimator=estimator,
+            budget=budget, today=today(), fetch_attachments=read_all,
+            status=st, label=label)
+        if not rec:
+            abandoned += 1
+            st.d["lastError"] = rep.get("stage", "")
+            return False
+        row = to_row(rec, post=unit.get("post", ""), country=unit.get("country", ""),
+                     source=unit.get("source", "Site"), link=unit.get("link", ""),
+                     platform=unit.get("platform", "USGOV"), agency=unit.get("agency", ""),
+                     domestic=unit.get("domestic", False),
+                     files=unit.get("attachments", []),
+                     read_ok=rec.get("_read_ok", 1), read_fail=rec.get("_read_fail", 0),
+                     sol_hint=unit.get("sol_hint", ""))
+        row["readFailures"] = rec.get("_read_failures", [])
+        if rec.get("_estimate"):
+            row["estimate"] = rec["_estimate"]
+            if not (row.get("value") or "").strip():
+                row["value"] = rec["_estimate"]["display"]
+        rows.append(row)
+        ledger.add(unit["hash"])
+        completed += 1
+        st.beat(done=completed, found=discovered, aiCalls=budget.used)
+        return True
 
     try:
-        # ---------------- SAM ----------------
+        # ========= PHASE 0: REPAIR what we already hold =========
+        # Rahul's complaint — "why am I still seeing all the solicitations pending
+        # to be verified" — is answered here. Incomplete records are finished
+        # BEFORE a single new one is discovered, so the register converges.
+        repairs = repair_queue(prior.get("solicitations", []))
+        repair_cap = max(0, int(MAX_AI_CALLS * REPAIR_SHARE))
+        # Which solicitation numbers are already spoken for. A re-scan may only
+        # adopt a newly-read number if no OTHER record already owns it — otherwise
+        # a single mis-read number would collapse two live records into one and
+        # quietly delete a solicitation off the register.
+        claimed = {}
+        for r in prior.get("solicitations", []):
+            s = (r.get("sol") or "").strip().upper()
+            if s:
+                claimed.setdefault(s, r.get("sol") or r.get("link"))
+        st.beat(phase="repair", currentJob=f"completing {len(repairs)} unfinished records",
+                queued=len(repairs))
+        for old in repairs:
+            if budget.used >= repair_cap or not budget.can_start_job():
+                break
+            label = (old.get("sol") or old.get("title") or "record")[:50]
+            st.beat(currentJob=f"re-scanning: {label}")
+            link = old.get("link") or ""
+            atts = list(old.get("files") or [])
+            text = ""
+            try:
+                if link and not link.lower().split("?")[0].endswith(
+                        (".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip")):
+                    text, more, _ok, _f, sam_id = chase_solicitation(link)
+                    for u in more:
+                        if u not in atts:
+                            atts.append(u)
+                elif link:
+                    atts.insert(0, link)
+            except fetcher.Blocked:
+                repaired_fail(old, "site refused the bot — needs hold-the-door")
+                continue
+            except Exception as e:
+                repaired_fail(old, f"re-crawl error: {str(e)[:60]}")
+                continue
+
+            unit = {"text": text, "attachments": atts[:15],
+                    "hash": old.get("fp") or unit_hash(text or link),
+                    "post": old.get("post", ""), "country": old.get("country", ""),
+                    "source": old.get("source", "Site"),
+                    "platform": old.get("platform", "USGOV"),
+                    "agency": old.get("agency", ""),
+                    "domestic": old.get("domestic", False),
+                    "link": link, "sol_hint": old.get("sol") or ""}
+            rec, rep = pipeline.process_one(
+                unit, call_ai=call, analyzer=analyzer, estimator=estimator,
+                budget=budget, today=today(), fetch_attachments=read_all,
+                status=st, label=label)
+            if not rec:
+                # nothing readable / AI unavailable — count the try, keep the old row
+                repaired_fail(old, rep.get("stage", "could not be completed"))
+                continue
+            fresh = to_row(rec, post=old.get("post", ""), country=old.get("country", ""),
+                           source=old.get("source", "Site"), link=link,
+                           platform=old.get("platform", "USGOV"),
+                           agency=old.get("agency", ""),
+                           domestic=old.get("domestic", False), files=atts[:15],
+                           read_ok=rec.get("_read_ok", 1),
+                           read_fail=rec.get("_read_fail", 0),
+                           sol_hint=old.get("sol") or "")
+            # a repair must never lose the operator's own decisions or history
+            for keep in ("firstSeen", "deleted", "deletedOn", "hidden", "hiddenOn",
+                         "switched", "switchedOn", "samId", "notes"):
+                if old.get(keep) not in (None, "", False):
+                    fresh[keep] = old[keep]
+            if old.get("switched"):
+                fresh["tier"] = old.get("tier", fresh["tier"])
+            # identity is stable: a re-scan must never rename or clone a record
+            own_key = old.get("sol") or old.get("link") or ""
+            if old.get("sol"):
+                fresh["sol"] = old["sol"]                      # never renamed
+            else:
+                found = (fresh.get("sol") or "").strip().upper()
+                owner = claimed.get(found)
+                if found and owner and owner != own_key:
+                    # another record already owns this number — don't merge blind
+                    fresh["sol"] = ""
+                    fresh["verifyNotes"] = (fresh.get("verifyNotes") or []) + [
+                        f"re-scan read number {found}, which already belongs to "
+                        f"another record — kept separate for a human to compare"]
+                    fresh["verified"] = "UNVERIFIED"
+                elif found:
+                    claimed[found] = own_key                   # this record owns it now
+            fresh["prevKey"] = own_key
+            fresh["readFailures"] = rec.get("_read_failures", [])
+            fresh["repairTries"] = int(old.get("repairTries", 0) or 0) + 1
+            fresh["lastDeepScan"] = now_utc()
+            fresh["fp"] = fingerprint(fresh)
+            if rec.get("_estimate"):
+                fresh["estimate"] = rec["_estimate"]
+                if not (fresh.get("value") or "").strip():
+                    fresh["value"] = rec["_estimate"]["display"]
+            if fresh.get("verified") == "VERIFIED":
+                fresh["repairTries"] = 0          # healed; eligible again if it regresses
+                repaired += 1
+            rows.append(fresh)
+            st.beat(repaired=repaired, aiCalls=budget.used)
+
+        # ================= SAM =================
         st.beat(phase="sam", currentJob="querying SAM.gov")
         for op in sam_search(cfg):
-            if not budget_left():
+            if not budget.can_start_job():
                 break
-            try:
-                text, ok, fail = sam_unit(op)
-                if len(text) < 180 or not looks_like_solicitation(text):
-                    continue
-                h = unit_hash(text)
-                if h in ledger:
-                    continue                    # another bot already did this one
-                found += 1
-                rec = adjudicate_unit(text, str(op.get("title", "SAM notice")))
-                if transient(rec):
-                    continue
-                ledger.add(h)
-                nid = op.get("noticeId", "")
-                link = cfg["sam"]["view"].replace("{id}", nid) if nid else "https://sam.gov/"
-                ctry, _ = _pop_country(op)
-                rows.append(to_row(rec, post=str(op.get("organizationName") or "SAM.gov"),
-                                   country=ctry, source="SAM", link=link, platform="USGOV",
-                                   domestic=is_domestic(op),
-                                   files=(op.get("resourceLinks") or []), read_ok=ok, read_fail=fail,
-                                   sol_hint=str(op.get("solicitationNumber") or "")))
-            except ai.AllExhausted:
-                st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
-                break
-            except Exception as e:
-                st.d["lastError"] = f"SAM record: {str(e)[:90]}"   # one bad notice never kills the bot
+            text, ok, fail = sam_unit(op)
+            if len(text) < 180 or not looks_like_solicitation(text):
                 continue
-            time.sleep(PAGE_PAUSE)
+            h = unit_hash(text)
+            if h in ledger:
+                continue
+            discovered += 1
+            nid = op.get("noticeId", "")
+            ctry, _ = _pop_country(op)
+            finish_unit({"text": text, "attachments": list(op.get("resourceLinks") or []),
+                         "hash": h, "post": str(op.get("organizationName") or "SAM.gov"),
+                         "country": ctry, "source": "SAM", "platform": "USGOV",
+                         "domestic": is_domestic(op),
+                         "link": cfg["sam"]["view"].replace("{id}", nid) if nid else "https://sam.gov/",
+                         "sol_hint": str(op.get("solicitationNumber") or "")},
+                        str(op.get("title", "SAM notice")))
 
-        # ---------------- United Nations (UNGM / UNDP / IOM / ILO / UNICEF) ----------------
+        # ================= United Nations =================
         un_srcs = [s for i, s in enumerate(un_sources.UN_SOURCES)
                    if SHARDS <= 1 or i % SHARDS == SHARD]
         for src in un_srcs:
-            if not budget_left():
+            if not budget.can_start_job():
                 break
             agency = src["agency"]
             st.beat(phase="un", currentJob=f"UN · {agency}")
@@ -703,192 +881,121 @@ def run(mode):
                 if un_sources.has_credentials(agency):
                     try:
                         opener = un_sources.try_login(agency)
-                        un_sources.keep_alive(opener, agency)      # stop the session timing out
+                        un_sources.keep_alive(opener, agency)
                     except un_sources.HoldTheDoor as h:
-                        _raise_help(blocked_sites, blocked_hosts, st, agency, h.url or src["list"],
-                                    h.need, platform="UN")
-                        opener = None                               # carry on with public access
+                        _raise_help(blocked_sites, blocked_hosts, st, agency,
+                                    h.url or src["list"], h.need, platform="UN")
                 notices = un_sources.list_notices(src)
             except un_sources.HoldTheDoor as h:
-                _raise_help(blocked_sites, blocked_hosts, st, agency, h.url or src["list"],
-                            h.need, platform="UN")
+                _raise_help(blocked_sites, blocked_hosts, st, agency,
+                            h.url or src["list"], h.need, platform="UN")
                 continue
             except Exception as e:
-                st.d["lastError"] = f"{agency}: {str(e)[:80]}"
+                st.d["lastError"] = f"{agency}: {str(e)[:70]}"
                 continue
 
             for url, title in notices[:10]:
-                if not budget_left():
+                if not budget.can_start_job():
                     break
                 try:
                     text, atts = un_sources.fetch_notice(url, opener)
-                    if len(text) < 180 or not looks_like_solicitation(text):
-                        continue
-                    h = unit_hash(text)
-                    if h in ledger:
-                        continue
-                    found += 1
-                    rec = adjudicate_unit(text, f"{agency}: {title[:40]}")
-                    if transient(rec):
-                        continue
-                    ledger.add(h)
-                    rows.append(to_row(rec, post=src["name"], country="", source="UN",
-                                       link=url, platform="UN", agency=agency,
-                                       files=atts, read_ok=1 + len(atts), read_fail=0,
-                                       sol_hint=title[:60]))
-                except ai.AllExhausted:
-                    st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
-                    break
-                except un_sources.HoldTheDoor as hh:
-                    _raise_help(blocked_sites, blocked_hosts, st, agency, hh.url or url,
-                                hh.need, platform="UN")
-                except Exception as e:
-                    st.d["lastError"] = f"{agency} notice: {str(e)[:80]}"
-                time.sleep(PAGE_PAUSE)
+                except Exception:
+                    continue
+                if len(text) < 180 or not looks_like_solicitation(text):
+                    continue
+                h = unit_hash(text)
+                if h in ledger:
+                    continue
+                discovered += 1
+                finish_unit({"text": text, "attachments": atts, "hash": h,
+                             "post": src["name"], "country": "", "source": "UN",
+                             "platform": "UN", "agency": agency, "link": url,
+                             "sol_hint": title[:60]}, f"{agency}: {title[:40]}")
 
-        # ---------------- Embassy sites (sharded + resumable) ----------------
+        # ================= Embassy sites (sharded, resumable) =================
         roots = cfg.get("roots", [])
         mine = [r for i, r in enumerate(roots) if SHARDS <= 1 or i % SHARDS == SHARD]
         n = len(mine)
         start = state.get("root_idx", 0) % max(1, n) if mode == "roots" else 0
-        coverage = {}
-        completed_pass = True
+        coverage, full_pass = {}, True
         for off in range(n):
-            if not budget_left():
+            if not budget.can_start_job():
                 state["root_idx"] = (start + off) % max(1, n)
-                completed_pass = False
+                full_pass = False
                 break
             root = mine[(start + off) % n]
             host = root_host(root["base"])
-            st.beat(phase="embassy", currentJob=f"crawling {root['post']}",
+            st.beat(phase="embassy", currentJob=f"scanning {root['post']}",
                     queued=n - off, coverage=coverage, paused=paused())
             try:
                 units = {}
                 for pp in discover_proc_pages(root, cfg)[:4]:
                     html_pages, files = collect_candidates(pp, cfg)
-                    # each HTML solicitation page = one unit (with its own attachments)
                     for sp in html_pages[:8]:
                         units[sp] = None
-                    # orphan files grouped into units by solicitation number
                     for k, u in group_file_units(files[:12]).items():
                         units.setdefault("file::" + k, u)
                     time.sleep(PAGE_PAUSE)
                 coverage[root["country"]] = len(units)
 
                 for key, pre in list(units.items())[:12]:
-                    if not budget_left():
+                    if not budget.can_start_job():
                         break
                     try:
-                        sam_id = ""
                         if pre is None:
-                            # chase it through pages, documents and SAM redirects
                             text, attach, ok, fail, sam_id = chase_solicitation(key)
-                            link, files = key, attach
+                            link, atts = key, attach
                         else:
-                            text, files, ok, fail = pre["text"], pre["files"], pre["ok"], pre["fail"]
-                            link = files[0] if files else root["base"]
+                            text, atts = pre["text"], pre["files"]
+                            link, sam_id = (atts[0] if atts else root["base"]), ""
                         if len(text) < 180:
                             continue
-
-                        # What IS this page? Never store an index page as a solicitation.
                         kind = classify_page(text, link) if pre is None else "solicitation"
                         if kind == "noise":
                             continue
                         if kind == "listing":
-                            # solicitations written inline on the page -> one record each
-                            units_inline = split_inline_solicitations(text)
-                            for sol_no, chunk in units_inline[:8]:
-                                if not budget_left():
+                            for sol_no, chunk in split_inline_solicitations(text)[:8]:
+                                if not budget.can_start_job():
                                     break
-                                hh2 = unit_hash(chunk)
-                                if hh2 in ledger or not looks_like_solicitation(chunk):
+                                hh = unit_hash(chunk)
+                                if hh in ledger or not looks_like_solicitation(chunk):
                                     continue
-                                found += 1
-                                rec2 = adjudicate_unit(chunk, f"{root['post']} {sol_no}")
-                                if transient(rec2):
-                                    continue
-                                ledger.add(hh2)
-                                rows.append(to_row(rec2, post=root["post"], country=root["country"],
-                                                   source="Site", link=link, platform="USGOV",
-                                                   files=files, read_ok=ok, read_fail=fail,
-                                                   sol_hint=sol_no))
-                                time.sleep(PAGE_PAUSE)
+                                discovered += 1
+                                finish_unit({"text": chunk, "attachments": [], "hash": hh,
+                                             "post": root["post"], "country": root["country"],
+                                             "source": "Site", "platform": "USGOV",
+                                             "link": link, "sol_hint": sol_no},
+                                            f"{root['post']} {sol_no}")
                             continue
-
                         if not looks_like_solicitation(text):
                             continue
                         h = unit_hash(text)
                         if h in ledger:
                             continue
-                        found += 1
-                        rec = adjudicate_unit(text, root["post"])
-                        if transient(rec):
-                            continue
-                        ledger.add(h)
-                        # if the trail ended at SAM, it is the SAME solicitation SAM
-                        # carries — tag it so it merges instead of duplicating
-                        r2 = to_row(rec, post=root["post"], country=root["country"],
-                                    source=("Site+SAM" if sam_id else "Site"), link=link,
-                                    platform="USGOV", files=files, read_ok=ok, read_fail=fail)
-                        if sam_id:
-                            r2["samId"] = sam_id
-                        rows.append(r2)
-                    except ai.AllExhausted:
-                        st.beat(currentJob="AI quota exhausted — pausing (resumes next run)")
-                        raise StopIteration
+                        discovered += 1
+                        finish_unit({"text": text, "attachments": atts, "hash": h,
+                                     "post": root["post"], "country": root["country"],
+                                     "source": ("Site+SAM" if sam_id else "Site"),
+                                     "platform": "USGOV", "link": link,
+                                     "samId": sam_id, "sol_hint": ""}, root["post"])
                     except fetcher.Blocked:
                         raise
                     except Exception as e:
-                        st.d["lastError"] = f"{root['post']} unit: {str(e)[:80]}"
-                    time.sleep(PAGE_PAUSE)
+                        st.d["lastError"] = f"{root['post']}: {str(e)[:70]}"
             except fetcher.Blocked as b:
-                if host not in blocked_hosts:
-                    blocked_sites.append({"host": host, "post": root["post"], "platform": "USGOV",
-                                          "url": root["base"], "reason": str(b), "since": now_utc()})
-                    blocked_hosts.add(host)
-                st.beat(blockedSites=blocked_sites)
-            except StopIteration:
-                state["root_idx"] = (start + off) % max(1, n)
-                completed_pass = False
-                break
+                _raise_help(blocked_sites, blocked_hosts, st, root["post"],
+                            root["base"], str(b), platform="USGOV")
             except Exception as e:
-                st.d["lastError"] = f"{root['post']}: {str(e)[:80]}"
-        if completed_pass:
+                st.d["lastError"] = f"{root['post']}: {str(e)[:70]}"
+        if full_pass:
             state["root_idx"] = 0
 
     except ai.AllExhausted:
-        st.beat(currentJob="AI quota exhausted — paused")
+        st.beat(currentJob="AI quota exhausted — paused, resumes next run")
     except Exception as e:
-        # never lose a shard's work to one unexpected error — log it and still save
-        import traceback
-        traceback.print_exc()
-        st.d["lastError"] = f"fatal: {type(e).__name__}: {str(e)[:110]}"
+        import traceback; traceback.print_exc()
+        st.d["lastError"] = f"fatal: {type(e).__name__}: {str(e)[:100]}"
 
-    # ---------------- ESTIMATOR: last stage, only on cleared records ----------------
-    est_done = 0
-    try:
-        for r in rows:
-            if ai_calls >= MAX_AI_CALLS + 25 or (time.time() - t0) > TIME_BUDGET_S + 120:
-                break
-            if paused() or not estimator.should_estimate(r):
-                continue
-            st.beat(phase="estimate", currentJob=f"valuing: {str(r.get('title',''))[:50]}")
-            try:
-                e = estimator.estimate(r, r.get("evidence", ""), call)
-            except ai.AllExhausted:
-                break
-            except Exception:
-                continue
-            ai_calls += 1
-            if e:
-                r["estimate"] = e
-                if not (r.get("value") or "").strip():
-                    r["value"] = e["display"]      # show the estimate where no value was stated
-                est_done += 1
-    except Exception as e:
-        st.d["lastError"] = f"estimator: {str(e)[:80]}"
-
-    # ---------------- merge + archive ----------------
     merged, new_c, chg_c = merge_records(prior_rows, rows, mode)
     merged = apply_expiry(merged)
 
@@ -898,16 +1005,24 @@ def run(mode):
         meta["lastDeep"] = stamp; meta["lastRoots"] = stamp
     meta["lastLive"] = stamp
     meta["counts"] = tally(merged)
-    meta["ledger"] = sorted(ledger)[-8000:]        # cap so the file can't grow forever
+    meta["ledger"] = sorted(ledger)[-8000:]
     save(DATA, {"meta": meta, "solicitations": merged})
     save(STATE, state)
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
     st.d["aiDiag"] = rotator.diag()
     st.d["samDiag"] = SAM_DIAG.get("last", "SAM not queried this run")
-    st.finish(note=f"done — {new_c} new, {chg_c} changed, {len(merged)} total, {ai_calls} AI calls")
-    print(f"[{mode}] found={found} new={new_c} changed={chg_c} total={len(merged)} est={est_done} "
-          f"ai_calls={ai_calls} blocked={len(blocked_sites)} ledger={len(ledger)}")
-
+    st.d["docCaps"] = __import__("docreader").capabilities()
+    st.d["completed"] = completed
+    st.d["abandoned"] = abandoned
+    st.d["repaired"] = repaired
+    st.d["stillUnfinished"] = sum(1 for r in merged if repairable(r))
+    st.finish(note=(f"done — {repaired} unfinished records completed, "
+                    f"{completed} new solicitations fully processed, "
+                    f"{abandoned} left for next run, {budget.used} AI calls"
+                    + (f" · {budget.stopped_reason}" if budget.stopped_reason else "")))
+    print(f"[{mode}] repaired={repaired} discovered={discovered} completed={completed} "
+          f"abandoned={abandoned} total={len(merged)} ai={budget.used}/{MAX_AI_CALLS} "
+          f"ledger={len(ledger)}")
 
 def apply_expiry(rows):
     """Past deadline or cancelled -> archived + documented, out of the active list."""
@@ -930,8 +1045,15 @@ def merge_records(prior_rows, fresh_rows, mode):
     by_key = dict(prior_rows)
     new_c = chg_c = 0
     for r in fresh_rows:
+        # A RE-SCAN UPDATES A RECORD, IT NEVER CREATES A SECOND ONE.
+        # `prevKey` is the identity the record already had on the register; if a
+        # deep re-scan finally reads a solicitation number off the documents, the
+        # original row is replaced rather than orphaned beside a duplicate.
+        prev = r.get("prevKey")
+        if prev and prev in by_key and prev != (r.get("sol") or r.get("link")):
+            by_key.pop(prev, None)
         k = r.get("sol") or r.get("link")
-        old = by_key.get(k)
+        old = by_key.get(k) or (prior_rows.get(prev) if prev else None)
         if not old:
             r["firstSeen"] = today(); new_c += 1
         elif old.get("fp") != r.get("fp"):

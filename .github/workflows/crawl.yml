@@ -2,9 +2,16 @@ name: Crawl Solicitations
 # The 24/7 engine. Runs a FLEET of parallel sharded workers — each owns its own
 # slice of the source list, so no two bots ever redo the same work. Every worker
 # also checks control.json (the Mission Control STOP switch) before doing anything.
+#
+# AI BUDGET DISCIPLINE (the fix for "everything is pending verification").
+# The old schedule attempted 12 runs x 4 shards x 60 calls = 2,880 AI calls a day
+# against free tiers worth a few hundred. Every provider 429'd, so records were
+# stored half-read and the whole register sat unverified.
+# Now: 6 runs x 4 shards x 8 calls = 192 calls a day, which still completes ~96
+# solicitations FULLY every day. Fewer, finished records beat many broken ones.
 on:
   schedule:
-    - cron: "17 */2 * * *"   # deep re-crawl slice every 2 hours
+    - cron: "17 */4 * * *"   # deep re-crawl slice every 4 hours (6 runs/day)
     - cron: "47 13 * * *"    # one quick live status check daily
   workflow_dispatch:
     inputs:
@@ -37,6 +44,14 @@ jobs:
           P=$(python3 -c "import json;print(str(json.load(open('control.json')).get('paused',False)).lower())" 2>/dev/null || echo false)
           echo "paused=$P" >> "$GITHUB_OUTPUT"
           echo "fleet paused: $P"
+      # A broken engine must never be allowed to write to the register.
+      - name: Engine self-test
+        if: steps.c.outputs.paused != 'true'
+        run: |
+          pip install --quiet pdfplumber pypdf beautifulsoup4 python-docx openpyxl
+          python test_analyzer.py
+          python test_pipeline_e2e.py
+          python test_repair.py
       - id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -62,7 +77,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install cryptography pdfplumber pypdf beautifulsoup4 requests
+      # THE CORE SCANNING STANDARD: a bot must be able to read EVERY attachment
+      # it finds — Word, Excel, legacy .doc, and scanned PDFs via OCR. Without
+      # these the reader silently reports "document unreadable" and the record
+      # can never reach VERIFIED.
+      - name: Install document readers (OCR, Word, Excel)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr poppler-utils antiword
+          pip install --quiet cryptography beautifulsoup4 requests \
+            pdfplumber pypdf python-docx openpyxl pytesseract pdf2image
+      - name: Confirm the bots can actually read documents
+        run: |
+          python - <<'EOF'
+          import docreader, json, sys
+          caps = docreader.capabilities()
+          print("document reader capabilities:", json.dumps(caps, indent=1))
+          missing = [k for k, v in caps.items() if not v]
+          if missing:
+              print("::error::cannot read:", ", ".join(missing))
+              sys.exit(1)
+          print("all document formats readable")
+          EOF
       - name: Run crawler (shard ${{ matrix.shard }})
         env:
           GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
@@ -84,8 +120,10 @@ jobs:
           UNGM_PASS:          ${{ secrets.UNGM_PASS }}
           SHARD:              ${{ matrix.shard }}
           SHARDS:             "4"
-          MAX_AI_CALLS:       "60"
+          MAX_AI_CALLS:       "8"      # 6 runs x 4 shards x 8 = 192 calls/day
           TIME_BUDGET_S:      "1400"
+          REPAIR_SHARE:       "0.65"   # finish existing records before finding new ones
+          MAX_REPAIR_TRIES:   "3"      # then stop asking and flag it for a human
         run: python crawler.py "${{ needs.gate.outputs.mode }}"
       - name: Upload shard result
         uses: actions/upload-artifact@v4

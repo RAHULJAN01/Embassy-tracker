@@ -97,17 +97,29 @@ def pdf_text(raw):
         return f"[pdf unreadable: {str(e)[:60]}]"
 
 
+def read_attachment_full(url, retries=1):
+    """Download an attachment and read it COMPLETELY — pdf (incl. scanned/OCR),
+    docx, doc, xlsx, rtf, zip, html, text. Returns (text, note) where note
+    explains any failure instead of silently returning nothing."""
+    import docreader
+    last = ""
+    for attempt in range(retries + 1):
+        try:
+            raw, ct, final = get(url)
+        except Blocked as b:
+            return "", f"blocked ({b})"
+        except Exception as e:
+            last = f"fetch error ({str(e)[:40]})"
+            continue
+        if raw is None:
+            last = "could not download"
+            if isinstance(ct, str) and ct.startswith("__fail__"):
+                last = f"download failed ({ct[9:][:40]})"
+            continue
+        return docreader.read_bytes(raw, url, ct)
+    return "", last or "could not download"
+
+
 def read_attachment(url):
-    """Download an attachment and return its extracted text ('' if unreadable).
-    A blocked/!200 attachment is NOT a site block — just skip it."""
-    try:
-        raw, ct, final = get(url)
-    except Blocked:
-        return ""
-    if not raw:
-        return ""
-    if "pdf" in ct or url.lower().endswith(".pdf"):
-        return pdf_text(raw)
-    if any(x in ct for x in ("text", "html")):
-        return html_text(raw)
-    return ""      # binary/doc formats we can't read inline are skipped
+    """Back-compat: text only."""
+    return read_attachment_full(url)[0]

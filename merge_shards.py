@@ -23,13 +23,27 @@ def load(p, d):
         return d
 
 
+def _norm(s):
+    s = (s or "").upper().strip()
+    s = re.sub(r"^(RFQ|RFP|ITB|IFB|SOL|NO\.?|#)[\s:#-]*", "", s)
+    return re.sub(r"[^A-Z0-9]", "", s)
+
+
 def key_of(r):
     """Normalised identity: '#19CA1026Q0002', '19CA1026Q0002' and 'RFQ 19CA1026Q0002'
     are the SAME solicitation and must never become two rows."""
-    sol = (r.get("sol") or "").upper()
-    sol = re.sub(r"^(RFQ|RFP|ITB|IFB|SOL|NO\.?|#)[\s:#-]*", "", sol.strip())
-    sol = re.sub(r"[^A-Z0-9]", "", sol)
-    return sol or (r.get("link") or "")
+    return _norm(r.get("sol")) or (r.get("link") or "")
+
+
+def prev_key_of(r):
+    """The identity a record held BEFORE a deep re-scan. When a re-scan finally
+    reads a solicitation number off the attachments, the old row must be replaced,
+    never left behind as a twin."""
+    p = r.get("prevKey") or ""
+    if not p:
+        return ""
+    k = _norm(p)
+    return k or p
 
 
 def _merge_pair(a, b):
@@ -171,6 +185,14 @@ def main(shard_dir):
             k = key_of(r)
             if not k:
                 continue
+            pk = prev_key_of(r)
+            if pk and pk != k and pk in merged:
+                # the re-scan gave this record a firmer identity — retire the old row
+                old = merged.pop(pk)
+                for f in ("firstSeen", "deleted", "deletedOn", "hidden", "hiddenOn",
+                          "switched", "notes"):
+                    if r.get(f) in (None, "", False) and old.get(f) not in (None, "", False):
+                        r[f] = old[f]
             merged[k] = _merge_pair(merged[k], r) if k in merged else r
         ledger |= set((d.get("meta") or {}).get("ledger", []))
         b = load(sd / "blocked.json", {"sites": []})
