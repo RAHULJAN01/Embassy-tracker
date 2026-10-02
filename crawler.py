@@ -409,21 +409,39 @@ def group_file_units(file_urls):
 # --------------------------------------------------------------------------
 # SAM
 # --------------------------------------------------------------------------
+SAM_DIAG = {}      # captures exactly what SAM said, for Mission Control diagnostics
+
+
 def _sam_page(cfg, key, params):
-    """One SAM query. Returns [] on any failure — SAM must never kill a run."""
+    """One SAM query. Captures the exact HTTP status + message so we can SEE why
+    SAM returns nothing (bad key -> 403, over limit -> 429, empty -> 200/0)."""
+    import urllib.request
+    url = cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": fetcher.UA, "Accept": "application/json"})
     try:
-        raw, ct, final = fetcher.get(cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params))
-    except fetcher.Blocked as b:
-        print(f"SAM rate-limited ({b}) — skipping this query")
-        return []
+        with urllib.request.urlopen(req, timeout=45) as r:
+            body = r.read().decode("utf-8", "replace")
+            status = r.status
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        status = e.code
     except Exception as e:
-        print(f"SAM error ({str(e)[:70]})")
+        SAM_DIAG["last"] = f"network: {str(e)[:120]}"
         return []
-    if not raw:
-        return []
+    # record a readable diagnostic
+    snippet = body[:200].replace("\n", " ")
     try:
-        return json.loads(raw).get("opportunitiesData", []) or []
+        data = json.loads(body)
+        ops = data.get("opportunitiesData") or []
+        total = data.get("totalRecords", "?")
+        msg = data.get("error", {}).get("message") or data.get("message") or ""
+        SAM_DIAG["last"] = f"HTTP {status} | total={total} | got={len(ops)}" + (f" | {msg}" if msg else "")
+        return ops
     except Exception:
+        SAM_DIAG["last"] = f"HTTP {status} | non-JSON: {snippet}"
         return []
 
 
@@ -885,6 +903,7 @@ def run(mode):
     save(STATE, state)
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
     st.d["aiDiag"] = rotator.diag()
+    st.d["samDiag"] = SAM_DIAG.get("last", "SAM not queried this run")
     st.finish(note=f"done — {new_c} new, {chg_c} changed, {len(merged)} total, {ai_calls} AI calls")
     print(f"[{mode}] found={found} new={new_c} changed={chg_c} total={len(merged)} est={est_done} "
           f"ai_calls={ai_calls} blocked={len(blocked_sites)} ledger={len(ledger)}")

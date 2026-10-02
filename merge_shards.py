@@ -200,7 +200,8 @@ def main(shard_dir):
            "coverage": {k: v for s in statuses for k, v in (s.get("coverage") or {}).items()},
            "bots": len(statuses), "running": False,
            "lastError": next((s.get("lastError") for s in statuses if s.get("lastError")), ""),
-           "aiDiag": {"ok": {}, "errors": {}}}
+           "aiDiag": {"ok": {}, "errors": {}},
+           "samDiag": next((x.get("samDiag") for x in statuses if x.get("samDiag") and "not queried" not in str(x.get("samDiag"))), "SAM not queried")}
     for s in statuses:
         dg = s.get("aiDiag") or {}
         for k, v in (dg.get("ok") or {}).items():
