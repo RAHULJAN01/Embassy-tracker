@@ -13,17 +13,68 @@ WORK = pathlib.Path(tempfile.mkdtemp(prefix="repair-"))
 for f in ("crawler.py", "analyzer.py", "ai.py", "fetcher.py", "un_sources.py",
           "estimator.py", "pipeline.py", "docreader.py", "roots.json"):
     shutil.copy(SRC / f, WORK / f)
-shutil.copy(SRC / "data.json", WORK / "data.json")
+
+# ---------------------------------------------------------------- the fixture
+# A register with the SAME failure mix the live one had when the repair phase was
+# written: no closing date, no title, never adjudicated, unreadable attachments.
+# Synthesised rather than read from data.json so the test is deterministic and
+# does not break when the real register is rebuilt.
+def _rec(n, **kw):
+    r = {"sol": f"19IN50{26}Q{n:04d}",
+         "link": f"https://dz.usembassy.gov/business/rfq-{n}",
+         "title": f"Supply and delivery, lot {n}", "tier": "BID",
+         "verified": "VERIFIED", "deadline": "2027-03-01", "posted": "2026-09-01",
+         "files": [f"https://dz.usembassy.gov/files/{n}.pdf"], "fileCount": 1,
+         "verifyNotes": [], "archived": False, "firstSeen": "2026-09-01",
+         "platform": "USGOV", "sector": "COTS"}
+    r.update(kw)
+    return r
+
+
+def build_register():
+    rows = []
+    n = 100
+    for _ in range(12):      # no closing date — the biggest real failure
+        n += 1
+        rows.append(_rec(n, deadline="", verified="UNVERIFIED",
+                         verifyNotes=["no closing date found"]))
+    for _ in range(8):       # never adjudicated
+        n += 1
+        rows.append(_rec(n, tier="REVIEW", verified="UNVERIFIED",
+                         verifyNotes=["not adjudicated", "no closing date found"],
+                         deadline=""))
+    for _ in range(4):       # no title
+        n += 1
+        rows.append(_rec(n, title="(untitled solicitation)", verified="UNVERIFIED",
+                         verifyNotes=["no title"]))
+    for _ in range(4):       # documents the bots could not read
+        n += 1
+        rows.append(_rec(n, verified="UNVERIFIED", fileCount=3,
+                         files=[f"https://dz.usembassy.gov/files/{n}-{i}.pdf" for i in range(3)],
+                         verifyNotes=["3 document(s) unreadable"]))
+    for _ in range(6):       # already complete — must never be touched
+        n += 1
+        rows.append(_rec(n))
+    for _ in range(4):       # archived — must never be touched
+        n += 1
+        rows.append(_rec(n, archived=True, deadline="2020-01-01", status="Expired"))
+    return rows
+
+
+REGISTER = build_register()
+(WORK / "data.json").write_text(json.dumps({"meta": {}, "solicitations": REGISTER}))
+SRC_DATA = WORK / "seed.json"
+SRC_DATA.write_text(json.dumps({"meta": {}, "solicitations": REGISTER}))
+
 sys.path.insert(0, str(WORK))
 os.environ.update({"MAX_AI_CALLS": "40", "TIME_BUDGET_S": "600",
                    "PAGE_PAUSE": "0", "SHARDS": "1", "SHARD": "0"})
-
 import crawler, pipeline, ai
 
-for n, p in (("HERE", ""), ("DATA", "data.json"), ("STATE", "state.json"),
-             ("STATUS", "status.json"), ("BLOCKED", "blocked.json"),
-             ("CONTROL", "control.json"), ("ROOTS", "roots.json")):
-    setattr(crawler, n, WORK / p if p else WORK)
+for n, rel in (("HERE", ""), ("DATA", "data.json"), ("STATE", "state.json"),
+               ("STATUS", "status.json"), ("BLOCKED", "blocked.json"),
+               ("CONTROL", "control.json"), ("ROOTS", "roots.json")):
+    setattr(crawler, n, WORK / rel if rel else WORK)
 (WORK / "control.json").write_text('{"paused": false}')
 crawler.SAM_DIAG = {"last": "stubbed"}
 
@@ -36,19 +87,11 @@ def check(label, cond, detail=""):
         FAILS.append(label)
 
 
-# ---------------------------------------------------- the real register
-real = json.loads((SRC / "data.json").read_text())
-allrows = real["solicitations"]
+allrows = REGISTER
 active = [r for r in allrows if not r.get("archived")]
 unver = [r for r in active if r.get("verified") != "VERIFIED"]
-print(f"\nREAL REGISTER: {len(allrows)} records, {len(active)} active, "
+print(f"\nTEST REGISTER: {len(allrows)} records, {len(active)} active, "
       f"{len(unver)} unverified")
-why = {}
-for r in unver:
-    for n in (r.get("verifyNotes") or ["(no note)"]):
-        why[n] = why.get(n, 0) + 1
-for k, v in sorted(why.items(), key=lambda x: -x[1])[:8]:
-    print(f"   {v:>3} x {k}")
 
 print("\n=== 1. The repair queue targets the real backlog ===")
 q = crawler.repair_queue(allrows)
@@ -131,7 +174,7 @@ def runit():
     return d, s
 
 
-shutil.copy(SRC / "data.json", WORK / "data.json")
+shutil.copy(SRC_DATA, WORK / "data.json")
 stub("good"); AI_N["n"] = 0
 crawler.MAX_AI_CALLS = 40
 d1, s1 = runit()
@@ -169,7 +212,7 @@ for i in range(3):
     prev = now
 
 print("\n=== 5. A record that CANNOT be completed gives up loudly, not silently ===")
-shutil.copy(SRC / "data.json", WORK / "data.json")
+shutil.copy(SRC_DATA, WORK / "data.json")
 stub("bad")
 spends = []
 for i in range(5):
@@ -195,7 +238,7 @@ check("nothing exceeds the retry ceiling",
       all(int(r.get("repairTries", 0) or 0) <= crawler.MAX_REPAIR_TRIES for r in rows2))
 
 print("\n=== 6. The operator's own decisions survive a repair ===")
-shutil.copy(SRC / "data.json", WORK / "data.json")
+shutil.copy(SRC_DATA, WORK / "data.json")
 dd = json.loads((WORK / "data.json").read_text())
 tgt = next(r for r in dd["solicitations"]
            if crawler.repairable(r))
