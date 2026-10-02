@@ -1,17 +1,17 @@
 {
  "meta": {
-  "lastDeep": "2026-10-02 01:04 UTC",
-  "lastRoots": "2026-10-02 01:04 UTC",
-  "lastLive": "2026-10-02 01:04 UTC",
+  "lastDeep": "2026-10-02 02:58 UTC",
+  "lastRoots": "2026-10-02 02:58 UTC",
+  "lastLive": "2026-10-02 02:58 UTC",
   "counts": {
-   "active": 47,
-   "bid": 13,
-   "mid": 11,
+   "active": 49,
+   "bid": 14,
+   "mid": 12,
    "no": 3,
    "review": 20,
-   "archived": 76,
+   "archived": 79,
    "verified": 3,
-   "unverified": 44
+   "unverified": 46
   },
   "ledger": [
    "03515f70b475208b",
@@ -26,6 +26,7 @@
    "13be63a1516e259d",
    "18d47863e64db6e8",
    "18ea78235c7a770d",
+   "1c07f288879d4828",
    "1d943473f48d68bc",
    "1e7d376f46e38d05",
    "1ea573514424b9f8",
@@ -50,6 +51,7 @@
    "42a655fed7572db8",
    "42e19f2587008af6",
    "43b24a3fc8ac6253",
+   "49692909b695734e",
    "4a45e5dc9b2412d2",
    "4bbc69ff6dac896c",
    "4cc21f6a55368b04",
@@ -92,6 +94,7 @@
    "85c12c644cac23bb",
    "86f5887f3683ae32",
    "89e826f2963d9f04",
+   "89facc6c8fc6cffc",
    "8a20836b055325bc",
    "8ac6070e551bbdef",
    "8ad0d180f72c3fd1",
@@ -115,6 +118,7 @@
    "a846473f39259a74",
    "a872386a8d8cce98",
    "a984dfae9f5fe629",
+   "aabc1bdb448c5006",
    "abba67c0171db0e0",
    "acb375a931085e27",
    "ad1bc14d50e80a8d",
@@ -123,6 +127,7 @@
    "af0f64c04c8d6a26",
    "b1351ad1cbc2bd82",
    "b19f11038b5069b3",
+   "b1a550895e0d9232",
    "b2fcd68041c75ce7",
    "b5d2d7790f7d9b1a",
    "b69c3f05cbe58860",
@@ -131,6 +136,7 @@
    "ba2aa53c8c38b923",
    "bb071164d07bdf04",
    "bb1f14d1e5908dd4",
+   "bb436e8f0210e0ec",
    "bbc1491f2bb663c5",
    "bbde33bc8599e795",
    "bd2c03b61f415e11",
@@ -7836,6 +7842,328 @@
    "fp": "bf0f0f7520078277",
    "firstSeen": "2026-10-02",
    "archivedOn": "2026-10-02"
+  },
+  {
+   "tier": "MID",
+   "sector": "CONSTRUCTION",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "CMR Fence Project",
+   "sol": "PRIME",
+   "post": "U.S. Embassy Burma",
+   "country": "Burma",
+   "source": "Site",
+   "link": "https://mm.usembassy.gov/business/",
+   "posted": "",
+   "deadline": "2020-08-13",
+   "qa": "",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-02",
+   "summary": "Supply and install a fence (CMR Fence Project) for the U.S. Embassy in Yangon, Myanmar",
+   "type": "CONSTRUCTION",
+   "scope": "Supply and install a fence (CMR Fence Project) for the U.S. Embassy in Yangon, Myanmar",
+   "value": "",
+   "shipping": "F.O.B. Destination to U.S. Embassy Yangon, Myanmar",
+   "payment": "USD, monthly invoicing, payment after inspection",
+   "shipAfter": "within 90 days after notice to proceed (NTP)",
+   "setaside": "false",
+   "license": "Local licenses/permits required; can be obtained by a local partner",
+   "docs": [
+    "Copy of Bill of Lading",
+    "Invoice",
+    "Packing List",
+    "Advance Notice email to Rangoon-shipping@state.gov",
+    "Certificate of Substantial Completion",
+    "Schedule of Defects",
+    "Request for Substantial Completion",
+    "Request for Final Acceptance",
+    "Final request for payment",
+    "As-built drawings",
+    "Record shop drawings",
+    "Submittals"
+   ],
+   "files": [
+    "https://mm.usembassy.gov/wp-content/uploads/sites/13/2024/12/RFQ-U.S.-Emb-Rangoon-Perimeter-Wall-19BM8025Q0003.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [
+    {
+     "t": "M&M has no in-house workforce",
+     "k": "real",
+     "note": "M&M must use a local subcontractor or partner for on‑site labor."
+    },
+    {
+     "t": "M&M has no bonding capacity of its own",
+     "k": "real",
+     "note": "M&M cannot provide performance bond; must use a local partner or JV."
+    },
+    {
+     "t": "M&M has no in-country tax registration",
+     "k": "real",
+     "note": "M&M lacks local tax ID; must rely on a local partner."
+    },
+    {
+     "t": "Construction and on-site services are not automatically disqualifying",
+     "k": "boiler",
+     "note": "Policy permits construction and on-site services; not a disqualifier."
+    },
+    {
+     "t": "Local license/permit required for the work",
+     "k": "fix",
+     "note": "License must be held by the prime or a local partner; can be obtained by a local subcontractor."
+    }
+   ],
+   "route": "Use a local licensed subcontractor/JV partner to provide the required tax ID, performance bond, and on‑site labor, and act as prime through that partner.",
+   "challenge": "Clarify that the prime may satisfy the written assurance of subcontractor licenses and permits by providing documentation from its local partner, and that the requirement to comply with host‑country laws does not preclude reliance on a local partner for licensing, bonding, and tax registration.",
+   "citation": null,
+   "confidence": 0.85,
+   "reviewReason": "",
+   "verified": "VERIFIED",
+   "verifyNotes": [],
+   "evidence": "om the agent handling the shipment. Such proof shall be accepted in lieu of payment of excise tax. (End of clause) DUTY-FREE CLEARANCE In accordance with procedures described in Section H.16, if applicable, duty-free clearance shall include all imported materials, equipment and personnel, all shipping containers or otherwise, and shall be labeled as follows: ATTN: Customs & Shipping (CONTRACT No. 19BM8025CXXXX) to be completed by the Contractor. Items shall be marked as “Diplomatic Cargo”. 1 Material Shipping/Customs Clearance Material Shipping/Customs Clearance Materials for the CMR Fence Pro",
+   "fp": "ceb14da629de0367",
+   "firstSeen": "2026-10-02",
+   "archivedOn": "2026-10-02"
+  },
+  {
+   "tier": "BID",
+   "sector": "COTS",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "CENOP K9 UNIT HYBRID GENERATOR (Amendment)",
+   "sol": "PR11665277",
+   "post": "U.S. Embassy Colombia",
+   "country": "Colombia",
+   "source": "Site",
+   "link": "https://co.usembassy.gov/business/",
+   "posted": "",
+   "deadline": "",
+   "qa": "",
+   "status": "Active",
+   "archived": false,
+   "updated": "2026-10-02",
+   "summary": "Hybrid generator for K9 unit",
+   "type": "eligible",
+   "scope": "Hybrid generator for K9 unit",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [
+    "Amendment"
+   ],
+   "files": [
+    "https://common.usembassy.gov/wp-content/uploads/sites/57/2023/06/PR11665277-15.-INL-RFQ-Amendment.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [],
+   "route": "",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.95,
+   "reviewReason": "",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "19 document(s) unreadable",
+    "no closing date found"
+   ],
+   "evidence": "ut SelectUSA Commercial and Contract Opportunities Economic Opportunity INL-RFQ PR11665277 – CENOP K9 UNIT HYBRID GENERATOR (Amendment) INL-RFQ PR11665277 – CENOP K9 UNIT HYBRID GENERATOR (Amendment) Economic Opportunity INL INL-RFQ PR11227322- HEALTH AREA ELEMENTS GARZON_VELEZ_TUNJA INL-RFQ PR11227322- HEALTH AREA ELEMENTS GARZON_VELEZ_TU",
+   "fp": "081d5dddd6b68366",
+   "firstSeen": "2026-10-02"
+  },
+  {
+   "tier": "MID",
+   "sector": "SERVICES",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "VNET Internet Services Renewal",
+   "sol": "19FM2026Q0006",
+   "post": "U.S. Embassy Micronesia",
+   "country": "Micronesia",
+   "source": "Site",
+   "link": "https://fm.usembassy.gov/request-for-quotations-for-vnet-internet-services/",
+   "posted": "2026-01-29",
+   "deadline": "2026-02-09",
+   "qa": "",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-02",
+   "summary": "Renewal of VNET Internet Services providing 15/15 Mbps bandwidth with fault tolerance in the last mile and 16 public IP addresses (/28 subnet) for U.S. Embassy ",
+   "type": "Telecommunications / Internet Service Provider",
+   "scope": "Renewal of VNET Internet Services providing 15/15 Mbps bandwidth with fault tolerance in the last mile and 16 public IP addresses (/28 subnet) for U.S. Embassy ",
+   "value": "",
+   "shipping": "N/A (Local telecommunications connectivity to U.S. Embassy Kolonia)",
+   "payment": "EFT / Net 30 via U.S. Government standard terms",
+   "shipAfter": "",
+   "setaside": "None",
+   "license": "Host-country telecommunications/ISP operating authority in FSM",
+   "docs": [
+    "SF-1449",
+    "Section 1 Pricing Schedule",
+    "Section 5 Representations and Certifications",
+    "Attachment 1 Cybersecurity Supply Chain Risk Management (C-SCRM) Questionnaire"
+   ],
+   "files": [
+    "https://fm.usembassy.gov/wp-content/uploads/sites/41/2026/02/RFQ_19FM2026Q0006-VNET-INTERNET-SERVICE.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [
+    {
+     "t": "VNET Internet Services renewal of 15/15 Mbps providing fault tolerance in the last mile and 16 public IP addresses /28 subnet",
+     "k": "real",
+     "note": "Physical last-mile infrastructure and local IP allocation in Kolonia, FSM are required."
+    },
+    {
+     "t": "Attachment 1 CYBERSECURITY SUPPLY CHAIN RISK MANAGEMENT (C-SCRM) QUESTIONNAIRE",
+     "k": "real",
+     "note": "Telecommunications equipment and upstream transit providers must meet State Department supply chain security compliance."
+    }
+   ],
+   "route": "Prime-subcontractor model: Partner with the local licensed carrier/ISP in Pohnpei/Kolonia (such as FSM Telecommunications Corporation) to supply the physical last-mile circuit, redundancy, and IP block, with M&M acting as prime contractor responsible for contract management, C-SCRM compliance documentation, and USD billing.",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.85,
+   "reviewReason": "",
+   "verified": "VERIFIED",
+   "verifyNotes": [],
+   "evidence": "ernational Parental Child Abduction Arrest of a U.S. Citizen Death of a U.S. Citizen Victims of Crime Emergency Financial Assistance [DOCUMENT: https://fm.usembassy.gov/wp-content/uploads/sites/41/2026/02/RFQ_19FM2026Q0006-VNET-INTERNET-SERVICE.pdf] U.S. Embassy Kolonia, Federated States of Micronesia Date: January 29, 2026 Dear Prospective Quoter: Subject: Request for Quotations number 19FM2026Q0006. Enclosed is a Request for Quotations (RFQ) for VNET Internet Services renewal of 15/15 Mbps providing fault tolerance in the last mile and 16 public IP addresses /28 subnet. If you would like to ",
+   "fp": "b1450dab5bb33a69",
+   "firstSeen": "2026-10-02",
+   "archivedOn": "2026-10-02"
+  },
+  {
+   "tier": "NO",
+   "sector": "SERVICES",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "Human Resources Assistant (Combined-LE Staff Services)",
+   "sol": "KOROR-2026-005",
+   "post": "U.S. Embassy Palau",
+   "country": "Palau",
+   "source": "Site",
+   "link": "https://pw.usembassy.gov/wp-content/uploads/sites/148/2026/08/KOROR-2026-005-HRA-FSN-8-CCombined-LE-Staff-Services.pdf",
+   "posted": "2026-08-17",
+   "deadline": "2026-09-04",
+   "qa": "",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-02",
+   "summary": "Administration of Locally Employed staff services at the U.S. Embassy in Koror, Palau.",
+   "type": "Human Resources Assistant",
+   "scope": "Administration of Locally Employed staff services at the U.S. Embassy in Koror, Palau.",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [
+    "DS-174 Employment Application Form",
+    "Curriculum Vitae or Resume",
+    "School Certificate or Diploma",
+    "Transcript of Records (TOR)",
+    "Other Certificate/s or License/s (if applicable)",
+    "Residency Permit and/or Work Permit (for Dual Citizen, U.S. Citizen and Third Co",
+    "Copy of Sponsor's Orders/Assignment Notification (or equivalent)",
+    "Copy of Passport",
+    "DD-214, Letter from Veterans’ Affairs, or other supporting documentation (if app",
+    "SF-50 (if applicable)"
+   ],
+   "files": [
+    "https://pw.usembassy.gov/wp-content/uploads/sites/148/2026/08/KOROR-2026-005-HRA-FSN-8-CCombined-LE-Staff-Services.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [
+    {
+     "t": "The U.S. Embassy in Koror, Palau is seeking eligible and qualified applicants for the position of Human Resources Assistant (Combined-LE Staff Services).",
+     "k": "real",
+     "note": "Not a procurement solicitation"
+    }
+   ],
+   "route": "",
+   "challenge": "",
+   "citation": {
+    "doc": "Vacancy Announcement",
+    "quote": "The U.S. Embassy in Koror, Palau is seeking eligible and qualified applicants for the position of Human Resources Assistant (Combined-LE Staff Services)."
+   },
+   "confidence": 1.0,
+   "reviewReason": "",
+   "verified": "VERIFIED",
+   "verifyNotes": [],
+   "evidence": " [ATTACHMENT: https://pw.usembassy.gov/wp-content/uploads/sites/148/2026/08/KOROR-2026-005-HRA-FSN-8-CCombined-LE-Staff-Services.pdf] VACANCY ANNOUNCEMENT Announcement Number: Koror-2026-005 Hiring Agency: Embassy Koror, Republic of Palau Position Title: Human Resources Assistant (Combined-LE Staff Services) Opening Period: August 17 – September 4, 2026 Vacancy Time Zone: GMT+9 Series/Grade: FSN-08 Salary: US$ 23,406.00 – 35,110 per annum Work Schedule: Full Time (40 hours per week) Promotion Potential: FSN-08 Duty Location(s): 1 Vacancy in Koror, Palau For More Info: Email us at HRKoror@state",
+   "fp": "733e6b399fa41300",
+   "firstSeen": "2026-10-02",
+   "archivedOn": "2026-10-02"
+  },
+  {
+   "tier": "MID",
+   "sector": "SERVICES",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "A&E Designs for SJO Monitoring Center",
+   "sol": "PR16129331",
+   "post": "U.S. Embassy Costa Rica",
+   "country": "Costa Rica",
+   "source": "Site",
+   "link": "https://cr.usembassy.gov/business/",
+   "posted": "",
+   "deadline": "",
+   "qa": "",
+   "status": "Active",
+   "archived": false,
+   "updated": "2026-10-02",
+   "summary": "A&E Designs for SJO Monitoring Center",
+   "type": "Professional Architectural and Engineering Services",
+   "scope": "A&E Designs for SJO Monitoring Center",
+   "value": "",
+   "shipping": "",
+   "payment": "",
+   "shipAfter": "",
+   "setaside": "",
+   "license": "",
+   "docs": [
+    "RFO Part 36"
+   ],
+   "files": [
+    "https://cr.usembassy.gov/wp-content/uploads/sites/129/2026/09/PR16129331.pdf",
+    "https://cr.usembassy.gov/wp-content/uploads/sites/129/2026/09/PR16113564.pdf",
+    "https://cr.usembassy.gov/wp-content/uploads/sites/129/2026/09/INL-Combined-Synopsis-and-Solicitation-PR16129583-Retrofit-Support-Work.pdf",
+    "https://cr.usembassy.gov/wp-content/uploads/sites/129/2026/09/INL-Combined-Synopsis-and-Solicitation-PR16088790-Wet-Scrubber-for-Incinerator.pdf",
+    "https://cr.usembassy.gov/wp-content/uploads/sites/129/2026/07/PR16129824.pdf"
+   ],
+   "fileCount": 5,
+   "restrictions": [
+    {
+     "t": "This acquisition is conducted in accordance with the Architect-Engineer (A&E) Selection Procedures prescribed in RFO Part 36 for professional Architectural and Engineering Services.",
+     "k": "real",
+     "note": "A&E selection procedures govern the professional-services evaluation."
+    },
+    {
+     "t": "The Government intends to evaluate firms based on their profes",
+     "k": "real",
+     "note": "Evaluation appears to rely on professional qualifications; the text is truncated, so a prime-specific experience requirement cannot be confirmed."
+    }
+   ],
+   "route": "Team with a local A&E firm or subcontractor that holds the required professional qualifications/license and pass through its experience/qualifications; price local professional labor into the bid.",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.55,
+   "reviewReason": "",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "no closing date found"
+   ],
+   "evidence": "sta Rica for the acquisition of commodities and/or services. If you or the company you represent would like to participate in the solicitations, or would only like to view the solicitations issued by the Procurement Section, click on the respective bid to find the information. Thank you for visiting us and for your participation. A&E Designs for SJO Monitoring Center SOLICITATION NO. PR16129331. This acquisition is conducted in accordance with the Architect-Engineer (A&E) Selection Procedures prescribed in RFO Part 36 for professional Architectural and Engineering Services. The Government inte",
+   "fp": "717653e6320b8ef1",
+   "firstSeen": "2026-10-02"
   }
  ]
 }
