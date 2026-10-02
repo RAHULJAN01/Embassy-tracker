@@ -52,6 +52,7 @@ jobs:
           python test_analyzer.py
           python test_pipeline_e2e.py
           python test_repair.py
+          python test_merge.py
       - id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then

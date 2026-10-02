@@ -64,6 +64,31 @@ def _merge_pair(a, b):
     for f in ("deadline", "posted", "value", "setaside", "samId", "estimate", "citation"):
         if not keep.get(f) and other.get(f):
             keep[f] = other[f]
+    # The repair counter must SURVIVE the merge. One bot may have just spent a
+    # deep re-scan on this record while another still holds an untouched copy;
+    # if the untouched copy wins, the attempt is forgotten and the record gets
+    # retried for ever instead of giving up and asking for a human.
+    tries = max(int(a.get("repairTries", 0) or 0), int(b.get("repairTries", 0) or 0))
+    if tries:
+        keep["repairTries"] = tries
+    scans = [r.get("lastDeepScan") for r in (a, b) if r.get("lastDeepScan")]
+    if scans:
+        keep["lastDeepScan"] = max(scans)
+    # likewise the operator's own decisions, whichever copy carries them
+    for f in ("deleted", "deletedOn", "hidden", "hiddenOn", "switched", "switchedOn",
+              "firstSeen", "notes"):
+        if not keep.get(f) and other.get(f):
+            keep[f] = other[f]
+    # if the winner has no explanation but the re-scanned copy does, keep the words
+    if not keep.get("verifyNotes") and other.get("verifyNotes"):
+        keep["verifyNotes"] = other["verifyNotes"]
+    if keep.get("verified") != "VERIFIED":
+        gave_up = [n for r in (a, b) for n in (r.get("verifyNotes") or [])
+                   if "gave up" in n or "re-scan" in n]
+        if gave_up:
+            notes = [n for n in (keep.get("verifyNotes") or [])
+                     if "gave up" not in n and not n.startswith("re-scan")]
+            keep["verifyNotes"] = (notes + gave_up[-1:])[:6]
     files = list(dict.fromkeys((keep.get("files") or []) + (other.get("files") or [])))
     keep["files"] = files
     keep["fileCount"] = len(files)
