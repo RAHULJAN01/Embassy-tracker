@@ -45,14 +45,14 @@
   .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
     max-width:1460px;margin:0 auto;padding-left:20px;padding-right:20px}
   /* scrolled: the masthead slims down so the pinned controls stay compact */
-  .mastwrap .mast,.mastwrap .logo,.mastwrap .flag{transition:height .12s linear,padding .12s linear}
-  body.scrolled .mastwrap .mast{padding:7px 0 6px}
-  body.scrolled .mastwrap .logo{height:40px}
-  body.scrolled .mastwrap .flag{height:26px}
-  body.scrolled .mastwrap .mmeta{display:none}
-  body.scrolled .mastwrap .brand .bt .n{font-size:15px}
-  body.scrolled .mastwrap .brand .bt .s{display:none}
-  body.scrolled .mastwrap .toolbar{padding:7px 0}
+  /* The header is FIXED. It does not shrink, grow, or animate on scroll —
+     Rahul: "I want it to stay fixed and not do these fancy dances." So the
+     masthead is simply built compact and stays exactly that size always. */
+  .mastwrap .mast{padding:9px 0 8px}
+  .mastwrap .logo{height:46px}
+  .mastwrap .flag{height:30px}
+  .mastwrap .mmeta{font-size:10.5px;line-height:1.5}
+  .mastwrap .toolbar{padding:8px 0}
   @media(max-width:1000px){
     .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
       padding-left:12px;padding-right:12px}
@@ -194,7 +194,11 @@
   .flagw{display:inline-block;margin-right:6px;vertical-align:-2px;line-height:0}
   .flagimg{width:20px;height:15px;display:block;border:1px solid var(--line2);
     object-fit:cover;background:var(--alt)}
-  .flagw.big .flagimg{width:26px;height:19px}
+  .flagw.big .flagimg{width:34px;height:25px}
+  /* under the reference number, where Rahul wants it, and properly sized */
+  .flagw.ref{display:block;margin:7px 0 0}
+  .flagw.ref .flagimg{width:40px;height:30px;border-width:1px}
+  .flagw.ref.noimg::after{font-size:11px;padding:2px 6px}
   .flagw.noimg .flagimg{display:none}
   .flagw.noimg::after{content:attr(data-cc);display:inline-block;font-size:9.5px;
     font-weight:700;letter-spacing:.5px;border:1px solid var(--line2);color:var(--sub);
@@ -275,6 +279,20 @@
   .gatebox .glogo{display:block;margin:0 auto 16px;min-height:4px}
   .gatebox .glogo-svg{width:172px;max-width:72%;height:auto;display:block;margin:0 auto}
   body.night .gatebox .glogo-svg{filter:invert(1)}
+
+  /* what an unfinished record needs from a human — the first thing you read */
+  .needs{border:2px solid var(--orange);margin:0 0 14px;background:var(--bg)}
+  .needs-h{background:var(--orange);color:#fff;font-size:11.5px;font-weight:700;
+    letter-spacing:.7px;text-transform:uppercase;padding:8px 12px}
+  .need{padding:10px 13px;border-top:1px solid var(--line)}
+  .need:first-of-type{border-top:none}
+  .need-w{font-weight:700;font-size:14px;margin-bottom:3px}
+  .need-y{font-size:13px;color:var(--sub);line-height:1.5}
+  .need-a{font-size:13px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+  .needtag{display:inline-block;margin-top:5px;font-size:10px;font-weight:700;
+    letter-spacing:.3px;padding:3px 7px;border:1px solid var(--orange);color:var(--orange);
+    background:var(--orangebg);max-width:100%;white-space:normal;line-height:1.35}
+  .needmore{font-weight:400;opacity:.8}
 
   /* ---------- the dossier: a brief you can act on, not a spec dump ---------- */
   .brief{font-size:16.5px;line-height:1.5;font-weight:700;border-left:5px solid var(--ink);
@@ -854,6 +872,7 @@ function dossier(s){
   const grp=(title,inner,cls)=>inner?`<div class="dgrp ${cls||''}"><h3>${title}</h3><div class="dgb">${inner}</div></div>`:'';
   const tbl=(rows)=>rows?`<table class="kv"><tbody>${rows}</tbody></table>`:'';
   let h='<div class="dwrap">';
+  h+=needsBox(s);
 
   /* ---- THE BRIEF: what this is, in one plain sentence ---- */
   if(s.brief) h+=`<div class="brief">${esc(s.brief)}</div>`;
@@ -953,9 +972,9 @@ function rowHTML(s,i){
   const k=opKey(s);
   const del=isDeleted(s), hid=isHidden(s);
   return `<tr class="row" onclick="tgl(${i})">
-    <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}</td>
+    <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}${flagOf(s.country,"ref")}</td>
     <td data-l="Source"><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
-    <td class="tcell titlecell"><span class="ttl">${flagOf(s.country)}${esc(s.title)}</span>${setAsideTag(s)}${opBadge(s)}</td>
+    <td class="tcell titlecell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}${needsTag(s)}${opBadge(s)}</td>
     <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${flagOf(s.country)}${esc(s.country)}</span></td>
     <td class="hidecol" data-l="Classification">${esc(s.type)}</td>
     <td class="num" data-l="Deadline"><span class="due ${soon}">${esc(duetxt)}</span></td>
@@ -981,6 +1000,83 @@ function rowHTML(s,i){
 }
 /* Set-aside the CO used — shown on EVERY row. Red when it locks us out,
    green when the field is genuinely open, grey when the notice never says. */
+/* ================= WHAT DOES THIS ACTUALLY NEED FROM YOU? =================
+   "Under review" on its own is useless. Every unfinished record now says what
+   the bots could not settle, why, and the one thing you could do about it. */
+function reviewNeeded(s){
+  const out=[], notes=(s.verifyNotes||[]).join(" ").toLowerCase();
+  const add=(what,why,action)=>out.push({what,why,action});
+
+  if(!s.deadline || /no closing date/.test(notes))
+    add("Confirm the closing date",
+        "No closing date appears anywhere in the notice or its attachments, so the bots cannot tell whether it is still open.",
+        "Open the notice and read the submission deadline. Then press DEEP SCAN, or SWITCH it yourself.");
+
+  if(s.tier==='REVIEW' && s.reviewReason)
+    add("Decide the bid yourself", s.reviewReason,
+        "Read the dossier below and use SWITCH to put it in BID, CONDITIONAL or NON-ELIGIBLE.");
+  else if(s.tier==='REVIEW')
+    add("Decide the bid yourself",
+        "The adjudicator could not reach a confident decision on this one.",
+        "Read the dossier below and use SWITCH to place it yourself.");
+
+  if(s.overturnedNobid)
+    add("A refusal was overturned — check the route",
+        "A first pass refused this. The second, stronger check disagreed: "+s.overturnedNobid,
+        "Confirm the fulfilment route below looks real before you commit time to it.");
+
+  if(/no title/.test(notes) || !s.title || /^\(untitled/.test(s.title||""))
+    add("Give it a name",
+        "The page carried no readable heading, so there is nothing to call it.",
+        "Open the notice and check what it is actually for.");
+
+  const rf=s.readFailures||[];
+  if(rf.length){
+    const why=rf.map(f=>`${(f.file||'').split('/').pop()} — ${f.why||'unreadable'}`);
+    add(`Read ${rf.length} file${rf.length>1?'s':''} the bots could not open`,
+        "These attachments could not be read, so whatever is inside them was not considered: "+why.join("; "),
+        "Open them yourself. If they are scanned images with no text layer, only a human can read them.");
+  } else if(/document\(s\) unreadable/.test(notes)){
+    add("Some attachments could not be read",
+        (s.verifyNotes||[]).filter(n=>/unreadable/.test(n)).join("; "),
+        "Open the notice and check the attachments directly.");
+  }
+
+  if(/gave up after/.test(notes))
+    add("The bots have stopped trying",
+        (s.verifyNotes||[]).find(n=>/gave up/.test(n))||"",
+        "This one will not complete on its own. Decide it by hand, or DELETE it.");
+
+  if(/re-scan \d+\//.test(notes))
+    add("A re-scan did not finish it",
+        (s.verifyNotes||[]).find(n=>/re-scan \d+\//.test(n))||"",
+        "It will try again automatically. Press DEEP SCAN to push it up the queue.");
+
+  if(!out.length && s.verified!=='VERIFIED')
+    add("Something is still missing",
+        (s.verifyNotes||[]).join("; ")||"The record did not pass every completeness check.",
+        "Press DEEP SCAN to have the bots read it again from scratch.");
+  return out;
+}
+
+function needsBox(s){
+  if(s.verified==='VERIFIED' && s.tier!=='REVIEW' && !s.overturnedNobid) return '';
+  const n=reviewNeeded(s); if(!n.length) return '';
+  return `<div class="needs"><div class="needs-h">⚑ What this needs from you</div>`
+    + n.map(x=>`<div class="need">
+         <div class="need-w">${esc(x.what)}</div>
+         <div class="need-y">${esc(x.why)}</div>
+         <div class="need-a"><b>Do this:</b> ${esc(x.action)}</div>
+       </div>`).join('')
+    + `</div>`;
+}
+function needsTag(s){
+  if(s.verified==='VERIFIED' && s.tier!=='REVIEW') return '';
+  const n=reviewNeeded(s); if(!n.length) return '';
+  return `<div class="needtag" title="${esc(n.map(x=>x.what).join(' · '))}">⚑ ${esc(n[0].what)}`
+       + (n.length>1?` <span class="needmore">+${n.length-1} more</span>`:'')+`</div>`;
+}
+
 function setAsideTag(s){
   const raw=(s.setaside||'').trim();
   if(!raw) return `<span class="sa sa-unk" title="The notice does not state a set-aside">SET-ASIDE NOT STATED</span>`;
@@ -1120,23 +1216,8 @@ function refreshCounts(){document.getElementById('scount').textContent=LS().leng
 /* The toolbar pins directly beneath the masthead, so its buttons — Collapse All
    among them — never scroll out of reach on a computer. The masthead's height
    changes as it reflows, so it is measured rather than guessed. */
-/* The header shrinks when you scroll — but shrinking it makes the page shorter,
-   which moves the scroll position, which can push it back over the threshold and
-   straight into a flicker loop on the way back up. Two guards stop that for good:
-   a HYSTERESIS BAND (it compacts at 110px and only expands again below 40px, so a
-   single threshold can never be crossed twice by its own side-effect), and a
-   state check so the class is only touched when it genuinely changes. */
-let _compact=false;
-function syncMastHeight(){
-  const y=window.scrollY||document.documentElement.scrollTop||0;
-  const want=_compact ? y>40 : y>110;       // sticky in both directions
-  if(want!==_compact){ _compact=want; document.body.classList.toggle('scrolled', want); }
-}
-let _scrollTick=false;
-window.addEventListener('scroll', ()=>{        // once per frame, never mid-layout
-  if(_scrollTick) return; _scrollTick=true;
-  requestAnimationFrame(()=>{ _scrollTick=false; syncMastHeight(); });
-}, {passive:true});
+/* Nothing resizes on scroll. The header is one fixed size, always. */
+function syncMastHeight(){}
 window.addEventListener('resize', syncMastHeight);
 window.addEventListener('load', syncMastHeight);
 
