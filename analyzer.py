@@ -51,17 +51,14 @@ ADJUDICATE_PROMPT = (
     "  * Illegal / sanctioned counterparty or destination.\n"
     "  NOTE: bonding, on-site labour, installation, local licences, past-performance demands and "
     "RFP narrative scoring are NOT fatal. They are GAPS -> handle them in Stage 3.\n\n"
-    "REGISTRATION IS NOT A RESTRICTION — READ THIS CAREFULLY:\n"
-    "  M&M already holds UEI XWL3YN7QNKT7 and an EIN, and its SAM.gov registration is in "
-    "progress. A clause requiring SAM.gov registration (FAR 52.204-7), an active SAM record, "
-    "a UEI, a CAGE code, an NCAGE code, or registration on a buyer's own vendor portal is "
-    "ROUTINE ADMINISTRATIVE BOILERPLATE that appears on virtually every U.S. government "
-    "solicitation. It is paperwork M&M is already completing, not a barrier.\n"
-    "  * NEVER let a registration requirement make the tier MID or NO.\n"
-    "  * NEVER list it as a controlling restriction. If you list it at all, use kind \"boiler\".\n"
-    "  * Judge the solicitation as if the registration were already active.\n"
-    "  * The ONLY time it matters is if the closing date is so near that registration could not "
-    "be active in time — in that case mention it under gotchas, and still do not change the tier.\n\n"
+    "REGISTRATION IS SETTLED. DO NOT CONSIDER IT AT ALL:\n"
+    "  M&M's SAM.gov registration is COMPLETE and active, and it holds UEI XWL3YN7QNKT7 "
+    "and an EIN. Registration is a closed question.\n"
+    "  * Do NOT list SAM.gov, System for Award Management, FAR 52.204-7, UEI, CAGE, NCAGE, "
+    "DUNS or any vendor-portal registration as a restriction, a gap, a risk or a gotcha.\n"
+    "  * Do NOT let any of them influence the tier, the route or the confidence.\n"
+    "  * Do NOT mention them anywhere in your answer. Treat those clauses as if they were "
+    "not in the document. They are satisfied.\n\n"
     "SERVICES & CONSTRUCTION — decide experience exactly like this:\n"
     "  * No past-performance/experience requirement at all -> BID.\n"
     "  * Experience required BUT the solicitation allows a subcontractor's, partner's, JV's or\n"
@@ -287,28 +284,49 @@ _REGISTRATION_RX = re.compile(
     r"|\buei\b|cage code|ncage|duns|vendor (portal )?registration|register(ed)? in sam)\b", re.I)
 
 
-def declassify_registration(rec):
-    """A SAM / UEI / CAGE / NCAGE clause is boilerplate, not a controlling restriction.
+def strip_registration(rec):
+    """Registration is settled, so it never appears in the register at all.
 
-    Rahul: "remove the restriction which requires SAM registration, it is causing
-    fully biddable ones to sit in BNB." He is right — it is paperwork already under
-    way, and it was demoting work he can actually win.
+    Rahul: "remove the criteria fundamentally which demands SAM registration from
+    the entire portal, now and forever — this is already done."
+
+    The prompt tells the model to ignore it. This is the deterministic backstop
+    behind that instruction: any registration clause that still slips through is
+    deleted outright — not downgraded, not shown as boilerplate — and anything
+    held back solely by one is released. A model that drifts cannot quietly
+    reintroduce a barrier that no longer exists.
     """
-    moved = 0
-    for r in rec.get("restrictions") or []:
-        if r.get("kind") == "real" and _REGISTRATION_RX.search(r.get("text", "") or ""):
-            r["kind"] = "boiler"
-            r["note"] = ("Routine registration boilerplate — M&M holds a UEI and its SAM "
-                         "record is in progress. Not a barrier to bidding.")
-            moved += 1
-    # If registration was the ONLY thing holding it at MID, it belongs at BID.
-    if moved and rec.get("tier") == "MID":
-        real_left = [r for r in (rec.get("restrictions") or []) if r.get("kind") == "real"]
-        route = (rec.get("route") or "")
-        route_is_registration = bool(route) and bool(_REGISTRATION_RX.search(route))
-        if not real_left and (not route or route_is_registration):
+    before = rec.get("restrictions") or []
+    rec["restrictions"] = [r for r in before
+                           if not _REGISTRATION_RX.search(r.get("text", "") or "")]
+    removed = len(before) - len(rec["restrictions"])
+
+    rec["gotchas"] = [g for g in (rec.get("gotchas") or [])
+                      if not _REGISTRATION_RX.search(g)]
+    for f in ("license", "route", "challenge_draft"):
+        v = rec.get(f) or ""
+        if v and _REGISTRATION_RX.search(v):
+            # keep the parts that are about something real
+            keep = [seg.strip() for seg in re.split(r"(?<=[.;])\s+", v)
+                    if seg.strip() and not _REGISTRATION_RX.search(seg)]
+            rec[f] = " ".join(keep)
+            removed += 1
+
+    # released: nothing real is holding it back any more
+    if removed and rec.get("tier") == "MID":
+        if not [r for r in rec["restrictions"] if r.get("kind") == "real"] \
+                and not (rec.get("route") or "").strip():
             rec["tier"] = "BID"
-            rec["promoted_from_mid"] = "registration paperwork is not a barrier"
+            rec["promoted_from_mid"] = "registration is complete — nothing else was holding it"
+    # A no-bid whose ONLY cited reason is registration has no reason left at all,
+    # whether or not anything else was stripped.
+    if rec.get("tier") == "NO":
+        cit = (rec.get("citation") or {}).get("quote", "")
+        if cit and _REGISTRATION_RX.search(cit):
+            rec["tier"] = "REVIEW"
+            rec["citation"] = None
+            rec["review_reason"] = ("no-bid rested only on a registration clause, which no "
+                                    "longer applies — needs a fresh look")
     return rec
 
 
@@ -353,7 +371,7 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     rec = _coerce(data)
     rec["_evidence"] = evidence
     rec["review_reason"] = ""
-    declassify_registration(rec)      # registration paperwork never costs us a bid
+    strip_registration(rec)           # registration is settled; it never appears
 
     # --- DATES ARE MANDATORY: back-fill anything the model missed, from the raw text
     if not rec["closing"]:

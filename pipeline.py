@@ -66,6 +66,18 @@ class Budget:
         return self.used
 
 
+def _first_title(text, limit=140):
+    """A usable title straight out of the text, so an expired notice can still be
+    archived and documented without spending a single AI call on it."""
+    import re as _re
+    for line in (text or "").splitlines():
+        s = line.strip(" \t:-—·|")
+        if 12 <= len(s) <= limit and not s.lower().startswith(("http", "[document")):
+            if _re.search(r"[a-zA-Z]{4}", s):
+                return s[:limit]
+    return ""
+
+
 def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
                 fetch_attachments, status=None, label=""):
     """Take ONE solicitation all the way through. Returns (record|None, report).
@@ -96,6 +108,21 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
 
     if len(text.strip()) < 180:
         report["stage"] = "abandoned: nothing readable"
+        return None, report
+
+    # ---- 1b. IS IT ALREADY DEAD? Check the closing date BEFORE paying to think.
+    # Nearly half the first paid run was spent fully adjudicating solicitations
+    # that had closed in 2024 and 2025, only to archive them a moment later.
+    # Date harvesting is plain regex and costs nothing, so it goes first.
+    closing = ""
+    try:
+        closing = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
+    except Exception:
+        closing = ""
+    if closing and closing < today:
+        report["stage"] = f"skipped: closed on {closing}"
+        report["expired"] = closing
+        report["title_guess"] = _first_title(text)
         return None, report
 
     # ---- 2. ADJUDICATE (with one retry, which the reservation already covers)

@@ -737,6 +737,7 @@ def run(mode):
     blocked_hosts = {b["host"] for b in blocked_sites}
 
     rows, discovered, completed, abandoned, repaired = [], 0, 0, 0, 0
+    skipped_expired = 0      # closed before we reached them — archived, never adjudicated
 
     def repaired_fail(old, why):
         """A repair attempt that didn't land. Keep the record, count the try, and
@@ -770,12 +771,37 @@ def run(mode):
 
     def finish_unit(unit, label):
         """Run ONE solicitation end to end. Returns True if a record was stored."""
-        nonlocal completed, abandoned
+        nonlocal completed, abandoned, skipped_expired
         rec, rep = pipeline.process_one(
             unit, call_ai=call, analyzer=analyzer, estimator=estimator,
             budget=budget, today=today(), fetch_attachments=read_all,
             status=st, label=label)
         if not rec:
+            # Already closed before we ever reached it. Rahul's rule is "archive
+            # everything, document everything" — so it is still recorded, with the
+            # date that killed it, but it never costs an AI call.
+            if rep.get("expired"):
+                row = {"sol": unit.get("sol_hint", ""), "link": unit.get("link", ""),
+                       "title": rep.get("title_guess") or unit.get("sol_hint")
+                                or "(expired solicitation)",
+                       "tier": "", "sector": "", "platform": unit.get("platform", "USGOV"),
+                       "agency": unit.get("agency", ""), "domestic": unit.get("domestic", False),
+                       "post": unit.get("post", ""), "country": unit.get("country", ""),
+                       "source": unit.get("source", "Site"),
+                       "deadline": rep["expired"], "status": "Expired", "archived": True,
+                       "archivedOn": today(), "updated": today(),
+                       "verified": "UNVERIFIED",
+                       "verifyNotes": [f"closed on {rep['expired']} before the bots reached it "
+                                       f"— archived without spending an AI call on it"],
+                       "files": unit.get("attachments", [])[:15],
+                       "fileCount": len(unit.get("attachments") or []),
+                       "restrictions": [], "docs": [], "gotchas": [], "lineItems": [],
+                       "skippedExpired": True}
+                row["fp"] = fingerprint(row)
+                rows.append(row)
+                ledger.add(unit["hash"])          # never look at it again
+                skipped_expired += 1
+                return False
             abandoned += 1
             st.d["lastError"] = rep.get("stage", "")
             return False
@@ -1077,10 +1103,12 @@ def run(mode):
     st.d["completed"] = completed
     st.d["abandoned"] = abandoned
     st.d["repaired"] = repaired
+    st.d["skippedExpired"] = skipped_expired
     st.d["stillUnfinished"] = sum(1 for r in merged if repairable(r))
     st.finish(note=(f"done — {repaired} unfinished records completed, "
                     f"{completed} new solicitations fully processed, "
-                    f"{abandoned} left for next run, {budget.used} AI calls"
+                    f"{abandoned} left for next run, {skipped_expired} already-closed skipped "
+                    f"without spending a call, {budget.used} AI calls"
                     + (f" · {budget.stopped_reason}" if budget.stopped_reason else "")))
     print(f"[{mode}] repaired={repaired} discovered={discovered} completed={completed} "
           f"abandoned={abandoned} total={len(merged)} ai={budget.used}/{MAX_AI_CALLS} "

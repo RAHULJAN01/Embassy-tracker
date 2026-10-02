@@ -6,63 +6,171 @@
   {
    "title": "Entity & Formation",
    "rows": [
-    ["Legal name", "MADISON & MAIN LLC", ""],
-    ["Entity type", "Limited Liability Company", ""],
-    ["State of formation", "Wyoming", ""],
-    ["Date of formation", "25 August 2026", ""],
-    ["State filing number", "2026-002064430", ""],
-    ["Status", "Active", ""],
-    ["Ownership", "Foreign-owned (single member)", ""]
+    [
+     "Legal name",
+     "MADISON & MAIN LLC",
+     ""
+    ],
+    [
+     "Entity type",
+     "Limited Liability Company",
+     ""
+    ],
+    [
+     "State of formation",
+     "Wyoming",
+     ""
+    ],
+    [
+     "Date of formation",
+     "25 August 2026",
+     ""
+    ],
+    [
+     "State filing number",
+     "2026-002064430",
+     ""
+    ],
+    [
+     "Status",
+     "Active",
+     ""
+    ],
+    [
+     "Ownership",
+     "Foreign-owned (single member)",
+     ""
+    ]
    ]
   },
   {
    "title": "Federal Identifiers",
    "rows": [
-    ["EIN (Employer Identification Number)", "36-5193196", ""],
-    ["EIN date allotted", "", "needed — the date printed on your IRS CP-575 notice"],
-    ["UEI (Unique Entity ID, SAM.gov)", "XWL3YN7QNKT7", ""],
-    ["SAM.gov registration", "Entity validated; UEI assigned", ""],
-    ["CAGE Code", "", "not yet issued — follows SAM registration"],
-    ["NCAGE Code", "", "requested via NSPA (expedited, 3-day route) — awaiting issue"]
+    [
+     "EIN (Employer Identification Number)",
+     "36-5193196",
+     ""
+    ],
+    [
+     "EIN date allotted",
+     "",
+     "needed — the date printed on your IRS CP-575 notice"
+    ],
+    [
+     "UEI (Unique Entity ID, SAM.gov)",
+     "XWL3YN7QNKT7",
+     ""
+    ],
+    [
+     "SAM.gov registration",
+     "Complete and active",
+     ""
+    ],
+    [
+     "CAGE Code",
+     "",
+     "not yet issued — follows SAM registration"
+    ],
+    [
+     "NCAGE Code",
+     "",
+     "requested via NSPA (expedited, 3-day route) — awaiting issue"
+    ]
    ]
   },
   {
    "title": "Registered Agent (Wyoming)",
    "rows": [
-    ["Registered agent", "Northwest Registered Agent Service, Inc.", ""],
-    ["Registered office address", "30 N Gould St, Ste N, Sheridan, WY 82801, United States", ""],
-    ["Agent contact", "", "needed — the phone and email on your Northwest account"]
+    [
+     "Registered agent",
+     "Northwest Registered Agent Service, Inc.",
+     ""
+    ],
+    [
+     "Registered office address",
+     "30 N Gould St, Ste N, Sheridan, WY 82801, United States",
+     ""
+    ],
+    [
+     "Agent contact",
+     "",
+     "needed — the phone and email on your Northwest account"
+    ]
    ]
   },
   {
    "title": "Addresses",
    "rows": [
-    ["Principal / physical address", "295 St Nai Basti, Near Govt School, Badusar 332317, Rajasthan, India", ""],
-    ["IRS mailing address on file", "", "needed — the address the IRS has for the EIN"],
-    ["Place of performance (typical)", "Overseas U.S. missions; UN agency duty stations", ""]
+    [
+     "Principal / physical address",
+     "295 St Nai Basti, Near Govt School, Badusar 332317, Rajasthan, India",
+     ""
+    ],
+    [
+     "IRS mailing address on file",
+     "",
+     "needed — the address the IRS has for the EIN"
+    ],
+    [
+     "Place of performance (typical)",
+     "Overseas U.S. missions; UN agency duty stations",
+     ""
+    ]
    ]
   },
   {
    "title": "Contact",
    "rows": [
-    ["Company email", "contact@madisonmain.us", ""],
-    ["U.S. telephone", "+1 202-369-1524", ""],
-    ["Website / domain", "madisonmain.us", ""]
+    [
+     "Company email",
+     "contact@madisonmain.us",
+     ""
+    ],
+    [
+     "U.S. telephone",
+     "+1 202-369-1524",
+     ""
+    ],
+    [
+     "Website / domain",
+     "madisonmain.us",
+     ""
+    ]
    ]
   },
   {
    "title": "Registrations & Platforms",
    "rows": [
-    ["SAM.gov", "Registered — UEI XWL3YN7QNKT7", ""],
-    ["Unison Marketplace", "Seller registration submitted; verification in progress", ""],
-    ["UNGM (United Nations Global Marketplace)", "Account held", ""],
-    ["DLA DIBBS", "Not registered — requires CAGE", ""]
+    [
+     "SAM.gov",
+     "Registered and active — UEI XWL3YN7QNKT7",
+     ""
+    ],
+    [
+     "Unison Marketplace",
+     "Seller registration submitted; verification in progress",
+     ""
+    ],
+    [
+     "UNGM (United Nations Global Marketplace)",
+     "Account held",
+     ""
+    ],
+    [
+     "DLA DIBBS",
+     "Not registered — requires CAGE",
+     ""
+    ]
    ]
   },
   {
    "title": "Banking",
    "rows": [
-    ["Bank", "", "name only — account and routing numbers are never stored here"]
+    [
+     "Bank",
+     "",
+     "name only — account and routing numbers are never stored here"
+    ]
    ]
   }
  ]

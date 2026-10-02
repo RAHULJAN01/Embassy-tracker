@@ -147,7 +147,7 @@ class Claude:
         self.errors = {}
         self.down_reason = ""          # non-empty => the portal raises the alarm
         self._last = 0.0
-        self._model_checked = False
+        self._tried_models = set()
         # kept so existing callers (crawler.probe) keep working
         self.providers = [["claude", self.key, None, 0]] if self.key else []
 
@@ -172,27 +172,26 @@ class Claude:
         if gap < MIN_INTERVAL:
             time.sleep(MIN_INTERVAL - gap)
 
-    def _resolve_model(self):
-        """If the configured model isn't visible to this account, try the aliases
-        ONCE rather than failing every call for the rest of the run."""
-        if self._model_checked:
-            return
-        self._model_checked = True
-        for m in [self.model] + [x for x in MODEL_FALLBACKS if x != self.model]:
-            status, text, _ = _post(self.key, m, 'Reply with only: {"ok":true}')
-            if status == 200:
-                self.model = m
-                return
-            if status != 404:
-                return                      # a real error, not a missing model
-        self.errors["claude"] = "no Haiku model id was accepted by this account"
+    def _next_model(self):
+        """A model id this account has not tried yet, or None.
+
+        We never 'probe' the model with a throwaway call — that burned a real
+        API call on every shard of every run (24 wasted calls a day) to learn
+        something the first genuine call tells us for free. If a real call comes
+        back 404 we simply move to the next id and REPLAY THE SAME PROMPT, so
+        nothing is paid for twice and nothing is lost.
+        """
+        for m in [MODEL] + MODEL_FALLBACKS:
+            if m not in self._tried_models:
+                return m
+        return None
 
     def call(self, prompt):
         if not self.key:
             self.down_reason = ("no Claude API key is configured — add the repository "
                                 "secret ANTHROPIC_API_KEY")
             raise AllExhausted(self.down_reason)
-        self._resolve_model()
+        self._tried_models.add(self.model)
 
         wait = 3.0
         last = ""
@@ -224,6 +223,14 @@ class Claude:
             why, fatal = _why(status, text)
             last = why
             self.errors["claude"] = why
+            if status == 404:
+                # this model id isn't available to the account — switch and
+                # replay the SAME prompt, so the call isn't wasted
+                nxt = self._next_model()
+                if nxt:
+                    self.model = nxt
+                    self._tried_models.add(nxt)
+                    continue
             if fatal:
                 self.down_reason = why
                 raise AllExhausted(why)

@@ -40,7 +40,24 @@
   .mmeta{font-size:11.5px;color:var(--sub);line-height:1.7}
   .mmeta b{color:#111}
   /* toolbar — aligned row */
-  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;
+    border-bottom:1px solid var(--line);background:var(--bg)}
+  .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
+    max-width:1460px;margin:0 auto;padding-left:20px;padding-right:20px}
+  /* scrolled: the masthead slims down so the pinned controls stay compact */
+  body.scrolled .mastwrap .mast{padding:7px 0 6px}
+  body.scrolled .mastwrap .logo{height:40px}
+  body.scrolled .mastwrap .flag{height:26px}
+  body.scrolled .mastwrap .mmeta{display:none}
+  body.scrolled .mastwrap .brand .bt .n{font-size:15px}
+  body.scrolled .mastwrap .brand .bt .s{display:none}
+  body.scrolled .mastwrap .toolbar{padding:7px 0}
+  @media(max-width:1000px){
+    .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
+      padding-left:12px;padding-right:12px}
+    body.scrolled .mastwrap .mmeta{display:block}
+    body.scrolled .mastwrap .brand .bt .s{display:block}
+  }
   .toolbar .grp{display:flex;gap:8px;align-items:center}
   .btn{height:36px;font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .btn.sec{background:var(--bg);color:var(--ink)}
@@ -405,16 +422,8 @@
       </div>
     </div>
   </div>
-</div>
-<div class="shell">
   <div class="navbar" id="navPlatform"></div>
   <div class="subnav" id="navSub"></div>
-
-  <div id="alarmBanner" class="alarm" style="display:none"></div>
-  <div id="helpBanner" class="help-banner" style="display:none"></div>
-  <div id="mcPanel" class="mc-panel" style="display:none"></div>
-  <div id="coPanel" class="co-panel" style="display:none"></div>
-
   <div class="toolbar">
     <div class="grp">
       <div class="dd" id="ddUpdate">
@@ -436,6 +445,14 @@
       <select id="fSort" onchange="render()"><option value="dl">Sort: Deadline</option><option value="val">Sort: Est. value</option><option value="new">Sort: Posted</option></select>
     </div>
   </div>
+
+</div>
+<div class="shell">
+
+  <div id="alarmBanner" class="alarm" style="display:none"></div>
+  <div id="helpBanner" class="help-banner" style="display:none"></div>
+  <div id="mcPanel" class="mc-panel" style="display:none"></div>
+  <div id="coPanel" class="co-panel" style="display:none"></div>
 
   <div class="summary" id="summary"></div>
 </div>
@@ -830,6 +847,16 @@ function applyNight(){
 }
 function refreshCounts(){document.getElementById('scount').textContent=LS().length;}
 
+/* The toolbar pins directly beneath the masthead, so its buttons — Collapse All
+   among them — never scroll out of reach on a computer. The masthead's height
+   changes as it reflows, so it is measured rather than guessed. */
+function syncMastHeight(){
+  document.body.classList.toggle('scrolled', window.scrollY > 60);
+}
+window.addEventListener('scroll', syncMastHeight, {passive:true});
+window.addEventListener('resize', syncMastHeight);
+window.addEventListener('load', syncMastHeight);
+
 /* ================= BOTS-DOWN ALARM =================
    There is exactly ONE AI behind this register now. That is the right call, but
    it means the whole thing stops if Claude stops — so it must never stop quietly.
@@ -969,7 +996,7 @@ function init(){
   document.getElementById('sl2').textContent=LS().length;
   const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].filter(Boolean).sort(),sel=document.getElementById('fCountry');
   cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-  applyNight(); renderNav(); renderHelp(); renderMC(); renderAlarm();
+  applyNight(); renderNav(); renderHelp(); renderMC(); renderAlarm(); syncMastHeight();
   refreshCounts();render();
 }
 
