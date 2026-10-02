@@ -411,11 +411,33 @@ def group_file_units(file_urls):
 # --------------------------------------------------------------------------
 SAM_DIAG = {}      # captures exactly what SAM said, for Mission Control diagnostics
 
+# SAM.gov hands a personal API key a DAILY allowance, and it is tiny: GSA's own
+# system-account guide puts a non-federal user with no assigned role at 10
+# requests PER DAY (1,000 once the account carries a role). Every search AND
+# every notice-description fetch spends one. We were spending more than that, so
+# SAM answered 429 "throttled out" and the register got nothing from it.
+# So: one window a day, one bot, and a hard ceiling on calls per run.
+SAM_MAX_CALLS = int(os.getenv("SAM_MAX_CALLS", "6"))
+SAM_CALLS = {"n": 0}
+
+
+def sam_spend(what=""):
+    """Take one unit of the SAM daily allowance. False = don't make the call."""
+    if SAM_CALLS["n"] >= SAM_MAX_CALLS:
+        SAM_DIAG.setdefault("last", "")
+        SAM_DIAG["last"] = (f"stopped at the self-imposed ceiling of {SAM_MAX_CALLS} "
+                            f"SAM calls this run (daily key allowance is small)")
+        return False
+    SAM_CALLS["n"] += 1
+    return True
+
 
 def _sam_page(cfg, key, params):
     """One SAM query. Captures the exact HTTP status + message so we can SEE why
     SAM returns nothing (bad key -> 403, over limit -> 429, empty -> 200/0)."""
     import urllib.request
+    if not sam_spend("search"):
+        return []
     url = cfg["sam"]["api"] + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": fetcher.UA, "Accept": "application/json"})
     try:
@@ -459,7 +481,7 @@ def sam_search(cfg, limit=60):
         return []
     # And only at a couple of hours a day — SAM postings don't change every 2h,
     # and querying every run would exhaust the daily key limit. SAM_HOURS overrides.
-    sam_hours = {int(h) for h in os.getenv("SAM_HOURS", "2,14").split(",") if h.strip().isdigit()}
+    sam_hours = {int(h) for h in os.getenv("SAM_HOURS", "14").split(",") if h.strip().isdigit()}
     hr = datetime.datetime.now(datetime.timezone.utc).hour
     if sam_hours and hr not in sam_hours and os.getenv("FORCE_SAM", "") != "1":
         print(f"hour {hr} UTC not a SAM window {sorted(sam_hours)} — skipping SAM this run")
@@ -492,11 +514,19 @@ def sam_unit(op):
     ok, fail = 1, 0
     desc = op.get("description", "") or ""
     if desc.startswith("http"):
-        raw, ct, final = fetcher.get(desc)
-        if raw:
-            parts.append(fetcher.html_text(raw)); ok += 1
-        else:
-            fail += 1
+        # SAM returns the description as a URL on api.sam.gov; it needs the key,
+        # and it spends one more unit of the small daily allowance.
+        on_sam = "api.sam.gov" in desc
+        if on_sam and "api_key=" not in desc:
+            k = os.getenv("SAM_API_KEY", "")
+            if k:
+                desc += ("&" if "?" in desc else "?") + "api_key=" + urllib.parse.quote(k)
+        if (not on_sam) or sam_spend("description"):
+            raw, ct, final = fetcher.get(desc)
+            if raw:
+                parts.append(fetcher.html_text(raw)); ok += 1
+            else:
+                fail += 1
     for link in (op.get("resourceLinks") or [])[:8]:
         t = fetcher.read_attachment(link)
         if t:
@@ -1011,6 +1041,12 @@ def run(mode):
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
     st.d["aiDiag"] = rotator.diag()
     st.d["samDiag"] = SAM_DIAG.get("last", "SAM not queried this run")
+    st.d["samCalls"] = f"{SAM_CALLS['n']}/{SAM_MAX_CALLS} this run"
+    if "429" in str(st.d["samDiag"]) or "throttl" in str(st.d["samDiag"]).lower():
+        st.d["samAdvice"] = ("SAM is refusing on the daily allowance. A SAM.gov key with no "
+                             "assigned role gets about 10 requests a DAY; a key on an account "
+                             "that carries a role gets 1,000. Check the SAM.gov account has a "
+                             "role on the entity, then regenerate the API key.")
     st.d["docCaps"] = __import__("docreader").capabilities()
     st.d["completed"] = completed
     st.d["abandoned"] = abandoned
