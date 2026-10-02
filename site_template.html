@@ -138,14 +138,20 @@
   body.night .sector-head{background:#232323}
   /* section */
   .section{margin-top:22px;border:1px solid var(--ink)}
-  .section > h2{margin:0;background:var(--ink);color:var(--bg);font-size:14px;font-weight:700;letter-spacing:.4px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .section > h2{margin:0;background:var(--ink);color:#fff;font-size:14px;font-weight:700;
+    letter-spacing:.4px;padding:11px 14px;display:flex;justify-content:space-between;
+    align-items:center;gap:10px;cursor:pointer}
+  .section.t-g{border-color:var(--green)} .section.t-g > h2{background:var(--green)}
+  .section.t-o{border-color:var(--orange)} .section.t-o > h2{background:var(--orange)}
+  .section.t-r{border-color:var(--red)}   .section.t-r > h2{background:var(--red)}
+  .section > h2 .dot{border-color:rgba(255,255,255,.65)}
   .section.collapsed table{display:none}
   /* register table — fixed alignment */
   table.reg{width:100%;border-collapse:collapse;background:var(--bg);color:var(--ink);font-size:13.5px;table-layout:fixed}
-  table.reg col.c-ref{width:132px} table.reg col.c-src{width:56px} table.reg col.c-pop{width:104px}
-  table.reg col.c-cls{width:108px} table.reg col.c-dl{width:90px} table.reg col.c-val{width:102px}
-  table.reg col.c-st{width:64px} table.reg col.c-up{width:74px} table.reg col.c-act{width:170px}
-  table.reg col.c-vf{width:78px}
+  table.reg col.c-ref{width:132px} table.reg col.c-src{width:80px} table.reg col.c-pop{width:112px}
+  table.reg col.c-cls{width:112px} table.reg col.c-dl{width:94px} table.reg col.c-val{width:104px}
+  table.reg col.c-st{width:76px} table.reg col.c-up{width:78px}
+  table.reg col.c-vf{width:106px}
   table.reg thead th{background:var(--head);text-align:left;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--sub);padding:9px 10px;border-bottom:2px solid #111;white-space:normal;vertical-align:bottom;overflow:hidden;overflow-wrap:anywhere}
   table.reg thead th.r,table.reg td.num{text-align:right}
   table.reg tbody td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
@@ -165,25 +171,29 @@
   .upd{font-size:11.5px;color:var(--mute);white-space:nowrap}
   .num{white-space:nowrap}
   .due{font-weight:700;white-space:nowrap} .due.soon{color:var(--red)}
-  /* Action buttons: big labelled rectangles in a tidy grid, spaced so a wrong
-     click isn't possible. Colour is reserved for CONSEQUENCE — red destroys,
-     orange sets aside — so it keeps meaning what it means everywhere else. */
-  .act{white-space:normal}
-  .actgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-  .ibtn{font-family:inherit;font-size:10.5px;font-weight:700;line-height:1.15;letter-spacing:.1px;
-    padding:9px 5px;border:1.5px solid var(--line2);background:var(--bg);color:var(--ink);
-    border-radius:2px;cursor:pointer;text-decoration:none;display:flex;align-items:center;
-    justify-content:center;gap:4px;text-align:center;min-height:32px;white-space:nowrap}
-  .ibtn:hover{background:var(--head);border-color:var(--ink)}
-  .ibtn.wide{grid-column:1 / -1}
-  .ibtn.star.saved{border-color:var(--orange);color:var(--orange);background:var(--orangebg)}
-  /* consequence colours */
-  .ibtn.del{border-color:var(--red);color:var(--red)}
-  .ibtn.del:hover{background:var(--red);color:#fff}
-  .ibtn.hide{border-color:var(--orange);color:var(--orange)}
-  .ibtn.hide:hover{background:var(--orange);color:#fff}
-  .ibtn.restore{border-color:var(--green);color:var(--green)}
-  .ibtn.restore:hover{background:var(--green);color:#fff}
+  /* Action bar: full width UNDER each solicitation, side by side, so the
+     buttons can be large and nothing is ever cut off at the screen edge.
+     Colour means CONSEQUENCE and nothing else — and the ones that change
+     something are SOLID white-on-colour, which reads better and looks better. */
+  tr.actrow > td{padding:0 10px 11px;border-bottom:1px solid var(--line);background:var(--bg)}
+  tr.row > td{border-bottom:none}
+  tr.row:hover + tr.actrow > td{background:var(--alt)}
+  .abar{display:flex;gap:7px;align-items:stretch;flex-wrap:wrap;width:100%}
+  .ibtn{flex:1 1 0;min-width:116px;font-family:inherit;font-size:12px;font-weight:700;
+    line-height:1.1;letter-spacing:.3px;padding:11px 10px;border:2px solid var(--line2);
+    background:var(--bg);color:var(--ink);border-radius:2px;cursor:pointer;
+    text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px;
+    text-align:center;min-height:40px;white-space:nowrap;box-sizing:border-box}
+  .ibtn:hover{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .ibtn.star.saved{border-color:var(--orange);background:var(--orange);color:#fff}
+  .ibtn.del{border-color:var(--red);background:var(--red);color:#fff}
+  .ibtn.del:hover{background:#8e1c1c;border-color:#8e1c1c;color:#fff}
+  .ibtn.hide{border-color:var(--orange);background:var(--orange);color:#fff}
+  .ibtn.hide:hover{background:#8f3c00;border-color:#8f3c00;color:#fff}
+  .ibtn.restore{border-color:var(--green);background:var(--green);color:#fff}
+  .ibtn.restore:hover{background:#115c27;border-color:#115c27;color:#fff}
+  body.night .ibtn.del,body.night .ibtn.hide,body.night .ibtn.restore,
+  body.night .ibtn.star.saved{color:#fff}
   /* dossier */
   tr.dossier > td{background:var(--alt);padding:0;border-bottom:2px solid #111}
   tr.dossier.hidden{display:none}
@@ -340,10 +350,10 @@
     table.reg tbody tr.row td.titlecell{display:block;padding-bottom:7px}
     table.reg tbody tr.row td.titlecell::before{display:none}
     table.reg tbody tr.row td.titlecell .ttl{font-size:14.5px;line-height:1.35}
-    table.reg tbody tr.row td.act{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px;
-      margin-top:8px;border-top:1px solid var(--line)}
-    table.reg tbody tr.row td.act::before{display:none}
-    .act .ibtn{margin-right:0;padding:9px 11px;font-size:13px}
+    tr.actrow{display:block}
+    tr.actrow > td{display:block;padding:0 12px 14px}
+    .abar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .ibtn{min-width:0;font-size:12.5px;min-height:44px;padding:11px 6px}
     table.reg tbody tr.sector-row td{padding:0}
     .sector-head{display:block;padding:8px 12px}
     tr.dossier{display:block} tr.dossier > td{display:block;padding:0}
@@ -666,20 +676,21 @@ function rowHTML(s,i){
     <td data-l="Status"><span class="status ${st}">${esc(s.status)}</span></td>
     <td data-l="Verified">${verifyBadge(s)}</td>
     <td class="upd hidecol" data-l="Last Updated">${esc(s.updated||'—')}</td>
-    <td class="act"><div class="actgrid">
-      <button class="ibtn star ${saved?'saved':''}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${esc(s.sol)}')">${saved?'★ SAVED':'☆ SAVE'}</button>
-      <a class="ibtn" title="Open the official notice on the source site" href="${esc(s.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ OPEN</a>
-      <button class="ibtn" title="DEEP RE-SCAN — download and read every attached file again, then re-adjudicate from scratch" onclick="event.stopPropagation();confirmAction('deepscan','${esc(k)}')">⟳ DEEP SCAN</button>
-      <button class="ibtn" title="QUICK CHECK — refresh the status and Last-Updated date only; files are NOT re-read" onclick="event.stopPropagation();confirmAction('touch','${esc(k)}')">◷ QUICK CHECK</button>
-      <button class="ibtn wide" title="SWITCH — move this into a different section yourself; no re-scan will overwrite your choice" onclick="event.stopPropagation();openSwitch('${esc(k)}')">⇄ SWITCH SECTION</button>
+    </tr>
+    <tr class="actrow"><td colspan="10"><div class="abar">
+      <button class="ibtn star ${saved?'saved':''}" onclick="event.stopPropagation();toggleSave('${esc(s.sol)}')">${saved?'★ SAVED':'☆ SAVE'}</button>
+      <a class="ibtn" href="${esc(s.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ OPEN NOTICE</a>
+      <button class="ibtn" onclick="event.stopPropagation();confirmAction('deepscan','${esc(k)}')">⟳ DEEP SCAN</button>
+      <button class="ibtn" onclick="event.stopPropagation();confirmAction('touch','${esc(k)}')">◷ QUICK CHECK</button>
+      <button class="ibtn" onclick="event.stopPropagation();openSwitch('${esc(k)}')">⇄ SWITCH</button>
       ${del
-        ? `<button class="ibtn restore wide" title="Put this back on the active register" onclick="event.stopPropagation();opAction('restore','${esc(k)}')">↩ RESTORE TO REGISTER</button>`
+        ? `<button class="ibtn restore" onclick="event.stopPropagation();opAction('restore','${esc(k)}')">↩ RESTORE</button>`
         : hid
-        ? `<button class="ibtn restore wide" title="Bring this back out of the Hidden cart" onclick="event.stopPropagation();opAction('unhide','${esc(k)}')">👁 UNHIDE</button>`
-        : `<button class="ibtn hide" title="HIDE — move to the Hidden cart until you bring it back" onclick="event.stopPropagation();opAction('hide','${esc(k)}')">⊘ HIDE</button>
-           <button class="ibtn del" title="DELETE — move to History, stamped with the date and time. Never shown as active again." onclick="event.stopPropagation();confirmAction('delete','${esc(k)}')">✕ DELETE</button>`}
+        ? `<button class="ibtn restore" onclick="event.stopPropagation();opAction('unhide','${esc(k)}')">👁 UNHIDE</button>`
+        : `<button class="ibtn hide" onclick="event.stopPropagation();opAction('hide','${esc(k)}')">⊘ HIDE</button>
+           <button class="ibtn del" onclick="event.stopPropagation();confirmAction('delete','${esc(k)}')">✕ DELETE</button>`}
     </div></td></tr>
-    <tr class="dossier hidden" id="d${i}"><td colspan="11">${dossier(s)}</td></tr>`;
+    <tr class="dossier hidden" id="d${i}"><td colspan="10">${dossier(s)}</td></tr>`;
 }
 /* Set-aside the CO used — shown on EVERY row. Red when it locks us out,
    green when the field is genuinely open, grey when the notice never says. */
@@ -764,25 +775,27 @@ function render(){
   const hidden=rest.filter(({s})=>isHidden(s)&&!s.archived);
   const shown=rest.filter(({s})=>!(isHidden(s)&&!s.archived));
   const active=shown.filter(({s})=>!s.archived), archived=shown.filter(({s})=>s.archived);
-  const cols='<colgroup><col class="c-ref"><col class="c-src"><col class="c-ttl"><col class="c-pop"><col class="c-cls"><col class="c-dl"><col class="c-val"><col class="c-st"><col class="c-vf"><col class="c-up"><col class="c-act"></colgroup>';
-  const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th><th>Actions</th></tr></thead>`;
+  const cols='<colgroup><col class="c-ref"><col class="c-src"><col class="c-ttl"><col class="c-pop"><col class="c-cls"><col class="c-dl"><col class="c-val"><col class="c-st"><col class="c-vf"><col class="c-up"></colgroup>';
+  const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th></tr></thead>`;
 
   // a tier section, sub-grouped by sector: COTS -> Services -> Construction
   function tierSection(tr){
     const items=active.filter(({s})=>effTier(s)===tr); if(!items.length)return '';
     const m=SMAP[tr];
-    let h=`<div class="section"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
+    const TC={g:'t-g',o:'t-o',r:'t-r'};
+    let h=`<div class="section ${TC[m.cls]||''}"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
     h+=`<table class="reg">${cols}${thead}<tbody>`;
     SECTOR_ORDER.forEach(sec=>{
       const grp=items.filter(({s})=>(s.sector||'')===sec); if(!grp.length)return;   // no empty sector blocks
-      h+=`<tr class="sector-row"><td class="sector-head" colspan="11">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
+      h+=`<tr class="sector-row"><td class="sector-head" colspan="10">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
       grp.forEach(({s,i})=>h+=rowHTML(s,i));
     });
     return h+'</tbody></table></div>';
   }
   function plainSection(items,cls,label,sub,collapsed){
     if(!items.length)return '';
-    let h=`<div class="section${collapsed?' collapsed':''}"><h2 onclick="this.parentNode.classList.toggle('collapsed')">`
+    const TC={g:'t-g',o:'t-o',r:'t-r'};
+    let h=`<div class="section ${TC[cls]||''}${collapsed?' collapsed':''}"><h2 onclick="this.parentNode.classList.toggle('collapsed')">`
       +`<span><span class="dot ${cls}"></span>${label}</span><span>${items.length} &nbsp;▾</span></h2>`;
     if(sub)h+=`<div style="padding:9px 14px;font-size:12px;color:var(--mute);font-style:italic;border-bottom:1px solid var(--line)">${sub}</div>`;
     h+=`<table class="reg">${cols}${thead}<tbody>`;

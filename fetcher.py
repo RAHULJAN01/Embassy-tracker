@@ -94,9 +94,50 @@ def _classify(code, headers, body):
     return "unknown", f"HTTP {code} ({cdn})"
 
 
+# ---------------------------------------------------------------- robots.txt
+# Looking like a browser is fine. Ignoring a site's stated wishes is not. Before
+# we work a host we read its robots.txt once and honour it — which also tells us
+# whether a 403 means "no robots here" or just a clumsy CDN refusing data centres.
+import urllib.robotparser
+
+_ROBOTS = {}
+
+
+def robots_ok(url, agent="*"):
+    """(allowed, note). Unreachable robots.txt is treated as allowed, which is
+    the conventional reading, but we say so rather than pretending we checked."""
+    try:
+        p = urllib.parse.urlparse(url)
+        host = f"{p.scheme}://{p.netloc}"
+    except Exception:
+        return True, ""
+    if host not in _ROBOTS:
+        rp = urllib.robotparser.RobotFileParser()
+        note = ""
+        try:
+            with _OPENER.open(_req(host + "/robots.txt"), timeout=20) as r:
+                rp.parse(_body(r).decode("utf-8", "replace").splitlines())
+        except Exception as e:
+            rp = None
+            note = f"robots.txt unreadable ({type(e).__name__})"
+        _ROBOTS[host] = (rp, note)
+    rp, note = _ROBOTS[host]
+    if rp is None:
+        return True, note
+    try:
+        allowed = rp.can_fetch(agent, url)
+    except Exception:
+        return True, "robots.txt unparseable"
+    return allowed, ("" if allowed else "robots.txt asks crawlers not to read this path")
+
+
 def get(url, retries=2):
     """Fetch a URL. Returns (content_bytes, content_type, final_url).
     Raises Blocked on a refusal; returns (None,...) on soft failure."""
+    allowed, note = robots_ok(url)
+    if not allowed:
+        BLOCK_DIAG[urllib.parse.urlparse(url).netloc] = note
+        raise Blocked(f"robots.txt disallows {url}", kind="robots", detail=note)
     last = None
     warmed = False
     for attempt in range(retries + 1):
