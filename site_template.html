@@ -45,6 +45,7 @@
   .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
     max-width:1460px;margin:0 auto;padding-left:20px;padding-right:20px}
   /* scrolled: the masthead slims down so the pinned controls stay compact */
+  .mastwrap .mast,.mastwrap .logo,.mastwrap .flag{transition:height .12s linear,padding .12s linear}
   body.scrolled .mastwrap .mast{padding:7px 0 6px}
   body.scrolled .mastwrap .logo{height:40px}
   body.scrolled .mastwrap .flag{height:26px}
@@ -107,7 +108,14 @@
   .mc-live{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
   .mc-live.on{background:var(--green)} .mc-live.off{background:var(--sub)}
   .mc-job{padding:10px 16px;border-top:1px solid var(--line);font-size:12.5px;color:#333}
-  .mc-job b{color:#111}
+  .mc-job b{color:var(--ink)}
+  .lvhead{margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .lv{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:5px 0;
+    border-top:1px solid var(--line);font-size:12.5px}
+  .lv b{min-width:52px}
+  .lvw{font-weight:700}
+  .lvd{color:var(--sub)}
+  .lvq{color:var(--mute);font-size:11.5px}
   @media(max-width:860px){.mc-grid{grid-template-columns:repeat(2,1fr)}}
   /* ---------- NIGHT MODE: inverts the page. The masthead is NEVER touched. ---------- */
   body.night{
@@ -182,6 +190,10 @@
   table.reg td.num{overflow:hidden;text-overflow:ellipsis}
   table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
   .pop{white-space:normal} .pop .c{color:var(--mute);font-size:12px}
+  .flag-i{font-size:14px;line-height:1;margin-right:5px;vertical-align:-1px}
+  .flag-cc{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.5px;
+    border:1px solid var(--line2);color:var(--sub);padding:1px 4px;margin-right:5px;
+    vertical-align:1px;font-family:Arial,Helvetica,sans-serif}
   .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid var(--ink);border-radius:2px;white-space:nowrap}
   .status{font-weight:700;font-size:12px;white-space:nowrap}
   .status.g{color:var(--green)} .status.o{color:var(--orange)} .status.r{color:var(--red)}
@@ -435,6 +447,7 @@
       </div>
       <button class="btn danger" onclick="confirmAction('abort')">Abort</button>
       <button class="btn sec" onclick="collapseAll()" title="Reset every section back to the default view">⊟ Collapse All</button>
+      <button class="btn sec" onclick="downloadExcel()" title="Download everything on the register right now as an Excel workbook">⤓ Excel</button>
       <button class="btn sec" id="shortlistBtn" onclick="toggleShortlistView()">★ Shortlist (<span id="scount">0</span>)</button>
     </div>
     <div class="spacer"></div>
@@ -473,7 +486,7 @@
 <script>
 /*__ENC__*/
 const LOCKED=/*__LOCKED__*/;
-let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false, COMPANY={};
+let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false, COMPANY={}, FLAGS={};
 const REPO="RAHULJAN01/embassy-tracker";
 let CONTROL_URL="";   // set from control.json at build time
 
@@ -514,6 +527,217 @@ function opBadge(s){
   const w=opInfo(s,'switched');if(w) return `<br><span class="opnote swd">MOVED BY YOU TO ${esc(w.tier||'')} ON ${esc(w.on||'')}</span>`;
   return '';
 }
+/* ---------- country flags on every solicitation, old and new ----------
+   The embassy subdomains are ISO country codes, so the map comes free. Flag
+   emoji are weightless and need no network, but Windows renders them as two
+   letters — so support is measured once and, where it is missing, a clean
+   bordered country code is shown instead. Either way every row is marked. */
+let _flagEmojiOK=null;
+function flagEmojiSupported(){
+  if(_flagEmojiOK!==null) return _flagEmojiOK;
+  try{
+    const c=document.createElement('canvas'); c.width=24; c.height=18;
+    const x=c.getContext('2d'); x.font='16px sans-serif';
+    const a=x.measureText('\uD83C\uDDFA\uD83C\uDDF8').width;   // US flag
+    const b=x.measureText('\uD83C\uDDFA').width*2;              // two indicators
+    _flagEmojiOK = a < b - 1;        // a real flag glyph is narrower than two letters
+  }catch(e){ _flagEmojiOK=false; }
+  return _flagEmojiOK;
+}
+function isoOf(country){
+  if(!country) return '';
+  const c=String(country).trim();
+  return FLAGS[c] || FLAGS[c.replace(/^the\s+/i,'')] || '';
+}
+function flagOf(country){
+  const cc=isoOf(country);
+  if(!cc) return '';
+  if(flagEmojiSupported()){
+    const e=String.fromCodePoint(...[...cc].map(ch=>0x1F1E6+ch.charCodeAt(0)-65));
+    return `<span class="flag-i" title="${esc(country)}">${e}</span>`;
+  }
+  return `<span class="flag-cc" title="${esc(country)}">${esc(cc)}</span>`;
+}
+
+
+/* ================= EXCEL EXPORT =================
+   A real .xlsx, built in the browser at the moment you click, from whatever is
+   on the register right then — Mission Control, every category, every
+   solicitation and everything inside it. No library and no network: an .xlsx is
+   just a ZIP of XML, so we write the ZIP ourselves (stored, with CRC32). That
+   keeps the page self-contained and means the download can never be stale. */
+const _CRCT=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+  return t;})();
+function _crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_CRCT[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;}
+function _zip(files){                       // [{name, data:Uint8Array}] -> Blob
+  const enc=new TextEncoder(), chunks=[], central=[]; let off=0;
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  files.forEach(f=>{
+    const nm=enc.encode(f.name), crc=_crc32(f.data), sz=f.data.length;
+    const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+    chunks.push(lh,nm,f.data);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),
+      ...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]), nm);
+    off+=lh.length+nm.length+sz;
+  });
+  const cs=central.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),
+    ...u16(files.length),...u16(files.length),...u32(cs),...u32(off),...u16(0)]);
+  return new Blob([...chunks,...central,end],{type:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function _xe(v){return String(v==null?"":v)
+  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function _sheetXML(rows){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+   +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+   +'<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" '
+   +'activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetData>';
+  rows.forEach((r,ri)=>{
+    x+=`<row r="${ri+1}">`;
+    r.forEach((v,ci)=>{
+      let ref=''; let n=ci;
+      do{ ref=String.fromCharCode(65+(n%26))+ref; n=Math.floor(n/26)-1; }while(n>=0);
+      ref+=(ri+1);
+      const num = typeof v==='number' && isFinite(v);
+      if(num) x+=`<c r="${ref}"${ri===0?' s="1"':''}><v>${v}</v></c>`;
+      else if(v!=null && String(v)!=='')
+        x+=`<c r="${ref}" t="inlineStr"${ri===0?' s="1"':''}><is><t xml:space="preserve">${_xe(v)}</t></is></c>`;
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+function buildWorkbook(sheets){                      // [{name, rows}]
+  const enc=new TextEncoder(), f=[];
+  const add=(n,str)=>f.push({name:n,data:enc.encode(str)});
+  add("[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+    +sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+    +'</Types>');
+  add("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  add("xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+    +'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+    +sheets.map((s,i)=>`<sheet name="${_xe(s.name).slice(0,31)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')
+    +'</sheets></workbook>');
+  add("xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')
+    +`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`
+    +'</Relationships>');
+  add("xl/styles.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<fonts count="2"><font><sz val="11"/><name val="Arial"/></font>'
+    +'<font><b/><sz val="11"/><name val="Arial"/></font></fonts>'
+    +'<fills count="2"><fill><patternFill patternType="none"/></fill>'
+    +'<fill><patternFill patternType="gray125"/></fill></fills>'
+    +'<borders count="1"><border/></borders>'
+    +'<cellStyleXfs count="1"><xf/></cellStyleXfs>'
+    +'<cellXfs count="2"><xf xfId="0"/><xf xfId="0" fontId="1" applyFont="1"/></cellXfs>'
+    +'</styleSheet>');
+  sheets.forEach((s,i)=>add(`xl/worksheets/sheet${i+1}.xml`,_sheetXML(s.rows)));
+  return _zip(f);
+}
+
+const XL_COLS=[["Ref. No.","sol"],["Brief","brief"],["Title","title"],["Decision","_tier"],
+ ["Sector","sector"],["Platform","platform"],["Agency","agency"],["Post","post"],
+ ["Country","country"],["Country code","_iso"],["Domestic","_dom"],["Source","source"],
+ ["Status","status"],["Verified","verified"],["Why not verified","_vn"],
+ ["Posted","posted"],["Questions due","qa"],["Closing","deadline"],["Days left","_days"],
+ ["Est. value","value"],["Valuation basis","_estbasis"],["Classification","type"],
+ ["Scope","scope"],["Line items","_items"],["Set-aside","setaside"],
+ ["How to submit","submitHow"],["Send to","submitTo"],["Required forms","_forms"],
+ ["Required submittals","_docs"],["Award basis","awardBasis"],["Shipping","shipping"],
+ ["Payment","payment"],["Delivery after award","shipAfter"],["Licences","license"],
+ ["Gotchas","_gotchas"],["Restrictions","_restr"],["Route to eligibility","route"],
+ ["Cited clause","_cite"],["Confidence","confidence"],["Files read","fileCount"],
+ ["Unreadable files","_rf"],["Operator action","_op"],["Link","link"],
+ ["First seen","firstSeen"],["Last updated","updated"],["Last deep scan","lastDeepScan"]];
+
+function _xlRow(s){
+  const j=a=>(a||[]).join(" | ");
+  const d=dleft(s.deadline);
+  const v={_tier:(SMAP[effTier(s)]||{}).label||effTier(s),
+    _iso:isoOf(s.country),_dom:s.domestic?"Domestic":"Overseas",
+    _vn:j(s.verifyNotes),_days:(d==null?"":d),
+    _estbasis:(s.estimate&&s.estimate.basis)||"",
+    _items:j(s.lineItems),_forms:j(s.submitForms),_docs:j(s.docs),
+    _gotchas:j(s.gotchas),
+    _restr:j((s.restrictions||[]).map(r=>`[${r.k}] ${r.t}`)),
+    _cite:(s.citation&&s.citation.quote)||"",
+    _rf:j((s.readFailures||[]).map(f=>`${f.file} — ${f.why}`)),
+    _op:isDeleted(s)?("DELETED "+((opInfo(s,'deleted')||{}).on||""))
+       :isHidden(s)?("HIDDEN "+((opInfo(s,'hidden')||{}).on||""))
+       :(opInfo(s,'switched')?("SWITCHED to "+(opInfo(s,'switched').tier||"")):"")};
+  return XL_COLS.map(([,k])=>k in v ? v[k] : (s[k]==null?"":s[k]));
+}
+
+function downloadExcel(){
+  const stamp=new Date().toISOString().replace("T"," ").slice(0,16)+" UTC";
+  const all=SOLICITATIONS.slice();
+  const hdr=XL_COLS.map(c=>c[0]);
+  const grp=(f)=>[hdr].concat(all.filter(f).map(_xlRow));
+  const active=s=>!s.archived&&!isDeleted(s)&&!isHidden(s);
+  const ai=(STATUS||{}).aiDiag||{};
+  const mc=[["Madison & Main LLC — Solicitation Register"],["Exported",stamp],[],
+    ["MISSION CONTROL"],
+    ["Mode",(STATUS||{}).mode||""],["Started",(STATUS||{}).startedAt||""],
+    ["Heartbeat",(STATUS||{}).heartbeat||""],["Current job",(STATUS||{}).currentJob||""],
+    ["Bots",(STATUS||{}).bots||0],["Found this run",(STATUS||{}).found||0],
+    ["AI calls",(STATUS||{}).aiCalls||0],["AI budget",(STATUS||{}).aiBudget||0],
+    ["Records completed",(STATUS||{}).repaired||0],
+    ["Still unfinished",(STATUS||{}).stillUnfinished||0],
+    ["Already-closed skipped",(STATUS||{}).skippedExpired||0],
+    ["AI model",ai.model||""],["AI healthy",ai.down?("NO — "+ai.down):"yes"],
+    ["Input tokens",ai.inputTokens||0],["Output tokens",ai.outputTokens||0],
+    ["Spend this run (USD)",ai.spendUSD||0],
+    ["SAM.gov",(STATUS||{}).samDiag||""],["Last error",(STATUS||{}).lastError||""],[],
+    ["REGISTER"],
+    ["Total records",all.length],["Active",all.filter(active).length],
+    ["Bid-eligible",all.filter(s=>active(s)&&effTier(s)==="BID").length],
+    ["Conditional",all.filter(s=>active(s)&&effTier(s)==="MID").length],
+    ["Non-eligible",all.filter(s=>active(s)&&effTier(s)==="NO").length],
+    ["Under review",all.filter(s=>active(s)&&effTier(s)==="REVIEW").length],
+    ["Hidden",all.filter(s=>isHidden(s)&&!s.archived&&!isDeleted(s)).length],
+    ["Archived",all.filter(s=>s.archived&&!isDeleted(s)).length],
+    ["Deleted",all.filter(isDeleted).length],
+    ["Last live",(META||{}).lastLive||""],["Last deep crawl",(META||{}).lastDeep||""],[],
+    ["BLOCKED SITES"],["Site","Why","Can you help?"]].concat(
+    ((BLOCKED||{}).sites||[]).map(b=>[b.post||b.host,b.need||b.reason||"",
+      (b.canHelp||b.kind==="login")?"yes — needs a login":"no — the site blocks bots"]));
+  const co=[["COMPANY INFORMATION"],[]];
+  ((COMPANY||{}).groups||[]).forEach(g=>{ co.push([g.title]);
+    (g.rows||[]).forEach(r=>co.push(["  "+r[0], r[1]||("("+(r[2]||"not recorded")+")")])); co.push([]); });
+  const sheets=[{name:"Mission Control",rows:mc},
+    {name:"All Solicitations",rows:[hdr].concat(all.map(_xlRow))},
+    {name:"Bid-Eligible",rows:grp(s=>active(s)&&effTier(s)==="BID")},
+    {name:"Conditional",rows:grp(s=>active(s)&&effTier(s)==="MID")},
+    {name:"Non-Eligible",rows:grp(s=>active(s)&&effTier(s)==="NO")},
+    {name:"Under Review",rows:grp(s=>active(s)&&effTier(s)==="REVIEW")},
+    {name:"Hidden",rows:grp(s=>isHidden(s)&&!s.archived&&!isDeleted(s))},
+    {name:"Archive",rows:grp(s=>s.archived&&!isDeleted(s))},
+    {name:"History (deleted)",rows:grp(isDeleted)},
+    {name:"Company",rows:co}];
+  const blob=buildWorkbook(sheets);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="MM-Solicitation-Register-"+new Date().toISOString().slice(0,10)+".xlsx";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1500);
+}
+
 function stampNow(){const d=new Date();return d.toISOString().replace('T',' ').slice(0,16)+' UTC';}
 // the tier the row should SIT IN right now: your switch wins over the bots'
 function effTier(s){const w=opState().switched[opKey(s)];return (w&&w.tier)||s.tier||'REVIEW';}
@@ -613,7 +837,7 @@ function dossier(s){
   /* ---- COMMERCIAL TERMS ---- */
   h+=grp("Commercial terms", tbl(
       kv("Shipping / delivery terms",s.shipping)+kv("Payment terms",s.payment)
-      +kv("Stated value",s.value)+kv("Place of performance",[s.post,s.country].filter(Boolean).join(", "))
+      +kv("Stated value",s.value)+(s.post||s.country?`<tr><th>Place of performance</th><td>${flagOf(s.country)}${esc([s.post,s.country].filter(Boolean).join(", "))}</td></tr>`:"")
       +kv("Source",SRCLABEL[s.source]||s.source)));
 
   /* ---- ELIGIBILITY ---- */
@@ -686,7 +910,7 @@ function rowHTML(s,i){
     <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}</td>
     <td data-l="Source"><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
     <td class="tcell titlecell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}${opBadge(s)}</td>
-    <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${esc(s.country)}</span></td>
+    <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${flagOf(s.country)}${esc(s.country)}</span></td>
     <td class="hidecol" data-l="Classification">${esc(s.type)}</td>
     <td class="num" data-l="Deadline"><span class="due ${soon}">${esc(duetxt)}</span></td>
     <td class="num valcell hidecol" data-l="Est. Value">${s.estimate?`<span class="estv" title="Estimated by the valuation bot — not stated in the notice">EST</span> `:''}${esc(s.value||'—')}</td>
@@ -850,10 +1074,23 @@ function refreshCounts(){document.getElementById('scount').textContent=LS().leng
 /* The toolbar pins directly beneath the masthead, so its buttons — Collapse All
    among them — never scroll out of reach on a computer. The masthead's height
    changes as it reflows, so it is measured rather than guessed. */
+/* The header shrinks when you scroll — but shrinking it makes the page shorter,
+   which moves the scroll position, which can push it back over the threshold and
+   straight into a flicker loop on the way back up. Two guards stop that for good:
+   a HYSTERESIS BAND (it compacts at 110px and only expands again below 40px, so a
+   single threshold can never be crossed twice by its own side-effect), and a
+   state check so the class is only touched when it genuinely changes. */
+let _compact=false;
 function syncMastHeight(){
-  document.body.classList.toggle('scrolled', window.scrollY > 60);
+  const y=window.scrollY||document.documentElement.scrollTop||0;
+  const want=_compact ? y>40 : y>110;       // sticky in both directions
+  if(want!==_compact){ _compact=want; document.body.classList.toggle('scrolled', want); }
 }
-window.addEventListener('scroll', syncMastHeight, {passive:true});
+let _scrollTick=false;
+window.addEventListener('scroll', ()=>{        // once per frame, never mid-layout
+  if(_scrollTick) return; _scrollTick=true;
+  requestAnimationFrame(()=>{ _scrollTick=false; syncMastHeight(); });
+}, {passive:true});
 window.addEventListener('resize', syncMastHeight);
 window.addEventListener('load', syncMastHeight);
 
@@ -995,7 +1232,8 @@ function init(){
      <div class="cell"><div class="big" id="sl2">0</div><div class="cap">★ Shortlisted</div></div>`;
   document.getElementById('sl2').textContent=LS().length;
   const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].filter(Boolean).sort(),sel=document.getElementById('fCountry');
-  cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  cs.forEach(c=>{const o=document.createElement('option');o.value=c;const cc=isoOf(c);
+    o.textContent=(cc&&flagEmojiSupported()?String.fromCodePoint(...[...cc].map(ch=>0x1F1E6+ch.charCodeAt(0)-65))+' ':'')+c;sel.appendChild(o);});
   applyNight(); renderNav(); renderHelp(); renderMC(); renderAlarm(); syncMastHeight();
   refreshCounts();render();
 }
@@ -1042,7 +1280,52 @@ function renderHelp(){
 }
 
 // --- Mission Control: live crawler status (toggled from the header) ---
-function toggleMC(){ const p=document.getElementById('mcPanel'); p.style.display=(p.style.display==='none'?'block':'none'); if(p.style.display==='block') renderMC(); }
+function toggleMC(){
+  const p=document.getElementById('mcPanel');
+  const open=p.style.display==='none';
+  p.style.display=open?'block':'none';
+  document.getElementById('mcBtn').classList.toggle('on',open);
+  if(open){ renderMC(); startLive(); } else { stopLive(); }
+}
+
+/* ---------- LIVE: where each bot is, right now ----------
+   Polled ONLY while Mission Control is open, straight from the running job's
+   log via the control worker. No AI tokens, no commits, nothing stored. */
+let _liveTimer=null, LIVE=null;
+function startLive(){ stopLive(); pollLive(); _liveTimer=setInterval(pollLive, 20000); }
+function stopLive(){ if(_liveTimer){ clearInterval(_liveTimer); _liveTimer=null; } }
+async function pollLive(){
+  const srv=controlServer(); if(!srv) return;
+  try{
+    const r=await fetch(srv.replace(/\/+$/,'')+'/live',{headers:{'X-Site-Key':sitePass()}});
+    if(!r.ok) return;
+    LIVE=await r.json(); renderLive();
+  }catch(e){}
+}
+function renderLive(){
+  const el=document.getElementById('liveBox'); if(!el||!LIVE) return;
+  if(!LIVE.bots||!LIVE.bots.length){
+    el.innerHTML='<b>Live:</b> <i>no crawl running right now.</i>'; return;
+  }
+  const PH={embassy:'Embassy sites',sam:'SAM.gov',un:'United Nations',
+            repair:'Finishing existing records',done:'Finished'};
+  const rows=LIVE.bots.map(b=>{
+    const dot=b.status==='in_progress'?'<span class="mc-live on"></span>'
+             :'<span class="mc-live off"></span>';
+    if(b.status!=='in_progress')
+      return `<div class="lv">${dot}<b>Bot ${b.shard!=null?b.shard:b.job.replace(/\D/g,'')}</b>
+        <span class="lvq">${esc(b.conclusion||b.status)}</span></div>`;
+    const where=[b.post&&`${flagOf(b.country||'')}${esc(b.post)}`,
+                 PH[b.phase]||b.phase].filter(Boolean).join(' &middot; ');
+    return `<div class="lv">${dot}<b>Bot ${b.shard}</b>
+      <span class="lvw">${where||'starting'}</span>
+      <span class="lvd">${esc(b.doing||'')}</span>
+      ${b.remaining?`<span class="lvq">${esc(b.remaining)} sites left</span>`:''}
+      ${b.ai?`<span class="lvq">${esc(b.ai)} AI calls</span>`:''}</div>`;
+  }).join('');
+  el.innerHTML=`<div class="lvhead"><b>Live — where the bots are right now</b>
+      <span class="lvq">${LIVE.running?'running':'idle'} &middot; updates every 20s</span></div>${rows}`;
+}
 function renderMC(){
   const p=document.getElementById('mcPanel'); const s=STATUS||{};
   if(!s||!s.startedAt){ p.innerHTML='<div class="mc-job"><b>Mission Control</b> — no crawler run recorded yet. The engine writes live status here on its first run.</div>'+fleetBar(); return; }
@@ -1064,6 +1347,7 @@ function renderMC(){
       <div class="mc-cell"><div class="mc-v">${s.stillUnfinished||0}</div><div class="mc-k">Still unfinished</div></div>
       <div class="mc-cell"><div class="mc-v">${(BLOCKED.sites||[]).length}</div><div class="mc-k">Blocked sites</div></div>
      </div>
+     <div class="mc-job" id="liveBox"><b>Live:</b> <i>connecting…</i></div>
      <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}${s.samDiag?'<br><b>SAM.gov:</b> '+esc(s.samDiag):''}${s.samAdvice?'<br><i style="color:var(--orange)">'+esc(s.samAdvice)+'</i>':''}</div>
      `+fleetBar();
 }
@@ -1223,6 +1507,7 @@ async function unlock(pwArg){
     CONTROL_URL=((payload.control||{}).controlUrl)||CONTROL_URL;
     OPERATOR=Object.assign({deleted:{},hidden:{},switched:{}}, payload.operator||{});
     COMPANY=payload.company||{};
+    FLAGS=payload.flags||{};
     pruneLocalOps();
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();

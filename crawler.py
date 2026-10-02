@@ -72,6 +72,14 @@ def unit_hash(text):
 
 
 # --------------------------------------------------------------------------
+def progress(**kw):
+    """Print a progress line the control worker can read out of the live job log.
+    This is how Mission Control knows where the bots are RIGHT NOW: no extra
+    commits, no polling of our own, and not a single AI token."""
+    bits = " ".join(f'{k}={json.dumps(str(v))}' for k, v in kw.items())
+    print(f"[PROGRESS] shard={SHARD} {bits}", flush=True)
+
+
 class Status:
     def __init__(self, mode, providers):
         self.d = {
@@ -846,6 +854,8 @@ def run(mode):
                 break
             label = (old.get("sol") or old.get("title") or "record")[:50]
             st.beat(currentJob=f"re-scanning: {label}")
+            progress(phase="repair", post=old.get("post", ""), doing="re-scanning",
+                     sol=label, ai=budget.used)
             link = old.get("link") or ""
             atts = list(old.get("files") or [])
             text = ""
@@ -929,6 +939,7 @@ def run(mode):
 
         # ================= SAM =================
         st.beat(phase="sam", currentJob="querying SAM.gov")
+        progress(phase="sam", doing="querying SAM.gov")
         for op in sam_search(cfg):
             if not budget.can_start_job():
                 break
@@ -957,6 +968,7 @@ def run(mode):
                 break
             agency = src["agency"]
             st.beat(phase="un", currentJob=f"UN · {agency}")
+            progress(phase="un", post=agency, doing="reading UN notices")
             opener = None
             try:
                 if un_sources.has_credentials(agency):
@@ -1008,6 +1020,9 @@ def run(mode):
             host = root_host(root["base"])
             st.beat(phase="embassy", currentJob=f"scanning {root['post']}",
                     queued=n - off, coverage=coverage, paused=paused())
+            progress(phase="embassy", post=root["post"], country=root.get("country", ""),
+                     doing="opening the procurement pages", remaining=n - off,
+                     done=completed, found=discovered, ai=budget.used)
             try:
                 units = {}
                 for pp in discover_proc_pages(root, cfg)[:4]:
@@ -1110,6 +1125,8 @@ def run(mode):
                     f"{abandoned} left for next run, {skipped_expired} already-closed skipped "
                     f"without spending a call, {budget.used} AI calls"
                     + (f" · {budget.stopped_reason}" if budget.stopped_reason else "")))
+    progress(phase="done", doing="run complete", done=completed, found=discovered,
+             ai=budget.used, skipped=skipped_expired)
     print(f"[{mode}] repaired={repaired} discovered={discovered} completed={completed} "
           f"abandoned={abandoned} total={len(merged)} ai={budget.used}/{MAX_AI_CALLS} "
           f"ledger={len(ledger)}")

@@ -130,6 +130,46 @@ export default {
         return json({ ok: true, state });
       }
 
+      // ---- WHERE ARE THE BOTS RIGHT NOW ----
+      // Read straight out of the running job's log. No extra commits, no AI
+      // tokens, nothing for the crawler to do but print as it works.
+      if (path === "/live" && request.method === "GET") {
+        const runs = await gh(env, "/actions/workflows/crawl.yml/runs?per_page=3");
+        const d = await runs.json();
+        const run = (d.workflow_runs || []).find(
+          (r) => r.status === "in_progress" || r.status === "queued"
+        ) || (d.workflow_runs || [])[0];
+        if (!run) return json({ ok: true, running: false, bots: [] });
+        const jr = await gh(env, `/actions/runs/${run.id}/jobs`);
+        const jd = await jr.json();
+        const jobs = (jd.jobs || []).filter((j) => j.name.startsWith("crawl"));
+        const bots = await Promise.all(
+          jobs.map(async (j) => {
+            const base = { job: j.name, status: j.status, conclusion: j.conclusion };
+            if (j.status !== "in_progress") return base;
+            try {
+              const lr = await gh(env, `/actions/jobs/${j.id}/logs`, { redirect: "follow" });
+              if (!lr.ok) return base;
+              const txt = await lr.text();
+              const lines = txt.split("\n").filter((l) => l.includes("[PROGRESS]"));
+              const last = lines[lines.length - 1] || "";
+              const f = {};
+              for (const m of last.matchAll(/(\w+)="([^"]*)"/g)) f[m[1]] = m[2];
+              const sh = (last.match(/shard=(\d+)/) || [])[1];
+              return { ...base, shard: sh, ...f, steps: lines.length };
+            } catch (e) {
+              return base;
+            }
+          })
+        );
+        return json({
+          ok: true,
+          running: run.status === "in_progress" || run.status === "queued",
+          runStatus: run.status, startedAt: run.created_at, runUrl: run.html_url,
+          bots,
+        });
+      }
+
       if (request.method !== "POST")
         return json({ ok: false, error: "use POST" }, 405);
 

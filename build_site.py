@@ -49,6 +49,7 @@ def main():
         # readable after the register password is entered
         "operator": _opt("operator.json", {"deleted": {}, "hidden": {}, "switched": {}}),
         "company": _opt("company.json", {}),
+        "flags": _opt("flags.json", {}),
     }
     data = json.dumps(payload, ensure_ascii=False)
     template = (HERE / "site_template.html").read_text(encoding="utf-8")
