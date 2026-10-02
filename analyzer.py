@@ -42,6 +42,17 @@ ADJUDICATE_PROMPT = (
     "Construction and on-site services are NOT automatically disqualifying. The only question is:\n"
     "  (1) Is M&M ELIGIBLE to hold this contract? If not -> NO.\n"
     "  (2) If eligible, HOW is it fulfilled? Name the concrete route.\n\n"
+    "WHAT A NO-BID CITATION MUST BE — the costliest mistake you can make is a NO on a\n"
+    "contract M&M could have won, so the bar is high:\n"
+    "  * Quote a CLAUSE — a full sentence stating an obligation or an exclusion.\n"
+    "  * NEVER quote a website menu or page heading (e.g. 'Economic Opportunity',\n"
+    "    'Commercial Opportunities', 'Doing Business in ...'). Those are site navigation,\n"
+    "    not terms of the solicitation, and they are NOT set-asides.\n"
+    "  * NEVER quote a submission deadline. A passed deadline archives a notice; it is\n"
+    "    never a reason to refuse to bid.\n"
+    "  * A requirement for a LOCAL, in-country or licensed firm is NOT a no-bid. A local\n"
+    "    partner or subcontractor can hold it -> tier MID and name that route.\n"
+    "  * If you cannot quote a sentence that genuinely excludes M&M, the tier is not NO.\n\n"
     "STAGE 1 — TRUE FATAL TRIGGERS (any one = tier NO, quote the clause VERBATIM):\n"
     "  * ITAR / EAR / embargoed goods: weapons, ammunition, military-specific or dual-use tech.\n"
     "  * A set-aside M&M cannot qualify for (U.S. small-business, 8(a), SDVOSB, HUBZone, "
@@ -126,6 +137,86 @@ ADJUDICATE_PROMPT = (
     "Use ONLY what the text states; never invent a date, value or quote. today is {today}.\n"
     "TEXT:\n{body}"
 )
+
+
+# ================= SITE CHROME =================
+# Embassy pages carry their whole navigation in ordinary text: "Economic
+# Opportunity", "Commercial Opportunities", "Doing Business in ...". The model
+# read one of those menu headings as a set-aside and threw away a winnable
+# contract. Navigation is not contract language and must never reach the model.
+_CHROME_LINES = re.compile(
+    r"^(?:\s*(?:home|menu|search|close|skip to (?:main )?content|jump into the main content"
+    r"|economic opportunit(?:y|ies)|commercial opportunit(?:y|ies)|doing business in[^\n]*"
+    r"|business ready|u\.?s\.?\s*citizen services|visas?|education\s*&\s*culture"
+    r"|news\s*&\s*events|embassy\s*&\s*consulates?|about(?: us)?|contact(?: us)?"
+    r"|jobs?|careers?|privacy policy|accessibility|follow us|share this page"
+    r"|social media|newsletter|subscribe|sitemap|related content|previous|next"
+    r"|read more|learn more|back to top|all news|events|press releases?)\s*)$",
+    re.I | re.M)
+
+_CHROME_PHRASES = re.compile(
+    r"\b(economic opportunit(?:y|ies)\s+commercial opportunit(?:y|ies)"
+    r"|commercial opportunit(?:y|ies)\s+economic opportunit(?:y|ies))\b", re.I)
+
+
+def clean_source_text(text):
+    """Strip website furniture so only the notice itself is adjudicated."""
+    if not text:
+        return text
+    t = _CHROME_LINES.sub("", text)
+    t = _CHROME_PHRASES.sub(" ", t)
+    return re.sub(r"\n{3,}", "\n\n", t)
+
+
+# ================= WHAT ACTUALLY DISQUALIFIES =================
+# A no-bid is the expensive mistake: a contract we could have won, silently
+# discarded. So its cited clause has to be a clause — an obligation that
+# genuinely excludes M&M — not a heading, a deadline, or a sentence that merely
+# contains the word "local".
+_EXCLUDES = re.compile(
+    r"\b(set[- ]aside|reserved (?:for|exclusively)|restricted to|limited to|only .{0,40}(?:firms|companies|nationals|bidders|offerors)"
+    r"|must be (?:a |an )?(?:registered|licen[sc]ed|incorporated|established|national|citizen|resident)"
+    r"|shall be (?:a |an )?(?:registered|licen[sc]ed|incorporated|national)"
+    r"|not eligible|ineligible|will not be considered|are excluded"
+    r"|8\(a\)|hubzone|sdvosb|wosb|edwosb|service[- ]disabled"
+    r"|itar|export[- ]controlled|military|ammunition|weapon)\b", re.I)
+
+_DEADLINE_ONLY = re.compile(
+    r"^\W*(?:quotations?|offers?|proposals?|bids?|submissions?)[^.]{0,80}"
+    r"(?:are |is |)due\b|^\W*no (?:quotations?|offers?|bids?) will be accepted", re.I)
+
+_LOCALITY_ONLY = re.compile(
+    r"\blocal(?:ly)?\b|\bin[- ]country\b|\bresident\b|\bdomestic(?:ally)?\b", re.I)
+
+_HARD_NATIONALITY = re.compile(
+    r"\b(must be (?:a |an )?(?:\w+ )?(?:national|citizen)|nationals? (?:of \w+ )?only"
+    r"|restricted to (?:\w+ )?(?:firms|companies|nationals|entities)"
+    r"|reserved (?:for|exclusively to) (?:\w+ )?(?:firms|companies|nationals)"
+    r"|only (?:\w+ )?[- ]?registered (?:firms|companies))\b", re.I)
+
+
+def citation_excludes(quote, full_text=""):
+    """(ok, why_not). True only if the quote is genuinely a disqualifying clause."""
+    q = (quote or "").strip()
+    if len(q) < 25:
+        return False, "the cited text is too short to be a contract clause"
+    if _CHROME_PHRASES.search(q) or _CHROME_LINES.search(q.strip()):
+        return False, "the cited text is website navigation, not a clause in the notice"
+    if _DEADLINE_ONLY.search(q):
+        return False, ("the cited text is a submission deadline. A passed deadline archives "
+                       "a solicitation; it never makes it a no-bid")
+    words = len(q.split())
+    if words < 6:
+        return False, "the cited text is a heading, not a sentence that excludes anyone"
+    if not _EXCLUDES.search(q):
+        return False, "the cited text states no restriction that would exclude M&M"
+    # "local" alone is a gap a partner closes — that is MID, by Rahul's own rule
+    if _LOCALITY_ONLY.search(q) and not _HARD_NATIONALITY.search(q) and not re.search(
+            r"set[- ]aside|8\(a\)|hubzone|sdvosb|wosb", q, re.I):
+        return False, ("the clause asks for a LOCAL firm, which a local partner or "
+                       "subcontractor can satisfy — that is conditional, not a no-bid")
+    return True, ""
+
 
 # ---------------------------------------------------------------- date harvesting
 _MONTHS = ("january february march april may june july august september october "
@@ -352,6 +443,7 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     """Adjudicate one solicitation. `call_ai(prompt)` returns a parsed dict
     (or raises / returns {} on failure). Returns a directory record with the
     accuracy gates applied, dates harvested, and an evidence snippet attached."""
+    text = clean_source_text(text)          # website menus are not contract language
     body = re.sub(r"\s+", " ", text or "")
     evidence = body[:1500]
     if len(body) < min_chars:
@@ -401,13 +493,29 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     if not rec["sector"]:
         rec["sector"] = guess_sector(text)
 
-    # --- ACCURACY GATE 1: a NO-BID must carry a citation that really exists in the text
+    # --- ACCURACY GATE 1: a NO-BID must quote a clause that REALLY EXISTS and
+    # that REALLY EXCLUDES US. Existing in the text is not enough: a menu
+    # heading, a deadline and the word "local" all exist in the text, and each
+    # of them threw away a contract we could have won.
     if rec["tier"] == "NO":
         cit = rec.get("citation")
-        if not (cit and cit.get("quote") and verify_citation(cit["quote"], text)):
+        q = (cit or {}).get("quote") or ""
+        if not (q and verify_citation(q, text)):
             rec["tier"] = "REVIEW"
             rec["review_reason"] = "no-bid rejected: cited clause not found verbatim in source"
             rec["citation"] = None
+        else:
+            good, why = citation_excludes(q, text)
+            if not good:
+                # a locality requirement is a GAP, not a bar — that is conditional
+                locality = ("local" in why) or _LOCALITY_ONLY.search(q)
+                rec["tier"] = "MID" if locality else "REVIEW"
+                rec["review_reason"] = f"no-bid rejected: {why}"
+                rec["overturned_nobid"] = why
+                rec["citation"] = None
+                if rec["tier"] == "MID" and not (rec.get("route") or "").strip():
+                    rec["route"] = ("Engage a locally licensed partner or subcontractor to hold "
+                                    "the licence and perform in country; M&M primes.")
 
     # --- ACCURACY GATE 2: low confidence never becomes a hard decision
     if rec["tier"] in ("BID", "MID", "NO") and rec["confidence"] < min_conf:
@@ -419,3 +527,84 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
 
 if __name__ == "__main__":
     print("analyzer v2 — import adjudicate(); run test_analyzer.py for checks")
+
+
+SECOND_OPINION_PROMPT = (
+    "A first pass refused to bid on this solicitation for Madison & Main LLC. "
+    "A wrong refusal silently throws away a contract M&M could have won, so check it.\n\n"
+    "M&M is a U.S. LLC that sources goods and ships them to overseas U.S. missions and UN "
+    "agencies, and can also act as prime and fulfil through others: an authorized dealer, a "
+    "supplier, a LOCAL subcontractor, an installer, or a teaming/JV partner. Its SAM.gov "
+    "registration is complete. It has no in-house workforce and no in-country presence of its "
+    "own, but it CAN engage a local licensed partner.\n\n"
+    "A refusal is only correct if the document contains a clause that genuinely EXCLUDES M&M:\n"
+    "  * a set-aside M&M cannot qualify for (U.S. small business, 8(a), HUBZone, SDVOSB, WOSB,\n"
+    "    or a bar restricted to host-country nationals/firms);\n"
+    "  * ITAR / export-controlled / military goods;\n"
+    "  * experience that must explicitly be the PRIME's own, with subcontractor experience\n"
+    "    expressly disallowed;\n"
+    "  * an illegal or sanctioned counterparty or destination.\n\n"
+    "These are NOT reasons to refuse:\n"
+    "  * a website menu or page heading ('Economic Opportunity', 'Commercial Opportunities');\n"
+    "  * a submission deadline, however near or past — that archives a notice, it does not bar us;\n"
+    "  * a requirement for a local, in-country, licensed, registered or bonded firm — a local\n"
+    "    partner or subcontractor can hold it, which makes it CONDITIONAL, not refused;\n"
+    "  * on-site labour, installation, past performance, insurance or bonding;\n"
+    "  * SAM.gov / UEI / CAGE / NCAGE registration, which is already complete.\n\n"
+    "THE FIRST PASS SAID: {reason}\nIT QUOTED: \"{quote}\"\n\n"
+    "Answer ONLY this JSON:\n"
+    '  {"upheld": true|false,\n'
+    '   "tier": "NO"|"MID"|"BID"|"REVIEW",\n'
+    '   "citation": {"doc":"...","quote":"verbatim excluding clause"} or null,\n'
+    '   "route": "if not NO, the concrete way M&M fulfils this",\n'
+    '   "why": "one sentence"}\n'
+    "Uphold the refusal ONLY if you can quote a clause that truly excludes M&M. "
+    "If the only obstacle is something a partner could hold, answer tier MID.\n"
+    "TEXT:\n{body}"
+)
+
+
+def second_opinion(rec, text, call_ai, model=None):
+    """Re-check a NO-BID with a stronger model before a winnable contract is lost.
+
+    Rahul: "if you need to use a heavier model to check things at the last moment,
+    use them so they don't do shitty things like these."
+    """
+    if rec.get("tier") != "NO":
+        return rec, False
+    body = re.sub(r"\s+", " ", clean_source_text(text) or "")[:18000]
+    prompt = (SECOND_OPINION_PROMPT
+              .replace("{reason}", (rec.get("review_reason") or "no reason recorded")[:300])
+              .replace("{quote}", ((rec.get("citation") or {}).get("quote") or "")[:400])
+              .replace("{body}", body))
+    try:
+        d = call_ai(prompt, model=model) if model else call_ai(prompt)
+    except Exception as e:
+        if type(e).__name__ == "AllExhausted":
+            raise
+        return rec, False
+    if not isinstance(d, dict) or d.get("_gerr"):
+        return rec, False
+
+    rec["second_opinion"] = {"upheld": bool(d.get("upheld")),
+                             "why": str(d.get("why", ""))[:300],
+                             "model": model or "primary"}
+    if d.get("upheld"):
+        cit = d.get("citation") or {}
+        q = str(cit.get("quote", ""))
+        good, _why = citation_excludes(q, text) if q else (False, "")
+        if q and good and verify_citation(q, text):
+            rec["citation"] = {"doc": str(cit.get("doc", ""))[:160], "quote": q[:400]}
+        return rec, False
+
+    # overturned — do not throw the contract away
+    t = str(d.get("tier", "MID")).upper()
+    rec["tier"] = t if t in ("BID", "MID", "REVIEW") else "MID"
+    rec["citation"] = None
+    rec["overturned_nobid"] = (rec.get("second_opinion") or {}).get("why", "") or \
+                              "a second, stronger check found no clause that excludes us"
+    if d.get("route"):
+        rec["route"] = str(d["route"])[:600]
+    rec["review_reason"] = ""
+    return rec, True
+

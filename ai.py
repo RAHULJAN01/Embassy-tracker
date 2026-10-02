@@ -37,6 +37,12 @@ MAX_RETRIES = int(os.getenv("AI_RETRIES", "4"))
 MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 MODEL_FALLBACKS = ["claude-haiku-4-5", "claude-3-5-haiku-latest"]
 
+# A second, stronger opinion — used ONLY to double-check a NO-BID before a
+# winnable contract is thrown away. No-bids are a minority of the register, so
+# this costs little and guards the one error that actually loses money.
+REVIEW_MODEL = os.getenv("CLAUDE_REVIEW_MODEL", "claude-sonnet-4-5-20250929")
+REVIEW_FALLBACKS = ["claude-sonnet-4-5", "claude-3-7-sonnet-latest", MODEL]
+
 # The key. ANTHROPIC_API_KEY is the name we ask for; the others are accepted so a
 # differently-named secret doesn't look like an outage. Which one was found is
 # reported in the diagnostics.
@@ -172,7 +178,7 @@ class Claude:
         if gap < MIN_INTERVAL:
             time.sleep(MIN_INTERVAL - gap)
 
-    def _next_model(self):
+    def _next_model(self, review=None):
         """A model id this account has not tried yet, or None.
 
         We never 'probe' the model with a throwaway call — that burned a real
@@ -181,23 +187,25 @@ class Claude:
         back 404 we simply move to the next id and REPLAY THE SAME PROMPT, so
         nothing is paid for twice and nothing is lost.
         """
-        for m in [MODEL] + MODEL_FALLBACKS:
+        pool = ([REVIEW_MODEL] + REVIEW_FALLBACKS) if review else ([MODEL] + MODEL_FALLBACKS)
+        for m in pool:
             if m not in self._tried_models:
                 return m
         return None
 
-    def call(self, prompt):
+    def call(self, prompt, model=None):
         if not self.key:
             self.down_reason = ("no Claude API key is configured — add the repository "
                                 "secret ANTHROPIC_API_KEY")
             raise AllExhausted(self.down_reason)
-        self._tried_models.add(self.model)
+        use = model or self.model
+        self._tried_models.add(use)
 
         wait = 3.0
         last = ""
         for attempt in range(MAX_RETRIES):
             self._pace()
-            status, text, _ = _post(self.key, self.model, prompt)
+            status, text, _ = _post(self.key, use, prompt)
             self._last = time.time()
 
             if status == 200:
@@ -209,7 +217,8 @@ class Claude:
                 self.input_tokens += int(u.get("input_tokens") or 0)
                 self.output_tokens += int(u.get("output_tokens") or 0)
                 self.calls += 1
-                self.ok["claude"] = self.ok.get("claude", 0) + 1
+                key = "claude-review" if model else "claude"
+                self.ok[key] = self.ok.get(key, 0) + 1
                 self.down_reason = ""
                 parts = data.get("content") or []
                 raw = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
@@ -226,9 +235,11 @@ class Claude:
             if status == 404:
                 # this model id isn't available to the account — switch and
                 # replay the SAME prompt, so the call isn't wasted
-                nxt = self._next_model()
+                nxt = self._next_model(model)
                 if nxt:
-                    self.model = nxt
+                    use = nxt
+                    if not model:
+                        self.model = nxt
                     self._tried_models.add(nxt)
                     continue
             if fatal:
@@ -243,7 +254,8 @@ class Claude:
 
 
 def make_caller():
-    """Factory: returns (client, call_fn). call_fn(prompt) -> dict."""
+    """Factory: returns (client, call_fn). call_fn(prompt) -> dict.
+    call_fn also accepts model= to ask a stronger model for a second opinion."""
     c = Claude()
     return c, c.call
 

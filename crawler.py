@@ -659,6 +659,8 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
         "awardBasis": rec.get("award_basis", ""),
         "gotchas": rec.get("gotchas", []) or [],
         "promotedFromMid": rec.get("promoted_from_mid", ""),
+        "overturnedNobid": rec.get("overturned_nobid", ""),
+        "secondOpinion": rec.get("second_opinion") or None,
         "value": rec.get("est_value", ""), "shipping": rec.get("shipping", ""),
         "payment": rec.get("payment", ""), "shipAfter": rec.get("ship_after", ""),
         "setaside": rec.get("setaside", ""), "license": rec.get("license", ""),
@@ -688,10 +690,21 @@ MAX_REPAIR_TRIES = int(os.getenv("MAX_REPAIR_TRIES", "3"))
 REPAIR_SHARE = float(os.getenv("REPAIR_SHARE", "0.65"))   # of the AI budget
 
 
+# A refusal reached under the old, looser rules is not to be trusted: four of
+# the first five no-bids were wrong (a website menu, a deadline, and twice the
+# word "local"). Any no-bid that never faced the second opinion is re-judged.
+def suspect_nobid(row):
+    if row.get("tier") != "NO" or row.get("deleted"):
+        return False
+    return not row.get("secondOpinion")
+
+
 def repairable(row):
     """Is this record incomplete in a way a re-crawl could actually fix?"""
     if row.get("archived") or row.get("deleted") or row.get("hidden"):
         return False
+    if suspect_nobid(row):
+        return True                      # re-judge it before we lose the contract
     if row.get("verified") == "VERIFIED":
         return False
     if int(row.get("repairTries", 0) or 0) >= MAX_REPAIR_TRIES:
@@ -704,6 +717,8 @@ def repair_rank(row):
     can still download is the highest-value call we can make."""
     notes = " ".join(row.get("verifyNotes") or []).lower()
     score = 0
+    if suspect_nobid(row):
+        score += 200          # a possibly-wrong refusal outranks everything else
     if "not adjudicated" in notes or row.get("tier") == "REVIEW":
         score += 40
     if "no closing date" in notes:

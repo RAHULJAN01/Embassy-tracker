@@ -27,7 +27,9 @@ import time
 COST_ADJUDICATE = 1
 COST_ESTIMATE = 1
 COST_RETRY = 1
-FULL_JOB_COST = COST_ADJUDICATE + COST_RETRY + COST_ESTIMATE      # reserve this much
+COST_SECOND_OPINION = 1
+FULL_JOB_COST = (COST_ADJUDICATE + COST_RETRY + COST_SECOND_OPINION
+                 + COST_ESTIMATE)      # reserve this much
 
 
 class Budget:
@@ -149,6 +151,24 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         # the AI never actually answered — do NOT store a half-record
         report["stage"] = "abandoned: AI unavailable (will retry next run)"
         return None, report
+
+    # ---- 2b. A NO-BID GETS A SECOND, STRONGER OPINION BEFORE WE THROW IT AWAY.
+    # Refusing a contract we could have won is the only error here that costs
+    # real money, and it is silent. No-bids are a minority, so this is cheap.
+    if rec.get("tier") == "NO" and budget.left >= COST_SECOND_OPINION:
+        if status:
+            status.beat(currentJob=f"double-checking a no-bid: {label[:40]}")
+        try:
+            import ai as _ai
+            rec, changed = analyzer.second_opinion(rec, text, call_ai,
+                                                   model=getattr(_ai, "REVIEW_MODEL", None))
+            budget.spend(COST_SECOND_OPINION)
+            report["ai_calls"] += 1
+            report["second_opinion"] = "overturned" if changed else "upheld"
+        except Exception as e:
+            if type(e).__name__ == "AllExhausted":
+                raise
+            report["second_opinion"] = f"could not run ({str(e)[:60]})"
 
     # ---- 3. BUILD THE RECORD (dates/title already back-filled by the analyzer)
     report["stage"] = "building record"
