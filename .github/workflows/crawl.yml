@@ -13,6 +13,10 @@ on:
         type: choice
         options: [roots, live, probe]
         default: roots
+      force_sam:
+        description: "force a SAM pull even outside the SAM windows"
+        type: boolean
+        default: false
 permissions:
   contents: write
   actions: write
@@ -75,6 +79,7 @@ jobs:
           NVIDIA_API_KEY:     ${{ secrets.NVIDIA_API_KEY }}
           HF_API_KEY:         ${{ secrets.HF_API_KEY }}
           SAM_API_KEY:        ${{ secrets.SAM_API_KEY }}
+          FORCE_SAM:          ${{ (github.event.inputs.force_sam == 'true') && '1' || '0' }}
           UNGM_USER:          ${{ secrets.UNGM_USER }}
           UNGM_PASS:          ${{ secrets.UNGM_PASS }}
           SHARD:              ${{ matrix.shard }}
