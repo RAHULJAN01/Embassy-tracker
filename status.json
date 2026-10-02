@@ -1,51 +1,20 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-02 16:30 UTC",
- "heartbeat": "2026-10-02 16:40 UTC",
+ "startedAt": "",
+ "heartbeat": "",
  "currentJob": "fleet run complete",
  "found": 0,
- "queued": 55,
- "aiCalls": 20,
- "aiBudget": 32,
- "providers": [
-  "cloudflare",
-  "gemini",
-  "gemini_2",
-  "gemini_3",
-  "github",
-  "groq",
-  "huggingface",
-  "mistral",
-  "nvidia",
-  "openrouter",
-  "pollinations",
-  "sambanova"
- ],
+ "queued": 0,
+ "aiCalls": 0,
+ "aiBudget": 0,
+ "providers": [],
  "coverage": {},
- "bots": 4,
+ "bots": 0,
  "running": false,
  "lastError": "",
  "aiDiag": {
-  "ok": {
-   "cloudflare": 7,
-   "pollinations": 4,
-   "groq": 1,
-   "nvidia": 2
-  },
-  "errors": {
-   "gemini": "gemini 429",
-   "gemini_2": "gemini 429",
-   "gemini_3": "gemini 429",
-   "groq": "openai/gpt-oss-20b 429",
-   "mistral": "mistral-small-2603 429",
-   "openrouter": "qwen/qwen3.8-27b:free 429",
-   "github": "github: Expecting value: line 1 column 1 (char 0)",
-   "cloudflare": "cloudflare: unparseable response",
-   "sambanova": "DeepSeek-V3.1 402",
-   "nvidia": "nvidia: The read operation timed out",
-   "huggingface": "huggingface: meta-llama/Llama-3.3-70B-Instruct HTTP 403: {\"error\":\"This authentication method does not have sufficient permissions to",
-   "pollinations": "pollinations: 'content'"
-  }
+  "ok": {},
+  "errors": {}
  },
  "samDiag": "SAM not queried"
 }

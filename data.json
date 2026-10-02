@@ -1,8 +1,8 @@
 {
  "meta": {
-  "lastLive": "2026-10-02 18:15 UTC",
-  "lastDeep": "",
-  "lastRoots": "",
+  "lastLive": "2026-10-02 18:17 UTC",
+  "lastDeep": "2026-10-02 18:17 UTC",
+  "lastRoots": "2026-10-02 18:17 UTC",
   "ledger": [],
   "rebuiltOn": "2026-10-02 18:15 UTC",
   "rebuildNote": "Register cleared and rebuilt from scratch under Claude. Nothing judged by the earlier free models was kept.",
