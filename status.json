@@ -1,38 +1,33 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-02 18:21 UTC",
- "heartbeat": "2026-10-02 18:30 UTC",
+ "startedAt": "2026-10-02 19:13 UTC",
+ "heartbeat": "2026-10-02 19:42 UTC",
  "currentJob": "fleet run complete",
- "found": 46,
- "queued": 122,
- "aiCalls": 72,
+ "found": 0,
+ "queued": 43,
+ "aiCalls": 0,
  "aiBudget": 100,
  "providers": [
   "claude"
  ],
  "coverage": {
-  "Algeria": 4,
   "Burkina Faso": 6,
-  "Central African Republic": 5,
-  "Cote d'Ivoire": 7,
-  "Angola": 1,
-  "Burundi": 6,
-  "Benin": 9,
-  "Botswana": 0,
-  "Cameroon": 0,
-  "Republic of the Congo": 1,
-  "Equatorial Guinea": 1,
-  "Gabon": 0,
-  "Kenya": 9
+  "Central African Republic": 1,
+  "Cote d'Ivoire": 11
  },
  "bots": 4,
  "running": false,
  "lastError": "abandoned: AI unavailable (will retry next run)",
  "aiDiag": {
   "ok": {
-   "claude": 76
+   "claude": 24
   },
-  "errors": {}
+  "errors": {},
+  "model": "claude-haiku-4-5-20251001",
+  "keyVar": "ANTHROPIC_API_KEY",
+  "inputTokens": 149216,
+  "outputTokens": 48000,
+  "spendUSD": 0.3892
  },
- "samDiag": "HTTP 429 | total=? | got=0 | Message throttled out"
+ "samDiag": "SAM not queried"
 }

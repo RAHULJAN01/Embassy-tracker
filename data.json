@@ -1,8 +1,8 @@
 {
  "meta": {
-  "lastLive": "2026-10-02 18:30 UTC",
-  "lastDeep": "2026-10-02 18:30 UTC",
-  "lastRoots": "2026-10-02 18:30 UTC",
+  "lastLive": "2026-10-02 19:42 UTC",
+  "lastDeep": "2026-10-02 19:42 UTC",
+  "lastRoots": "2026-10-02 19:42 UTC",
   "ledger": [
    "0a5030bcb7760be2",
    "0c476f32f9dbb7dc",
@@ -16,6 +16,7 @@
    "4936e1df01c9fd0d",
    "53f8839bb08e5573",
    "570ddd8d81313849",
+   "578b356fc649f029",
    "5d8862fff99a15f6",
    "5e2bf67699647740",
    "66e584f29efe87e4",
@@ -33,6 +34,7 @@
    "bda44bfc331d5e09",
    "c89b3be64ad8e292",
    "c8bd6c82046bbef2",
+   "ca34fe72282f0877",
    "cc25abd188fbaffb",
    "cec7a73fdde23865",
    "dc3294698958c8bc",
@@ -51,7 +53,7 @@
    "mid": 3,
    "no": 1,
    "review": 5,
-   "archived": 17,
+   "archived": 19,
    "verified": 3,
    "unverified": 7,
    "deleted": 0,
@@ -813,12 +815,15 @@
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (abandoned: nothing readable)"
    ],
    "evidence": "Procurement Notices PROCUREMENT NOTICES Search and filter Close By region Africa Arab States Asia and the Pacific Europe & the Commonwealth of independent States Latin America and the Caribbean Procurement Process ITB - Invitation to bid RFP - Request for proposal RFQ - Request for quotation IC - Individual contractor ITP - Invitation to pre-qualify EOI - Expression of interest RFI - Request for Information CP-QB-FBS - Call for Proposal – Quality Based Fixed Budget Innovation Challenge Other Active Filters: Clear All Title Ref No UNDP Office/Country Procurement Process Deadline Posted Title Ca",
    "fp": "5bc8f35b3240fd98",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:14 UTC"
   },
   {
    "tier": "BID",
@@ -1187,13 +1192,16 @@
    "reviewReason": "",
    "verified": "UNVERIFIED",
    "verifyNotes": [
-    "no closing date found"
+    "no closing date found",
+    "re-scan 1/3 did not complete it (abandoned: nothing readable)"
    ],
    "evidence": "each 2 LINCOLN INVERTEC 400SX PORTABLE INVERTER FOR STICK WELDING PART NO: K12042-1 1 each 3 FLEX TRINOFLEX BURNISHING MACHINE MODEL NO: BSE14-3 100 2 each 4 MILWAUKEE M18 FUEL RANDOM ORBITAL CORDLESS POLISHER WITH 15MM STROKE IN CASE PART NO: M18FROP15-0X 2 each 5 UTP TENASOUDO 75 CAST IRON ELECTRODES 4MM DIAMETER, 350MM LENGTH ISO STANDARD E 21-UM-65-G AWG STANDARD EZFE21 5 each Notes: all questions should be sent at BujProcurement@state.gov 4 days prior to closing date, to allow response time which should be 2 days prior to closing date. Outside of that the question (s) will not be consider",
    "fp": "5925935db114777f",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "changed": "2026-10-02"
+   "changed": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:23 UTC"
   },
   {
    "tier": "NO",
@@ -1526,12 +1534,15 @@
    "verifyNotes": [
     "no closing date found",
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (skipped: closed on 2026-01-21)"
    ],
    "evidence": "t for Operation of Cafeteria Request For Quotation 19BN1525Q0006, School Shuttle Monitor Services for US Embassy Cotonou Request For Quotati",
    "fp": "98a6e65e43329c49",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:14 UTC"
   },
   {
    "tier": "MID",
@@ -2054,12 +2065,15 @@
    "reviewReason": "",
    "verified": "UNVERIFIED",
    "verifyNotes": [
-    "no closing date found"
+    "no closing date found",
+    "re-scan 1/3 did not complete it (abandoned: nothing readable)"
    ],
    "evidence": "t Opportunities Economic Opportunity Commercial Opportunities Request for Proposals REQUEST FOR QUOTATION NUMBER 19KE5026Q0128 UNDERGROUND STORAGE WATER TANK CLEANING – ROSSLYN RIDGE REQUEST FOR QUOTATION NUMBER 19KE5026Q0128 UNDERGR",
    "fp": "2a675da18fb9cd31",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:22 UTC"
   },
   {
    "tier": "NO",
@@ -2203,12 +2217,15 @@
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (skipped: closed on 2021-04-09)"
    ],
    "evidence": "FOR QUOTATION NUMBER 19KE5026Q0127 ACCESS CONTROL FOR JTTF-K BUILDING Economic Opportunity Commercial Opportunities Request for Proposals REQUEST FOR QUOTATION NUMBER 19KE5026Q0126 LEGAT – CCTV FOR JTTF-K BUILDING REQUEST FOR QUOTATION NUMBER 19KE5026Q0126",
    "fp": "bc57f54dc4001df6",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:23 UTC"
   },
   {
    "tier": "MID",
@@ -2365,12 +2382,15 @@
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (skipped: closed on 2021-04-09)"
    ],
    "evidence": "CTV CAMERAS & NETWORK VIDEO RECORDER (NVR) Economic Opportunity Commercial Opportunities Request for Proposals Request for Quotation PR16227859 – RR network cabinets rehabilitation/replacement DTI-CIS Request for Quotation P",
    "fp": "731bca916f3685a8",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:22 UTC"
   },
   {
    "tier": "REVIEW",
@@ -2435,13 +2455,94 @@
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (skipped: closed on 2021-04-09)"
    ],
    "evidence": "47- MED UNIT LENOLIUM FLOOR INSTALLATION Economic Opportunity Commercial Opportunities Request for Proposals REQUEST FOR QUOTATION (RFQ)- PR16233448 – Supply of Low Sulphur Diesel for NOX Gas Station REQUEST FOR QUOTATION (RFQ)-",
    "fp": "28516f48e24abbea",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "changed": "2026-10-02"
+   "changed": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-02 19:42 UTC"
+  },
+  {
+   "sol": "Skip to main content",
+   "link": "https://www.iom.int/procurement-opportunities",
+   "title": "Procurement opportunities | International Organization for Migration",
+   "tier": "",
+   "sector": "",
+   "platform": "UN",
+   "agency": "IOM",
+   "domestic": false,
+   "post": "IOM Procurement",
+   "country": "",
+   "source": "UN",
+   "deadline": "2026-10-01",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-02",
+   "updated": "2026-10-02",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "closed on 2026-10-01 before the bots reached it — archived without spending an AI call on it"
+   ],
+   "files": [
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/30000034186_supplier-6-1.pdf",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/30000030951_supplier.pdf",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/contract-terms_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-a-bid-confirmation_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-c-bid-submission_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-c-bid-submission_30000030951_0.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-d-bidder-information_30000030951_0.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-e-joint-venture_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-f-eligibility-and-qualification-form_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/form-g-technical-bid_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/instructions-to-suppliers_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/iom-data-protection-principles_3.pdf",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/tors-medical_30000030951.docx",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/30000033441_supplier-1.pdf",
+    "https://www.iom.int/sites/g/files/tmzbdl2616/files/procurement/iom-bidder-s-declaration-of-conformity_2.docx"
+   ],
+   "fileCount": 40,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "6e8cb44d812e3bb3",
+   "firstSeen": "2026-10-02"
+  },
+  {
+   "sol": "PR16139707",
+   "link": "https://ci.usembassy.gov/tag/procurement-solicitations/",
+   "title": "OMB APPROVAL NO. 2700-0042",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Cote d'Ivoire",
+   "country": "Cote d'Ivoire",
+   "source": "Site",
+   "deadline": "2026-08-14",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-02",
+   "updated": "2026-10-02",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "closed on 2026-08-14 before the bots reached it — archived without spending an AI call on it"
+   ],
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "ce5c39c24e600db4",
+   "firstSeen": "2026-10-02"
   }
  ]
 }
