@@ -33,10 +33,19 @@ ok("a 404 replays the SAME prompt on the next model instead of re-paying",
    "replay" in src_ai.lower() or "_next_model" in src_ai)
 
 src_pipe = inspect.getsource(pipeline)
-ok("the closing date is checked BEFORE the model is called",
-   src_pipe.index("harvest_date") < src_pipe.index("analyzer.adjudicate"))
+# The cheap first pass comes before anything expensive: one small call on an
+# excerpt settles whether this is a solicitation, whether it is still open and
+# when it closes, and only then is a document opened or an adjudication paid
+# for. Rahul: "smallest things first, if confirmed then move to full mining."
+ok("the cheap first pass runs BEFORE the full adjudication",
+   src_pipe.index("read_triage") < src_pipe.index("analyzer.adjudicate"))
+ok("a page that is not a solicitation returns without adjudicating",
+   'report["notSolicitation"]' in src_pipe)
 ok("an already-closed solicitation returns without adjudicating",
    'report["expired"]' in src_pipe)
+ok("the attachments are not opened before the first pass has said yes",
+   src_pipe.index("read_triage") < src_pipe.index("fetch_attachments(chosen)"))
+ok("the same excerpt is never paid for twice", "nothing_new" in src_pipe)
 
 src_crawl = inspect.getsource(crawler)
 ok("a job is only STARTED if the whole job fits in the budget",
@@ -133,35 +142,34 @@ ok("and the realistic load (40 solicitations/day) is near $11",
 
 # ============================================================ THE CHEAP GATE
 print("\n=== Nothing is opened, read or thought about on a dead notice ===")
+# The dead-notice check used to be a regular expression here. It is now the
+# model's call, made on the cheap first pass, and it has to QUOTE the words
+# that say the notice is over -- a cancellation nobody can point to in the page
+# is overruled. What is still free and still decided here is arithmetic: is
+# there any text at all, and have we already settled this reference.
 import pipeline as _P
 _T = "2026-10-02"
 _body = " The U.S. Embassy requires cleaning services for the chancery compound. " * 8
 for _label, _txt, _want in [
-        # A PAST DATE FOUND BY PHRASE-MATCHING NO LONGER KILLS A NOTICE HERE.
-        # This gate archives the record and adds its hash to the never-look-
-        # again ledger, and on the field test it would have done that to a live
-        # Ottawa procurement page carrying the standard line "...submitted a
-        # complete application for certification to SBA on or before December
-        # 31, 2023". Killing a record is irreversible in practice, so it now
-        # needs a date the model read and quoted -- which happens a few steps
-        # later, in process_one, and re-checks exactly this condition.
-        ("past closing date (now the reader's call, not a phrase's)",
-         _body + " Quotations are due by 14 September 2026.", ""),
-        ("cancelled", _body + " This solicitation has been cancelled.", "dead"),
-        ("withdrawn", _body + " This RFQ was withdrawn by the contracting officer.", "dead"),
-        ("already awarded", _body + " Notice of award: contract awarded to Acme Ltd.", "dead"),
-        ("closed", _body + " This opportunity has closed.", "dead"),
-        ("superseded", _body + " Superseded by solicitation 19KE5026Q0200.", "dead"),
-        ("still live", _body + " Quotations are due by 20 December 2026.", ""),
-        ("no date stated", _body, "")]:
+        ("an empty page", "   ", "thin"),
+        ("a page with almost nothing on it", "Procurement.", "thin"),
+]:
     _v, _d = _P.triage(_txt, _T)
-    ok(f"  {_label} -> {_want or 'worth working'}", _v == _want, f"{_v} {_d[:40]}")
+    ok(f"  {_label} -> {_want}", _v == _want, f"{_v} {_d}"[:60])
+ok("  a notice already settled is not looked at again",
+   _P.triage(_body, _T, known_live={"PR15305534"}, sol_hint="PR15305534")[0] == "duplicate")
+ok("  and the regex that used to judge this is gone from the spend path",
+   "_DEAD_RX.search" not in inspect.getsource(_P.triage))
 
 _calls = {"n": 0}; _opened = {"n": 0}
 
 
 def _ai(p, model=None):
     _calls["n"] += 1
+    if p.startswith(analyzer.TRIAGE_PROMPT[:60]):
+        return {"is_solicitation": True, "status": "closed",
+                "status_quote": "This solicitation has been cancelled.",
+                "what_it_is": "cancelled RFQ", "closing": "", "closing_quote": ""}
     return {"tier": "BID", "confidence": 0.9}
 
 
@@ -182,14 +190,21 @@ _rec, _rep = _P.process_one(
      "attachments": ["https://x/a.pdf"] * 8, "sol_hint": "X"},
     call_ai=_ai, analyzer=analyzer, estimator=estimator, budget=_B(), today=_T,
     fetch_attachments=_fetch)
-ok("a dead notice costs ZERO AI calls", _calls["n"] == 0, str(_calls["n"]))
+# The model now makes this call, so it costs exactly ONE small call -- and that
+# is the whole bill: no files are opened, nothing is adjudicated, nothing is
+# priced. A full job is six calls plus every attachment, so the saving is the
+# same as it ever was; the difference is that a human-written regular
+# expression is no longer deciding what is dead.
+ok("a dead notice costs ONE cheap call and no more", _calls["n"] == 1, str(_calls["n"]))
 ok("a dead notice downloads ZERO files", _opened["n"] == 0, str(_opened["n"]))
 ok("but it is still archived and documented",
-   bool(_rep.get("expired")) and bool(_rep.get("deadReason")))
-# the parameter name appears in the signature, so compare against the real CALL
+   bool(_rep.get("expired")) and bool(_rep.get("deadReason")),
+   str(_rep.get("deadReason"))[:60])
+ok("and the record says WHICH words killed it",
+   "cancelled" in (_rep.get("deadReason") or "").lower(), str(_rep.get("deadReason"))[:60])
 _src = inspect.getsource(_P.process_one)
-ok("the triage gate runs BEFORE any download",
-   _src.index("triage(text, today") < _src.index("fetch_attachments(chosen)"))
+ok("the first pass runs BEFORE any download",
+   _src.index("read_triage") < _src.index("fetch_attachments(chosen)"))
 
 ok("a reference already finished is not opened a second time",
    _P.triage(_body + " due 20 December 2026.", _T, {"ABC123"}, "abc123")[0] == "duplicate")

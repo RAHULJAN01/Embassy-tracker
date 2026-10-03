@@ -520,10 +520,35 @@ def date_windows(text, span=260, cap=7000):
     return "\n...\n".join(out)
 
 
-DATE_PROMPT = (
-    "You are reading an excerpt of a government procurement notice. Your ONLY job is to "
-    "identify which of the dates printed here is the SUBMISSION DEADLINE — the last moment a "
-    "quote, bid, offer or proposal may be handed in.\n\n"
+def triage_excerpt(text, head=1800, cap=5600):
+    """What the first-pass reader is shown: the top of the page, where a notice
+    says what it is and whether it has been cancelled, plus the lines around
+    every printed date. Everything in between is boilerplate it does not need."""
+    t = clean_source_text(text or "")
+    if not t:
+        return ""
+    top = t[:head]
+    windows = date_windows(t[head:], cap=cap) if len(t) > head else ""
+    return top + ("\n...\n" + windows if windows else "")
+
+
+TRIAGE_PROMPT = (
+    "You are the first pass over a page that MIGHT be a government procurement notice. "
+    "Three questions, in order, and you answer all three. Nothing downstream runs unless you "
+    "say this is a live solicitation, so a wrong 'no' throws away a contract and a wrong "
+    "'yes' spends money on a web page.\n\n"
+    "1. IS THIS A SOLICITATION? A real one invites someone to supply goods, works or services "
+    "and tells them how to respond: a reference number, a scope, items or a statement of work, "
+    "an address or e-mail for quotes, a deadline. These are NOT solicitations: a procurement "
+    "INDEX or archive page that only links to notices, a navigation or landing page, a news "
+    "item, a visa or consular page, a page describing how to register as a vendor, a contract "
+    "AWARD announcement with nothing left to bid on.\n\n"
+    "2. IS IT STILL OPEN? Say 'closed' when the page says in words that it is over — "
+    "cancelled, withdrawn, rescinded, superseded, awarded, 'no longer accepting', "
+    "'submissions closed'. Say 'open' when nothing says otherwise. Judge this from the words, "
+    "not from the dates; whether the deadline has passed is worked out separately.\n\n"
+    "3. WHICH PRINTED DATE IS THE SUBMISSION DEADLINE — the last moment a "
+    "quote, bid, offer or proposal may be handed in?\n\n"
     "Read it the way a person would. A deadline is written a hundred different ways and all of "
     "them count: 'no quotations will be accepted after 12 October 2026', 'offers due date: "
     "12-OCT-2026', 'bids must be in our hands by 1600 hrs on 12.10.2026', 'the tender box is "
@@ -545,12 +570,81 @@ DATE_PROMPT = (
     "found there is discarded together with your date, so do not paraphrase, tidy, translate or "
     "correct it, and make sure the quote contains the date itself.\n\n"
     "Return ONLY a JSON object:\n"
-    '  {"closing":"YYYY-MM-DD|\\"\\"", "closing_quote":"the exact words",\n'
+    '  {"is_solicitation": true|false,\n'
+    '   "what_it_is":"a few words — e.g. \\"RFQ for office furniture\\", \\"index of notices\\",\n'
+    '                 \\"award announcement\\", \\"visa information page\\"",\n'
+    '   "status":"open"|"closed",\n'
+    '   "status_quote":"the exact words saying it is over, or \\"\\" when it is open",\n'
+    '   "closing":"YYYY-MM-DD|\\"\\"", "closing_quote":"the exact words",\n'
     '   "posted":"YYYY-MM-DD|\\"\\"", "posted_quote":"",\n'
     '   "qa_due":"YYYY-MM-DD|\\"\\"", "qa_quote":"",\n'
     '   "why":"one short sentence on what made you pick it, or why none of them qualifies"}\n\n'
     "EXCERPT:\n"
 )
+
+# Kept under its old name so the date-only reader still works; the first pass
+# uses TRIAGE_PROMPT above, which asks the same date question plus two more.
+DATE_PROMPT = TRIAGE_PROMPT
+
+
+def read_triage(text, call_ai, model=None):
+    """THE FIRST PASS, AND THE ONLY JUDGEMENT CALL BEFORE THE MONEY IS SPENT.
+
+    Rahul: "let the AI find solicitations first, then let it find whether it is
+    alive or not, if yes then go all in for it till the estimator... smallest
+    things first, if confirmed then move to full mining."
+
+    So one cheap call, on an excerpt rather than the document, answers all three
+    gate questions at once: is this a notice, is it still open, and when does it
+    close. It replaces three pieces of pattern-matching that used to make those
+    calls -- a keyword score for "looks like a solicitation", a regular
+    expression for "cancelled or awarded", and a phrase list for the deadline.
+    Each of those was a guess wearing the clothes of a decision.
+
+    Returns (rec, note). rec carries is_solicitation, status, status_quote,
+    what_it_is and the grounded dates. Both quotes are checked against the real
+    document, so the model cannot talk a live notice into being dead any more
+    than it can invent a deadline.
+    """
+    excerpt = triage_excerpt(text)
+    if not excerpt:
+        return {}, "the page carried nothing readable"
+    try:
+        data = call_ai(TRIAGE_PROMPT + excerpt, model=model) if model else \
+            call_ai(TRIAGE_PROMPT + excerpt)
+    except Exception as e:
+        if type(e).__name__ == "AllExhausted":
+            raise
+        return {}, f"the first-pass reader could not run ({str(e)[:60]})"
+    if not isinstance(data, dict) or data.get("_gerr"):
+        return {}, f"the first-pass reader failed ({(data or {}).get('_gerr', 'no answer')})"
+
+    rec = {"closing": str(data.get("closing") or "")[:10],
+           "posted": str(data.get("posted") or "")[:10],
+           "qa_due": str(data.get("qa_due") or "")[:10],
+           "closing_quote": str(data.get("closing_quote") or "")[:400],
+           "posted_quote": str(data.get("posted_quote") or "")[:400],
+           "qa_quote": str(data.get("qa_quote") or "")[:400],
+           "is_solicitation": bool(data.get("is_solicitation", True)),
+           "what_it_is": str(data.get("what_it_is") or "")[:80],
+           "status": ("closed" if str(data.get("status") or "").lower().startswith("clos")
+                      else "open"),
+           "status_quote": str(data.get("status_quote") or "")[:300]}
+
+    # A NOTICE IS ONLY DEAD IF THE PAGE SAYS SO IN WORDS THAT REALLY EXIST.
+    # Calling something closed archives it and retires it permanently, so the
+    # claim is held to the same standard as a date: quote it, or it did not
+    # happen. A model that says "closed" with nothing to point at is overruled.
+    if rec["status"] == "closed":
+        q = rec["status_quote"].strip()
+        if not (q and verify_citation(q, text)):
+            rec["status"] = "open"
+            rec["status_doubt"] = ("the reader called this closed but the words it quoted are "
+                                   "not in the page, so it was left open")
+            rec["status_quote"] = ""
+
+    ground_dates(rec, text)
+    return rec, str(data.get("why") or "")[:200]
 
 
 def read_dates(text, call_ai, model=None):

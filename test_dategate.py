@@ -40,11 +40,15 @@ class Spy:
         self.sonnet_answer = sonnet_answer
 
     def __call__(self, prompt, model=None):
-        if prompt.startswith(analyzer.DATE_PROMPT[:60]):
+        if prompt.startswith(analyzer.TRIAGE_PROMPT[:60]):
             self.calls.append(("date", model, len(prompt)))
+            base = {"is_solicitation": True, "status": "open", "status_quote": "",
+                    "what_it_is": "RFQ"}
             if model and self.sonnet_answer is not None:
-                return dict(self.sonnet_answer)
-            return dict(self.date_answer)
+                base.update(self.sonnet_answer)
+            else:
+                base.update(self.date_answer)
+            return base
         if "adjudicating ONE solicitation" in prompt:
             self.calls.append(("adjudicate", model, len(prompt)))
             return {"tier": "BID", "confidence": 0.9, "title": "Gate spare parts",
@@ -145,7 +149,11 @@ ok("but the reader gets it right", rep3.get("closing_found") == "2026-09-01",
    str(rep3.get("closing_found")))
 
 # ============================================== NO DATES PRINTED = FREE REJECTION
-print("\n=== a notice with no dates printed costs nothing ===")
+print("\n=== a notice with no dates printed stops after ONE cheap call ===")
+# The first pass is a single call on an excerpt, and it is the only thing that
+# runs before the money is spent. A notice with no deadline in it is not
+# adjudicated, not priced, and no files are opened for it -- so the whole page
+# costs one small call instead of the six a full job would take.
 NONE = ("Request for Solicitations: Gate Spare Parts Supply - PR15305534. Items being "
         "acquired: control modules, drive wheels, sensors, switches, inverters and "
         "batteries. All questions to BujProcurement@state.gov. ") * 6
@@ -154,10 +162,34 @@ spy3 = Spy()
 rec3, rep3 = run(NONE, spy3)
 ok("it is not adjudicated", rec3 is None, str(rep3.get("stage")))
 ok("it is recorded as having no date", rep3.get("noDate") is True)
-ok("and not one AI call was spent", spy3.calls == [], str(spy3.kinds()))
-ok("the reason is in plain words",
-   "no date of any kind is printed" in (rep3.get("date_note") or ""),
-   str(rep3.get("date_note"))[:60])
+ok("nothing was adjudicated or priced", "adjudicate" not in spy3.kinds()
+   and "estimate" not in spy3.kinds(), str(spy3.kinds()))
+ok("it cost the first pass and no more", len(spy3.kinds()) <= 2, str(spy3.kinds()))
+
+print("\n=== the AI decides what IS a solicitation, not a keyword list ===")
+INDEX = ("Procurement and Business Opportunities. Browse current and past solicitations "
+         "below. See also: visas, education, news and events. ") * 8
+spy4 = Spy()
+spy4.date_answer = {"is_solicitation": False, "what_it_is": "index of notices",
+                    "status": "open", "closing": "", "closing_quote": ""}
+rec4, rep4 = run(INDEX, spy4)
+ok("an index page is rejected by the reader", rec4 is None, str(rep4.get("stage"))[:50])
+ok("and it says what the page actually is",
+   "index" in (rep4.get("notSolicitation") or ""), str(rep4.get("notSolicitation")))
+ok("nothing further was spent on it",
+   "adjudicate" not in spy4.kinds() and "estimate" not in spy4.kinds(), str(spy4.kinds()))
+
+print("\n=== a cancellation must be QUOTED, or the notice stays open ===")
+LIVE = ("Request for Quotations PR15305534 - Gate Spare Parts. Quotations are due by "
+        "12 October 2026 at 1600 hours. Items: control modules, drive wheels. ") * 4
+spy5 = Spy()
+spy5.date_answer = {"is_solicitation": True, "status": "closed",
+                    "status_quote": "This solicitation has been cancelled.",
+                    "closing": "2026-10-12",
+                    "closing_quote": "Quotations are due by 12 October 2026 at 1600 hours."}
+rec5, rep5 = run(LIVE, spy5)
+ok("a cancellation nobody can point to is overruled", rec5 is not None,
+   str(rep5.get("deadReason"))[:60])
 
 # ===================================== THE STRONGER MODEL, ONLY AFTER A CHEAP MISS
 print("\n=== Sonnet is asked only after the cheap read comes back empty ===")

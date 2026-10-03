@@ -117,38 +117,26 @@ _LOW_VALUE = re.compile(r"(logo|banner|header|footer|map|photo|image|privacy|acc
 
 
 def triage(text, today, known_live=None, sol_hint=""):
-    """The cheap gate. Runs on the page text ALONE, before a single file is
-    opened and long before the model is called — because nothing about a dead
-    solicitation is worth paying for.
+    """The free checks, and ONLY the ones that need no judgement.
 
-    Returns (verdict, detail). verdict is "" when the notice is worth working.
+    This used to decide whether a notice was cancelled, awarded or past its
+    deadline, using a regular expression and a list of phrases. Both of those
+    were opinions dressed as facts, and both were measured getting it wrong on
+    real pages -- a live Ottawa procurement archived on a 2023 date lifted out
+    of set-aside boilerplate, a New Delhi deadline eleven days early.
+
+    Rahul's instruction, and it is the right one: "let the AI decide everything
+    from start to finish, even the dates." So every judgement moved to the
+    model. What is left here is arithmetic:
+
+      * is there any text on this page at all
+      * have we already settled this exact reference
+
+    Returns (verdict, detail). verdict is "" when the page is worth a look.
     """
     t = text or ""
     if len(t.strip()) < 180:
         return "thin", "the page carried almost no text"
-
-    m = _DEAD_RX.search(t)
-    if m:
-        return "dead", f"the notice says it is over: “{m.group(0)[:70]}”"
-
-    # A DATE FOUND BY PHRASE-MATCHING MAY NOT KILL A NOTICE.
-    #
-    # This gate archives a solicitation and adds its hash to the ledger that
-    # means "never look at this again". On the field test it would have done
-    # that to a live Ottawa procurement page, because the page carries the
-    # standard set-aside text "...submitted a complete application for
-    # certification to SBA on or before December 31, 2023" and the phrase
-    # matcher happily called that the closing date.
-    #
-    # Killing a record is irreversible in practice, so it now needs a date the
-    # MODEL read and quoted, which happens a few steps later and re-checks this
-    # exact condition. What survives here is the free, unambiguous kill: a
-    # notice that says in words that it is over, which _DEAD_RX above catches.
-    closing = ""
-    if closing and closing < today:
-        return "expired", closing
-
-    # already on the register, finished, and nothing new to learn
     if sol_hint and known_live and sol_hint.strip().upper() in known_live:
         return "duplicate", f"{sol_hint} is already on the register and verified"
     return "", ""
@@ -191,9 +179,9 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
               "stage": "start", "complete": False}
     text = unit.get("text") or ""
 
-    # ---- 0. IS IT ALIVE? Decided on the page text alone: no downloads, no OCR,
-    # no model. Rahul's rule — "if it has crossed its deadline or is cancelled,
-    # just move on; no need to scan it or open any files."
+    # ---- 0. THE ONLY FREE CHECKS LEFT ARE THE ONES THAT NEED NO JUDGEMENT.
+    # "Is there any text here" and "have we already settled this exact page" are
+    # facts. Everything that needs an opinion now belongs to the model.
     v, detail = triage(text, today, known_live, unit.get("sol_hint", ""))
     if v == "thin":
         report["stage"] = "abandoned: nothing readable on the page"
@@ -202,29 +190,60 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = f"skipped: {detail}"
         report["duplicate"] = detail
         return None, report
-    if v in ("dead", "expired"):
-        report["stage"] = (f"skipped before opening anything: "
-                           + (f"closed on {detail}" if v == "expired" else detail))
-        report["expired"] = detail if v == "expired" else today
-        report["deadReason"] = detail
+
+    # ---- 1. THE FIRST PASS. One cheap call on an excerpt, and it decides all
+    # three gate questions: is this a solicitation, is it still open, and when
+    # does it close. Nothing else is opened, downloaded or paid for until this
+    # says yes. Rahul: "smallest things first, if confirmed then move to full
+    # mining."
+    report["stage"] = "first pass: is this a live solicitation"
+    if status:
+        status.beat(currentJob=f"first pass: {label[:50]}")
+    first, first_why = {}, ""
+    if budget.left >= COST_DATE_READ:
+        try:
+            first, first_why = analyzer.read_triage(text, call_ai)
+            budget.spend(COST_DATE_READ)
+            report["ai_calls"] += 1
+        except Exception as e:
+            if type(e).__name__ == "AllExhausted":
+                raise
+            first, first_why = {}, f"the first pass could not run ({str(e)[:50]})"
+    report["firstPass"] = first_why
+    report["whatItIs"] = (first or {}).get("what_it_is", "")
+
+    # not a solicitation at all — an index page, an award notice, a visa page
+    if first and not first.get("is_solicitation", True):
+        report["stage"] = "not a solicitation: " + (first.get("what_it_is") or "")
+        report["notSolicitation"] = first.get("what_it_is") or "not a procurement notice"
+        report["title_guess"] = _first_title(text)
+        return None, report
+
+    # the page says in words that it is over, and those words are really there
+    if first and first.get("status") == "closed":
+        why = first.get("status_quote") or first_why or "the page says it is no longer open"
+        report["stage"] = "skipped before opening anything: " + why[:70]
+        report["expired"] = today
+        report["deadReason"] = f"the notice says it is over: “{why[:120]}”"
         report["title_guess"] = _first_title(text)
         report["skippedFiles"] = len(unit.get("attachments") or [])
         return None, report
 
-    # ---- 1. THE DATE COMES FIRST. Rahul's rule: "we need a date first — that's
-    # the very basic thing to even decide whether to check it fully. If there is
-    # no genuine date on the notice or the webpage, go and check the documents."
-    # So: look on the page; if nothing, open the files and look there; only then
-    # decide whether this is worth adjudicating at all.
-    report["stage"] = "finding the closing date"
-    if status:
-        status.beat(currentJob=f"finding the closing date: {label[:44]}")
-    page_date = ""
-    try:
-        page_date = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
-    except Exception:
-        page_date = ""
+    # the deadline it read off the page, already proven against the page text
+    page_date = (first or {}).get("closing") or ""
+    if page_date:
+        report["closing_found"] = page_date
+        report["closing_evidence"] = ((first or {}).get("date_evidence") or {}).get("closing", "")
+        report["closing_how"] = "read"
+    if page_date and page_date < today:
+        report["stage"] = f"skipped: closed on {page_date}"
+        report["expired"] = page_date
+        report["deadReason"] = f"the notice gives a closing date of {page_date}, already past"
+        report["title_guess"] = _first_title(text)
+        report["skippedFiles"] = len(unit.get("attachments") or [])
+        return None, report
 
+    first_pass_len = len(text)
     chosen = pick_attachments(unit.get("attachments") or [])
     report["attachments_skipped"] = max(0, len(unit.get("attachments") or []) - len(chosen))
 
@@ -271,33 +290,25 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = "abandoned: nothing readable"
         return None, report
 
-    # ---- THE DATE GATE. The MODEL reads the deadline. Phrases only gate cost.
+    # ---- THE DEADLINE, NOW FROM THE DOCUMENTS IF THE PAGE DID NOT HAVE IT.
     #
-    # Phrase-matching used to be allowed to settle the deadline whenever a cue
-    # matched, because that was free. A field test on real embassy notices
-    # showed what free was buying: of six notices it resolved, it got two right
-    # and four wrong, and the wrong ones were not near misses.
-    #
-    #   New Delhi:  "...after 5 p.m. on August 21, 2026, will not be answered.
-    #               BID CLOSING DATE Quotations are due no later than 5 p.m. on
-    #               September 1, 2026."
-    #               -> it took 21 August, the cutoff for QUESTIONS, and missed
-    #                  the closing date printed one line later.
-    #   Ottawa:     "...submitted a complete application for certification to
-    #               SBA on or before December 31, 2023."
-    #               -> it took 31 December 2023 off a page of set-aside
-    #                  boilerplate, a date three years past, which would archive
-    #                  the page and retire it to the never-look-again ledger.
-    #
-    # A cue phrase proves a deadline is DISCUSSED nearby. It cannot tell which
-    # of the dates around it is the one, and no list of phrases ever will --
-    # that is a reading-comprehension problem, and we are paying for a model
-    # that is good at exactly that. So the phrase pass now only decides whether
-    # it is worth spending a call: no dates printed at all costs nothing and
-    # stops here, and anything else goes to the reader on a compact excerpt.
-    closing, closing_ev, how = "", "", ""
-
-    date_rec = {}
+    # The first pass already read the page and proved whatever it found there.
+    # If it came back with a deadline we are done and no second call is made.
+    # If it did not, this is Rahul's rule: "if there is no genuine date on the
+    # notice or the webpage then go and check the documents, they may find the
+    # deadline for sure." So the files are open now, and the same reader is
+    # asked again over everything we hold -- and if the cheap one still cannot
+    # prove a deadline, the question goes to the stronger model once, because
+    # the alternative is dropping a live contract.
+    closing = page_date
+    closing_ev = ((first or {}).get("date_evidence") or {}).get("closing", "")
+    how = "read" if closing else ""
+    date_rec = dict(first) if first else {}
+    # NOTHING NEW TO READ MEANS NOTHING NEW TO ASK. When no attachment added a
+    # single character, a second cheap call would hand the model the identical
+    # excerpt it has already answered on, and pay for the same answer twice.
+    # In that case the only move worth making is upwards, to the stronger model.
+    nothing_new = (len(text) <= first_pass_len)
     if not closing:
         try:
             import ai as _ai
@@ -306,12 +317,14 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
             stronger = None
         for stage, model, cost in (("read", None, COST_DATE_READ),
                                    ("escalated", stronger, COST_DATE_ESCALATE)):
+            if stage == "read" and nothing_new and first:
+                continue            # already asked, same text, same answer
             if stage == "escalated" and not stronger:
                 break
             if budget.left < cost:
                 break
             try:
-                dr, note = analyzer.read_dates(text, call_ai, model=model)
+                dr, note = analyzer.read_triage(text, call_ai, model=model)
             except Exception as e:
                 if type(e).__name__ == "AllExhausted":
                     raise
@@ -349,13 +362,14 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["title_guess"] = _first_title(text)
         return None, report
 
-    # dead by its own words, in the documents this time
-    v2, detail2 = triage(text, today, None, "")
-    if v2 in ("dead", "expired"):
-        report["stage"] = ("skipped after reading the files: "
-                           + (f"closed on {detail2}" if v2 == "expired" else detail2))
-        report["expired"] = detail2 if v2 == "expired" else today
-        report["deadReason"] = detail2
+    # Dead by its own words, in the documents this time. The reader was given
+    # everything we hold on the second pass, so if a cancellation is written in
+    # an attachment it comes back here with the words that say so.
+    if date_rec.get("status") == "closed" and date_rec.get("status_quote"):
+        report["stage"] = "skipped after reading the files: " + date_rec["status_quote"][:60]
+        report["expired"] = today
+        report["deadReason"] = ("a document says it is over: "
+                                f"“{date_rec['status_quote'][:120]}”")
         report["title_guess"] = _first_title(text)
         return None, report
 

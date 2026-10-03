@@ -154,15 +154,34 @@ _SIG = ("request for quotation", "request for proposal", "invitation for bid",
         "tender", "expression of interest")
 
 
-def looks_like_solicitation(text):
+def solicitation_score(text):
+    """How much this page LOOKS like a notice. A number, not a verdict.
+
+    This used to be a boolean veto: score under two and the page was never
+    shown to the model at all, so a keyword list decided what counted as a
+    solicitation. That is exactly the kind of call the model should be making,
+    and a notice written in plainer language than my keywords expected was
+    simply invisible.
+
+    It now orders the queue instead of closing the door. Likely-looking pages
+    are read first, so the run's budget is spent where it will probably pay --
+    but anything the budget reaches goes to the model, which decides whether it
+    is really a solicitation, and says what it is when it is not.
+    """
     low = (text or "").lower()
     score = 0
     if _SOL_NUM.search(text or ""):
-        score += 1
+        score += 2
     if analyzer.find_dates(text or ""):
         score += 1
     score += sum(1 for s in _SIG if s in low)
-    return score >= 2
+    return score
+
+
+def looks_like_solicitation(text):
+    """Kept for callers that only want the cheapest possible 'is there anything
+    here at all'. It no longer vetoes spending -- see solicitation_score."""
+    return solicitation_score(text) >= 1
 
 
 def extract_sol_number(text):
