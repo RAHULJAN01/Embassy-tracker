@@ -26,7 +26,10 @@ def _rec(n, **kw):
          "verified": "VERIFIED", "deadline": "2027-03-01", "posted": "2026-09-01",
          "files": [f"https://dz.usembassy.gov/files/{n}.pdf"], "fileCount": 1,
          "verifyNotes": [], "archived": False, "firstSeen": "2026-09-01",
-         "platform": "USGOV", "sector": "COTS"}
+         "platform": "USGOV", "sector": "COTS",
+         # a complete record proves its deadline; without proof it is re-checked,
+         # which is the point of the date gate
+         "dateEvidence": {"closing": "Quotations are due by 1 March 2027."}}
     r.update(kw)
     return r
 
@@ -96,15 +99,26 @@ print(f"\nTEST REGISTER: {len(allrows)} records, {len(active)} active, "
 print("\n=== 1. The repair queue targets the real backlog ===")
 q = crawler.repair_queue(allrows)
 check("queue is non-empty", len(q) > 0, f"{len(q)} records queued")
-check("queue never contains an already-VERIFIED record",
+check("a VERIFIED record with a proven date is left alone",
       all(r.get("verified") != "VERIFIED" for r in q))
+
+# and the new rule: an unprovable deadline pulls a record back in even if it
+# was marked VERIFIED, because a date nobody can point to is not a date
+_unproven = _rec(999, deadline="2026-12-01")
+_unproven.pop("dateEvidence", None)
+check("an unproven deadline is re-checked even when VERIFIED",
+      crawler.suspect_date(_unproven) and crawler.repairable(_unproven))
 check("queue never contains an archived record", all(not r.get("archived") for r in q))
 check("every queued record has something to re-crawl",
       all(r.get("link") or r.get("files") for r in q))
 if q:
     top = q[0]
-    check("worst-first: the top of the queue is un-adjudicated or date-less",
-          top.get("tier") == "REVIEW" or "date" in " ".join(top.get("verifyNotes") or []).lower(),
+    # worst-first now means: a refusal we cannot trust, then a date we never
+    # proved, then un-adjudicated or date-less. Any of those at the top is right.
+    check("worst-first: the most dangerous record is at the top",
+          crawler.suspect_nobid(top) or crawler.unproven_dates(top)
+          or top.get("tier") == "REVIEW"
+          or "date" in " ".join(top.get("verifyNotes") or []).lower(),
           f"{top.get('tier')} / {top.get('verifyNotes')}")
 
 print("\n=== 2. Shards split the backlog with no overlap and no gaps ===")

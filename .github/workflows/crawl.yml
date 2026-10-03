@@ -55,6 +55,8 @@ jobs:
           python test_merge.py
           python test_efficiency.py
           python test_nobid.py
+          python test_page.py
+          python test_dates.py
       - id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then

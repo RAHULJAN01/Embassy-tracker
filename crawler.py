@@ -616,12 +616,21 @@ SECTOR_ORDER = {"COTS": 0, "SERVICES": 1, "CONSTRUCTION": 2, "MIXED": 3, "": 4}
 
 
 def verification_state(rec, read_ok, read_fail):
-    """VERIFIED only when everything needed is actually in hand."""
+    """VERIFIED only when everything needed is actually in hand AND PROVABLE.
+
+    A record was once marked VERIFIED on a deadline the model invented: the
+    notice contained no dates at all. VERIFIED now means every date shown was
+    found in the source document, not merely that a date is present.
+    """
     reasons = []
     if read_fail:
         reasons.append(f"{read_fail} document(s) unreadable")
     if not rec.get("closing"):
-        reasons.append("no closing date found")
+        reasons.append("no closing date stated in the notice")
+    elif not (rec.get("date_evidence") or {}).get("closing"):
+        reasons.append("the closing date could not be traced back to a line in the document")
+    for w in (rec.get("date_warnings") or []):
+        reasons.append(w)
     if not rec.get("title"):
         reasons.append("no title")
     if rec.get("tier") == "REVIEW":
@@ -660,6 +669,10 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
         "gotchas": rec.get("gotchas", []) or [],
         "promotedFromMid": rec.get("promoted_from_mid", ""),
         "overturnedNobid": rec.get("overturned_nobid", ""),
+        "datesVerified": True,          # every date proven present in the source
+        "droppedDates": rec.get("dropped_dates", []),
+        "dateEvidence": rec.get("date_evidence") or {},
+        "dateWarnings": rec.get("date_warnings") or [],
         "secondOpinion": rec.get("second_opinion") or None,
         "value": rec.get("est_value", ""), "shipping": rec.get("shipping", ""),
         "payment": rec.get("payment", ""), "shipAfter": rec.get("ship_after", ""),
@@ -699,12 +712,29 @@ def suspect_nobid(row):
     return not row.get("secondOpinion")
 
 
+def unproven_dates(row):
+    """A date that was never checked against the document cannot be trusted.
+    Records written before dates were grounded carry no proof, and one of them
+    sent Rahul to a solicitation whose text contains no date at all."""
+    if row.get("deleted") or row.get("datesVerified"):
+        return False
+    return bool(row.get("deadline"))
+
+
+def suspect_date(row):
+    """A date nobody can point to in the source is not a date. Records carrying
+    a deadline from before the proof requirement existed are re-checked."""
+    if row.get("deleted") or not row.get("deadline"):
+        return False
+    return not (row.get("dateEvidence") or {}).get("closing")
+
+
 def repairable(row):
     """Is this record incomplete in a way a re-crawl could actually fix?"""
     if row.get("archived") or row.get("deleted") or row.get("hidden"):
         return False
-    if suspect_nobid(row):
-        return True                      # re-judge it before we lose the contract
+    if suspect_nobid(row) or suspect_date(row):
+        return True                      # re-judge it before we act on bad data
     if row.get("verified") == "VERIFIED":
         return False
     if int(row.get("repairTries", 0) or 0) >= MAX_REPAIR_TRIES:
@@ -719,6 +749,10 @@ def repair_rank(row):
     score = 0
     if suspect_nobid(row):
         score += 200          # a possibly-wrong refusal outranks everything else
+    if unproven_dates(row):
+        score += 150          # an unproven deadline is the next most dangerous thing
+    if suspect_date(row):
+        score += 180          # an unproven deadline is the next most dangerous thing
     if "not adjudicated" in notes or row.get("tier") == "REVIEW":
         score += 40
     if "no closing date" in notes:

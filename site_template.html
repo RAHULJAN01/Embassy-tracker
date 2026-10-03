@@ -174,7 +174,7 @@
   .section.collapsed table{display:none}
   /* register table — fixed alignment */
   table.reg{width:100%;border-collapse:collapse;background:var(--bg);color:var(--ink);font-size:13.5px;table-layout:fixed}
-  table.reg col.c-ref{width:132px} table.reg col.c-src{width:80px} table.reg col.c-pop{width:112px}
+  table.reg col.c-ref{width:150px} table.reg col.c-src{width:80px} table.reg col.c-pop{width:112px}
   table.reg col.c-cls{width:112px} table.reg col.c-dl{width:94px} table.reg col.c-val{width:104px}
   table.reg col.c-st{width:76px} table.reg col.c-up{width:78px}
   table.reg col.c-vf{width:106px}
@@ -183,7 +183,19 @@
   table.reg tbody td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
   table.reg tbody tr.row{cursor:pointer}
   table.reg tbody tr.row:hover{background:var(--alt)}
+  .rnum{display:inline-block;min-width:22px;font-family:Arial,Helvetica,sans-serif;
+    font-size:13px;font-weight:700;color:var(--ink);margin-right:7px}
+  .rsol{display:inline}
+  .nodate{color:var(--orange);font-weight:700;font-size:12.5px}
+  .proof{font-style:italic;color:var(--sub);font-size:12.5px}
   .ref{font-family:"Courier New",monospace;font-size:12px;color:var(--sub);white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+  /* 1,2,3… down each section, so a solicitation can be pointed at by number */
+  .rnum{display:inline-block;min-width:23px;height:23px;line-height:21px;text-align:center;
+    border:1.5px solid var(--ink);color:var(--ink);background:var(--bg);
+    font-family:Arial,Helvetica,sans-serif;font-size:11.5px;font-weight:700;
+    margin-right:7px;vertical-align:2px}
+  .rnum:empty{display:none}
+  .rsol{display:inline}
   .ttl{font-weight:700;color:var(--ink);white-space:normal;display:block;overflow-wrap:anywhere}
   table.reg td{overflow:hidden;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
   table.reg td.ref,table.reg td.num,table.reg td.upd,table.reg td.act{overflow-wrap:normal;word-break:normal}
@@ -293,6 +305,8 @@
     letter-spacing:.3px;padding:3px 7px;border:1px solid var(--orange);color:var(--orange);
     background:var(--orangebg);max-width:100%;white-space:normal;line-height:1.35}
   .needmore{font-weight:400;opacity:.8}
+  .dproof{font-size:11.5px;color:var(--mute);font-style:italic;margin-top:4px;
+    font-weight:400;line-height:1.45}
 
   /* ---------- the dossier: a brief you can act on, not a spec dump ---------- */
   .brief{font-size:16.5px;line-height:1.5;font-weight:700;border-left:5px solid var(--ink);
@@ -887,10 +901,15 @@ function dossier(s){
   const dl=dleft(s.deadline);
   const dueline=s.deadline
     ? `${esc(s.deadline)}${dl!=null?` <span class="cd ${dl<0?'gone':dl<=7?'soon':''}">${dl<0?'closed':dl+' day'+(dl==1?'':'s')+' left'}</span>`:''}`
-    : '';
+    : '<span class="nodate">the notice does not state one — check it yourself</span>';
+  const de=(s.dateEvidence||{});
+  const proof=(f,label)=>de[f]
+    ? `<tr><th>${label} — the line it came from</th><td class="proof">\u201c${esc(de[f])}\u201d</td></tr>` : '';
   h+=grp("The clock", tbl(
       (dueline?`<tr><th>Closes</th><td class="big">${dueline}</td></tr>`:'')
-      +kv("Questions due",s.qa)+kv("Posted",s.posted)
+      +proof("closing","Closing date")
+      +kv("Questions due",s.qa)+proof("qa_due","Questions due")
+      +kv("Posted",s.posted)+proof("posted","Posted")
       +kv("Delivery after award",s.shipAfter)+kv("Current status",s.status)));
 
   /* ---- HOW TO SUBMIT ---- */
@@ -963,7 +982,7 @@ function dossier(s){
   h+='</div>';return h;
 }
 
-function rowHTML(s,i){
+function rowHTML(s,i,num){
   const dl=dleft(s.deadline);
   const duetxt=s.deadline?(dl!=null&&dl<0?"Closed":(dl!=null&&dl<=7?`${dl} day${dl==1?'':'s'}`:s.deadline)):"—";
   const soon=dl!=null&&dl>=0&&dl<=7?'soon':'';
@@ -972,7 +991,7 @@ function rowHTML(s,i){
   const k=opKey(s);
   const del=isDeleted(s), hid=isHidden(s);
   return `<tr class="row" onclick="tgl(${i})">
-    <td class="ref" data-l="Ref. No.">${esc(s.sol||'—')}${flagOf(s.country,"ref")}</td>
+    <td class="ref" data-l="Ref. No."><span class="rnum">${num||''}</span><span class="rsol">${esc(s.sol||'—')}</span>${flagOf(s.country,"ref")}</td>
     <td data-l="Source"><span class="srctag">${esc(SRCLABEL[s.source]||s.source)}</span></td>
     <td class="tcell titlecell"><span class="ttl">${esc(s.title)}</span>${setAsideTag(s)}${needsTag(s)}${opBadge(s)}</td>
     <td class="pop tcell hidecol" data-l="Place of Performance">${esc(s.post)}<br><span class="c">${flagOf(s.country)}${esc(s.country)}</span></td>
@@ -1006,6 +1025,9 @@ function rowHTML(s,i){
 function reviewNeeded(s){
   const out=[], notes=(s.verifyNotes||[]).join(" ").toLowerCase();
   const add=(what,why,action)=>out.push({what,why,action});
+
+  (s.dateWarnings||[]).forEach(w=>add("Check the dates yourself", w,
+     "Open the notice and confirm the closing date before you rely on it."));
 
   if(!s.deadline || /no closing date/.test(notes))
     add("Confirm the closing date",
@@ -1159,19 +1181,21 @@ function render(){
   const shown=rest.filter(({s})=>!(isHidden(s)&&!s.archived));
   const active=shown.filter(({s})=>!s.archived), archived=shown.filter(({s})=>s.archived);
   const cols='<colgroup><col class="c-ref"><col class="c-src"><col class="c-ttl"><col class="c-pop"><col class="c-cls"><col class="c-dl"><col class="c-val"><col class="c-st"><col class="c-vf"><col class="c-up"></colgroup>';
-  const thead=`<thead><tr><th>Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th></tr></thead>`;
+  const thead=`<thead><tr><th>#&nbsp; Ref. No.</th><th>Source</th><th>Solicitation Title</th><th class="hidecol">Place of Performance</th><th class="hidecol">Classification</th><th class="r">Deadline</th><th class="r hidecol">Est. Value</th><th>Status</th><th>Verified</th><th class="hidecol">Last Updated</th></tr></thead>`;
 
   // a tier section, sub-grouped by sector: COTS -> Services -> Construction
   function tierSection(tr){
     const items=active.filter(({s})=>effTier(s)===tr); if(!items.length)return '';
     const m=SMAP[tr];
     const TC={g:'t-g',o:'t-o',r:'t-r'};
+    let n=0;
     let h=`<div class="section ${TC[m.cls]||''}"><h2 onclick="this.parentNode.classList.toggle('collapsed')"><span><span class="dot ${m.cls}"></span>${m.label}</span><span>${items.length} &nbsp;▾</span></h2>`;
     h+=`<table class="reg">${cols}${thead}<tbody>`;
+    let num=0;
     SECTOR_ORDER.forEach(sec=>{
       const grp=items.filter(({s})=>(s.sector||'')===sec); if(!grp.length)return;   // no empty sector blocks
       h+=`<tr class="sector-row"><td class="sector-head" colspan="10">${SECTOR_LABEL[sec]} — ${grp.length}</td></tr>`;
-      grp.forEach(({s,i})=>h+=rowHTML(s,i));
+      grp.forEach(({s,i})=>{ n+=1; h+=rowHTML(s,i,n); });
     });
     return h+'</tbody></table></div>';
   }
@@ -1182,7 +1206,8 @@ function render(){
       +`<span><span class="dot ${cls}"></span>${label}</span><span>${items.length} &nbsp;▾</span></h2>`;
     if(sub)h+=`<div style="padding:9px 14px;font-size:12px;color:var(--mute);font-style:italic;border-bottom:1px solid var(--line)">${sub}</div>`;
     h+=`<table class="reg">${cols}${thead}<tbody>`;
-    items.forEach(({s,i})=>h+=rowHTML(s,i));
+    let n=0;
+    items.forEach(({s,i})=>{ n+=1; h+=rowHTML(s,i,n); });
     return h+'</tbody></table></div>';
   }
 

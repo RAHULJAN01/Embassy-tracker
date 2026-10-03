@@ -283,6 +283,70 @@ def find_dates(text):
     return [iso for _, iso in out]
 
 
+
+def date_in_text(iso, text):
+    """(found, evidence). A date is only real if it is actually in the document.
+
+    The model returned a closing date, a posted date and a Q&A date for a notice
+    whose text contains no dates at all, and the record was then marked VERIFIED
+    because a deadline was present. A date nobody can point to in the source is
+    worse than no date: it sends you to a deadline that does not exist.
+    """
+    if not iso or not text:
+        return False, ""
+    if iso not in set(find_dates(text)):
+        return False, ""
+    # pull the sentence it sits in, so a human can check it in one glance
+    for rx, kind in _DATE_PATTERNS:
+        for m in rx.finditer(text):
+            a, b, c = m.group(1), m.group(2), m.group(3)
+            got = (_mk(a, b, c) if kind == "ymd" else
+                   _mk(c, b, a) if kind == "dmy" else
+                   _mk(c, _month_num(b), a) if kind == "dMy" else
+                   (_mk("20" + c, _month_num(b), a) if _month_num(b) else "") if kind == "dMyy" else
+                   _mk(c, _month_num(a), b))
+            if got == iso:
+                lo = max(0, m.start() - 110)
+                hi = min(len(text), m.end() + 70)
+                return True, re.sub(r"\s+", " ", text[lo:hi]).strip()
+    return True, ""
+
+
+def ground_dates(rec, text):
+    """Keep only the dates we can PROVE, and keep the proof.
+
+    Every date the model returns is checked against the document. One that is
+    not there is thrown away — an empty deadline is honest, an invented one
+    sends Rahul to a solicitation that does not close when he thinks it does.
+    The line each surviving date came from is stored so a human can check it in
+    one glance, and so VERIFIED can mean something.
+    """
+    dropped, evidence = [], {}
+    for field, cues in (("closing", _DEADLINE_CUES), ("posted", _POSTED_CUES),
+                        ("qa_due", _QA_CUES)):
+        v = rec.get(field) or ""
+        if v:
+            found, ev = date_in_text(v, text)
+            if found:
+                evidence[field] = ev or "(found in the document)"
+                continue
+            dropped.append(field)
+            rec[field] = ""
+        h = harvest_date(text, cues)
+        if h:
+            found, ev = date_in_text(h, text)
+            if found:
+                rec[field] = h
+                evidence[field] = ev or "(found in the document)"
+    rec["date_evidence"] = evidence
+    if dropped:
+        rec["dropped_dates"] = dropped
+        rec.setdefault("date_warnings", []).append(
+            "the model supplied " + ", ".join(dropped)
+            + " that appear nowhere in the document — discarded")
+    return dropped
+
+
 _DEADLINE_CUES = ("closing date", "close date", "due date", "offers are due", "quotations are due",
                   "proposals are due", "bids are due", "submission deadline", "deadline for",
                   "must be received", "no later than", "closing time", "response date",
@@ -465,29 +529,31 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     rec["review_reason"] = ""
     strip_registration(rec)           # registration is settled; it never appears
 
-    # --- DATES ARE MANDATORY: back-fill anything the model missed, from the raw text
-    if not rec["closing"]:
-        rec["closing"] = harvest_date(text, _DEADLINE_CUES)
-    if not rec["posted"]:
-        rec["posted"] = harvest_date(text, _POSTED_CUES)
-    if not rec["qa_due"]:
-        rec["qa_due"] = harvest_date(text, _QA_CUES)
-    # titles often carry the deadline, e.g. "... (by August 18, 2025)"
+    # --- DATES MUST BE REAL, NOT PLAUSIBLE. Every date is checked against the
+    # document and the line it came from is kept as proof. A date nobody can
+    # point to is discarded, because an empty deadline is honest and an
+    # invented one is not.
+    dropped = ground_dates(rec, text)
+
+    # a title sometimes carries the deadline, e.g. "... (by 18 August 2026)"
     if not rec["closing"] and rec.get("title"):
-        td = find_dates(rec["title"])
-        if td:
-            rec["closing"] = td[-1]
-    # last resort: the soonest future date anywhere in the document
+        for d in find_dates(rec["title"]):
+            found, ev = date_in_text(d, text)
+            if found:
+                rec["closing"] = d
+                rec.setdefault("date_evidence", {})["closing"] = ev or "(from the title)"
+                break
+    # last resort: the soonest future date actually printed in the document
     if not rec["closing"]:
         today_iso = today or datetime.date.today().isoformat()
-        future = [d for d in find_dates(text) if d >= today_iso]
+        future = sorted(d for d in find_dates(text) if d >= today_iso)
         if future:
-            rec["closing"] = sorted(future)[0]
-    # still nothing, but the document clearly has dates -> use the latest one seen
-    if not rec["closing"]:
-        all_d = find_dates(text)
-        if all_d:
-            rec["closing"] = sorted(all_d)[-1]
+            rec["closing"] = future[0]
+            found, ev = date_in_text(future[0], text)
+            rec.setdefault("date_evidence", {})["closing"] = ev or "(found in the document)"
+            rec.setdefault("date_warnings", []).append(
+                "no line says this is the closing date — it is the soonest future date "
+                "printed in the document, so confirm it before you rely on it")
 
     # --- sector fallback
     if not rec["sector"]:

@@ -159,6 +159,63 @@ ok("a correct refusal is upheld", (not ch4) and r4["tier"] == "NO", r4["tier"])
 ok("the second opinion is recorded either way",
    bool(r3.get("second_opinion")) and bool(r4.get("second_opinion")))
 
+# ============================================================ DATES MUST BE REAL
+print("\n=== A date that is not in the document is not a date ===")
+NODATE = ("Request for Solicitations: Gate Spare Parts Supply - PR15305534. "
+          "Items being acquired: control modules, drive wheels, sensors, switches. "
+          "All questions should be sent to BujProcurement@state.gov. " * 6)
+
+
+def _fabricate(prompt):
+    # exactly what happened: a plausible deadline anchored on today, for a
+    # document that contains no date at all
+    return {"tier": "BID", "confidence": 0.9, "title": "Gate Spare Parts Supply",
+            "sol": "PR15305534", "closing": "2026-10-12", "posted": "2026-10-02",
+            "qa_due": "2026-10-08", "sector": "COTS", "restrictions": [], "route": "Dealer"}
+
+
+_r = A.adjudicate(NODATE, _fabricate, today="2026-10-02")
+ok("an invented closing date is discarded", _r["closing"] == "", repr(_r["closing"]))
+ok("an invented posted date is discarded", _r["posted"] == "", repr(_r["posted"]))
+ok("an invented Q&A date is discarded", _r["qa_due"] == "", repr(_r["qa_due"]))
+_warn = " ".join(_r.get("date_warnings") or []) + " " + (_r.get("review_reason") or "")
+ok("and the record says the dates were invented",
+   "appear nowhere" in _warn or "do not appear" in _warn, _warn[:70])
+ok("the discarded fields are named", set(_r.get("dropped_dates") or []) ==
+   {"closing", "posted", "qa_due"}, str(_r.get("dropped_dates")))
+
+REALD = ("Request for Quotation 19BI5026Q0007. The U.S. Embassy Bujumbura requires gate spare "
+         "parts. Questions are due by 8 October 2026. Quotations must be received no later "
+         "than 12 October 2026 at 23:59. Issued on 2 October 2026. " * 4)
+
+
+def _honest(prompt):
+    return {"tier": "BID", "confidence": 0.9, "title": "Gate Spare Parts",
+            "sol": "19BI5026Q0007", "closing": "2026-10-12", "posted": "2026-10-02",
+            "qa_due": "2026-10-08", "sector": "COTS", "restrictions": [], "route": "Dealer"}
+
+
+_r2 = A.adjudicate(REALD, _honest, today="2026-10-02")
+ok("a date printed in the document is kept", _r2["closing"] == "2026-10-12", _r2["closing"])
+ok("so is the posted date", _r2["posted"] == "2026-10-02", _r2["posted"])
+ok("and nothing is flagged", not (_r2.get("dropped_dates") or []))
+ok("the line each date came from is kept as proof",
+   "12 October 2026" in str((_r2.get("date_evidence") or {}).get("closing", "")),
+   str((_r2.get("date_evidence") or {}).get("closing", ""))[:60])
+
+ok("date_in_text refuses a date the document never states",
+   A.date_in_text("2026-10-12", NODATE)[0] is False)
+ok("date_in_text accepts one it does, with the line it sits in",
+   A.date_in_text("2026-10-12", REALD)[0] is True
+   and "October" in A.date_in_text("2026-10-12", REALD)[1])
+
+import crawler as _C
+ok("a record whose dates were never proven is sent back for re-judgement",
+   _C.unproven_dates({"deadline": "2026-10-12", "tier": "BID"}))
+ok("a record with proven dates is left alone",
+   not _C.unproven_dates({"deadline": "2026-10-12", "datesVerified": True}))
+
+
 print("\n" + "=" * 64)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
 print("=" * 64)
