@@ -198,7 +198,7 @@ _rec, _rep = _P.process_one(
 ok("a dead notice costs ONE cheap call and no more", _calls["n"] == 1, str(_calls["n"]))
 ok("a dead notice downloads ZERO files", _opened["n"] == 0, str(_opened["n"]))
 ok("but it is still archived and documented",
-   bool(_rep.get("expired")) and bool(_rep.get("deadReason")),
+   (bool(_rep.get("expired")) or bool(_rep.get("closedByWords"))) and bool(_rep.get("deadReason")),
    str(_rep.get("deadReason"))[:60])
 ok("and the record says WHICH words killed it",
    "cancelled" in (_rep.get("deadReason") or "").lower(), str(_rep.get("deadReason"))[:60])

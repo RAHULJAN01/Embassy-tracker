@@ -90,8 +90,15 @@ def _merge_pair(a, b):
         keep["source"] = "Site+SAM"
     elif srcs:
         keep["source"] = "Site+SAM" if len(srcs) > 1 else keep.get("source")
-    # don't lose anything the other copy had
-    for f in ("deadline", "posted", "value", "setaside", "samId", "estimate", "citation"):
+    # Don't lose anything the other copy had -- EXCEPT a deadline on a record
+    # that is being archived. A cancelled notice deliberately clears its
+    # deadline (the old date is the one we stopped trusting); back-filling it
+    # from the stale copy would hand the fabricated date straight back and the
+    # row would look live again. Everything else is safe to enrich.
+    enrich = ("posted", "value", "setaside", "samId", "estimate", "citation")
+    if not (keep.get("archived") or keep.get("tier") == "NO"):
+        enrich = ("deadline",) + enrich
+    for f in enrich:
         if not keep.get(f) and other.get(f):
             keep[f] = other[f]
     # The repair counter must SURVIVE the merge. One bot may have just spent a
@@ -265,15 +272,32 @@ def normalize(r):
         if r.get("tier") == "REVIEW": notes.append("not adjudicated")
         r["verified"] = "VERIFIED" if not notes else "UNVERIFIED"
         r["verifyNotes"] = notes
+    # ARCHIVING ONLY EVER GOES ONE WAY HERE: ON.
+    #
+    # This used to force archived=False for any record whose deadline was not in
+    # the past -- which quietly UN-ARCHIVED a correction the pipeline had just
+    # made. A gate-parts notice that a re-crawl correctly found closed was
+    # stamped archived=True, tier=NO; this line read its (today-dated) deadline
+    # as "still open" and flipped archived back to False. The lean correction
+    # then lost the fleet merge to the fat, confident, wrong copy beside it, and
+    # the notice went on showing as a live BID.
+    #
+    # The normaliser's job is to ARCHIVE records that are plainly over -- a past
+    # deadline, or a dead status word -- not to overrule an archive decision
+    # made upstream with far more context than a date comparison has. So an
+    # existing archived flag is always respected, and the dead-status list now
+    # covers every word the pipeline actually writes.
     dl = r.get("deadline") or ""
-    cancelled = str(r.get("status", "")).lower() in ("cancelled", "canceled", "removed")
-    if (dl and dl < today()) or cancelled:
+    status = str(r.get("status", "")).strip().lower()
+    dead_status = status in ("cancelled", "canceled", "removed", "expired",
+                             "closed", "withdrawn", "awarded", "superseded", "dead")
+    if (dl and dl < today()) or dead_status or r.get("archived"):
         r["archived"] = True
-        if dl and dl < today() and str(r.get("status", "")) in ("Active", "Check", ""):
+        if dl and dl < today() and status in ("active", "check", ""):
             r["status"] = "Expired"
         r.setdefault("archivedOn", today())
     else:
-        r["archived"] = bool(r.get("archived", False)) if not dl else False
+        r["archived"] = False
     return r
 
 
@@ -412,7 +436,13 @@ def main(shard_dir):
 
     root = pathlib.Path(shard_dir)
     shard_dirs = sorted([p for p in root.glob("shard-*") if p.is_dir()]) if root.exists() else []
+    bad_shards = []
     for sd in shard_dirs:
+      # ONE BAD SHARD MUST NOT COST THE FLEET ITS WORK. Four bots have already
+      # spent real money by the time this runs; a single malformed file used to
+      # take the whole run down with it and none of the work reached the
+      # register. Whatever can be merged, is.
+      try:
         d = load(sd / "data.json", {"meta": {}, "solicitations": []})
         for r in d.get("solicitations", []):
             k = key_of(r)
@@ -438,6 +468,10 @@ def main(shard_dir):
         sstate = load(sd / "state.json", {})
         if sstate.get("root_idx"):
             state["root_idx"] = sstate["root_idx"]
+      except Exception as _e:
+        bad_shards.append(f"{sd.name}: {type(_e).__name__}: {str(_e)[:120]}")
+    if bad_shards:
+        print("WARNING: shards that could not be merged -> " + "; ".join(bad_shards))
 
     rows = [normalize(clean_sol(r)) for r in merged.values() if not is_junk(clean_sol(r))]
     dropped = len(merged) - len(rows)
@@ -543,4 +577,25 @@ def main(shard_dir):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "shards")
+    # A CRASH HERE THROWS AWAY THE WHOLE RUN. Four bots have already done their
+    # work and uploaded it; if this step dies, none of it reaches the register
+    # and the only account of why is in a log that is not always reachable. The
+    # failure is therefore written into status.json first, where the portal
+    # shows it and anyone can read it straight out of the repo.
+    try:
+        main(sys.argv[1] if len(sys.argv) > 1 else "shards")
+    except Exception:
+        import traceback
+        tb = traceback.format_exc()
+        print(tb)
+        try:
+            st = load(HERE / "status.json", {})
+            st["mergeError"] = tb[-1800:]
+            st["lastError"] = ("the fleet merge failed: "
+                               + (tb.strip().splitlines() or [""])[-1][:160])
+            st["currentJob"] = "fleet merge FAILED — this run's work was not merged"
+            st["running"] = False
+            (HERE / "status.json").write_text(json.dumps(st, indent=1))
+        except Exception:
+            pass
+        sys.exit(1)

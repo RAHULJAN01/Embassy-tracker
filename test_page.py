@@ -53,7 +53,7 @@ else:
 # ---------------------------------------------------------------- no duplicates
 # A function defined twice means an edit landed on top of itself; the second
 # definition silently wins and the first one's callers get the wrong behaviour.
-CRITICAL = ["proven", "budgetPanel", "whereTheWorkWent", "decisionLog", "renderPageTabs", "setPage", "beep",
+CRITICAL = ["proven", "budgetPanel", "registerSnapshot", "whereTheWorkWent", "decisionLog", "renderPageTabs", "setPage", "beep",
             "toggleSound", "setVolume", "soundTheBots", "render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
             "renderAlarm", "renderCompany", "downloadExcel", "buildWorkbook",
             "flagOf", "isoOf", "esc", "reviewNeeded", "needsBox", "collapseAll",

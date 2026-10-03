@@ -223,7 +223,10 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
     if first and first.get("status") == "closed":
         why = first.get("status_quote") or first_why or "the page says it is no longer open"
         report["stage"] = "skipped before opening anything: " + why[:70]
-        report["expired"] = today
+        # closed by WORDS, not by a date -- so do not invent a closing date of
+        # today. The record is archived on its dead status, and if the page
+        # also stated a real closing date it is carried through separately.
+        report["closedByWords"] = True
         report["deadReason"] = f"the notice says it is over: “{why[:120]}”"
         report["title_guess"] = _first_title(text)
         report["skippedFiles"] = len(unit.get("attachments") or [])
@@ -367,7 +370,7 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
     # an attachment it comes back here with the words that say so.
     if date_rec.get("status") == "closed" and date_rec.get("status_quote"):
         report["stage"] = "skipped after reading the files: " + date_rec["status_quote"][:60]
-        report["expired"] = today
+        report["closedByWords"] = True
         report["deadReason"] = ("a document says it is over: "
                                 f"“{date_rec['status_quote'][:120]}”")
         report["title_guess"] = _first_title(text)

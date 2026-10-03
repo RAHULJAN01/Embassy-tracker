@@ -1200,13 +1200,28 @@ def run(mode):
                 # three tries it left the repair queue for good. This is the
                 # original complaint — a dead notice sitting in BID — and it was
                 # still reachable from here.
-                if rep.get("expired") or rep.get("deadReason"):
+                if rep.get("expired") or rep.get("deadReason") or rep.get("closedByWords"):
                     dead = dict(old)
                     dead["prevKey"] = old.get("sol") or old.get("link") or ""
-                    when = rep.get("expired") or today()
+                    # THE DEADLINE MUST BE THE REAL CLOSING DATE, NOT TODAY.
+                    # When the re-crawl can name the day it closed, record that
+                    # day -- a past date -- so the archive is self-evident and
+                    # nothing downstream has to be told separately that the row
+                    # is dead. Stamping it with today's date instead left a
+                    # "deadline" that is not in the past, which the normaliser
+                    # then read as "still open" and quietly un-archived.
+                    when = rep.get("expired")
+                    killed_by_words = bool(rep.get("closedByWords"))
+                    # a passed deadline carries its real date; a words-based
+                    # cancellation carries no invented date -- the OLD deadline
+                    # was the one we no longer trust, so it is cleared.
+                    closed_on = when if _looks_iso(when) else ("" if killed_by_words
+                                                               else old.get("deadline", ""))
                     dead.update({
-                        "tier": "NO", "status": "Expired", "archived": True,
-                        "deadline": when if _looks_iso(when) else old.get("deadline", ""),
+                        "tier": "NO",
+                        "status": "Cancelled" if killed_by_words else "Expired",
+                        "archived": True,
+                        "deadline": closed_on,
                         "verified": "UNVERIFIED", "updated": today(),
                         "lastDeepScan": now_utc(),
                         "reviewReason": (rep.get("deadReason")

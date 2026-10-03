@@ -1841,42 +1841,50 @@ function beep(kind){
   const t=ac.currentTime+0.02;
 
   if(kind==='done'){
-    // THE FULL DOOR, about 1.9 seconds. Bolt — long rolling drag — slam.
-    _scrape(ac,out,t,0.10,1700,0.55,9);                 // bolt withdraws
-    _ring(ac,out,430,t,0.22,0.30,18);
-    _thud(ac,out,t+0.02,120,0.22,0.55);
-    _scrape(ac,out,t+0.16,1.05,320,0.42,3.2,780);       // the slab runs its rail
-    _ring(ac,out,196,t+0.16,1.00,0.16,7);
-    _thud(ac,out,t+1.22,74,0.80,0.95);                  // it hits the stop
-    _scrape(ac,out,t+1.22,0.42,900,0.70,4.5,180);
-    _ring(ac,out,138,t+1.22,1.30,0.34,9);
-    _ring(ac,out,311,t+1.23,1.05,0.22,16);
-    _ring(ac,out,523,t+1.23,0.80,0.13,22);
+    // THE FULL CELL DOOR, about 2.7 seconds and heavy: a double bolt thrown
+    // back, the slab grinding the length of its rail, and a slam you feel. This
+    // is the sound a finished job makes, so it is meant to carry across a room.
+    _thud(ac,out,t,150,0.14,0.70);                      // bolt 1 knocks
+    _scrape(ac,out,t,0.13,1600,0.75,8,900);
+    _ring(ac,out,430,t,0.26,0.42,16);
+    _thud(ac,out,t+0.20,132,0.14,0.70);                 // bolt 2 knocks
+    _scrape(ac,out,t+0.20,0.13,1400,0.75,8,780);
+    _ring(ac,out,380,t+0.20,0.26,0.40,16);
+    _scrape(ac,out,t+0.42,1.55,300,0.60,2.6,620);       // the slab runs its rail
+    _ring(ac,out,174,t+0.42,1.50,0.26,6);
+    _ring(ac,out,98,t+0.42,1.55,0.30,5);                // deep rail rumble
+    _thud(ac,out,t+1.98,60,1.05,1.00);                  // it hits the stop — the slam
+    _scrape(ac,out,t+1.98,0.55,820,0.85,4,150);
+    _ring(ac,out,120,t+1.98,1.70,0.46,8);               // the whole frame rings
+    _ring(ac,out,270,t+1.99,1.35,0.30,15);
+    _ring(ac,out,466,t+1.99,1.05,0.18,22);
   } else if(kind==='error'){
-    // a fault klaxon: two long, flat, unpleasant blasts
-    [0,0.62].forEach(off=>{
+    // a fault klaxon: three long, flat, unpleasant blasts
+    [0,0.60,1.20].forEach(off=>{
       const o=ac.createOscillator(), g=ac.createGain(), f=ac.createBiquadFilter();
-      o.type='sawtooth'; o.frequency.setValueAtTime(138,t+off);
-      o.frequency.linearRampToValueAtTime(128,t+off+0.46);
-      f.type='lowpass'; f.frequency.value=1100;
+      o.type='sawtooth'; o.frequency.setValueAtTime(140,t+off);
+      o.frequency.linearRampToValueAtTime(126,t+off+0.46);
+      f.type='lowpass'; f.frequency.value=1200;
       g.gain.setValueAtTime(0,t+off);
-      g.gain.linearRampToValueAtTime(0.42*SND_VOL,t+off+0.04);
-      g.gain.setValueAtTime(0.42*SND_VOL,t+off+0.38);
-      g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.50);
+      g.gain.linearRampToValueAtTime(0.5*SND_VOL,t+off+0.04);
+      g.gain.setValueAtTime(0.5*SND_VOL,t+off+0.40);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.52);
       o.connect(f); f.connect(g); g.connect(out);
-      o.start(t+off); o.stop(t+off+0.54);
+      o.start(t+off); o.stop(t+off+0.56);
     });
-    _thud(ac,out,t,62,0.50,0.5);
+    _thud(ac,out,t,58,0.60,0.6);
   } else if(kind==='start'){
-    // the mechanism taking up load before it moves
-    _thud(ac,out,t,88,0.34,0.5);
-    _scrape(ac,out,t,0.34,520,0.30,5,260);
-    _ring(ac,out,233,t,0.40,0.18,12);
+    // the mechanism taking up load before it moves — a heavy engage
+    _thud(ac,out,t,84,0.46,0.65);
+    _scrape(ac,out,t,0.46,480,0.42,4,240);
+    _ring(ac,out,196,t,0.52,0.24,10);
+    _ring(ac,out,110,t,0.52,0.22,7);
   } else {
-    // a single latch knock as a bot moves to the next job — short, metallic
-    _scrape(ac,out,t,0.07,1250,0.34,8);
-    _ring(ac,out,392,t,0.16,0.20,18);
-    _thud(ac,out,t,150,0.12,0.30);
+    // each job done: a solid steel clank, not a tap. Short, but it lands.
+    _thud(ac,out,t,165,0.16,0.50);
+    _scrape(ac,out,t,0.12,1150,0.52,7,520);
+    _ring(ac,out,330,t,0.26,0.30,16);
+    _ring(ac,out,147,t,0.24,0.20,9);
   }
 }
 function toggleSound(){
@@ -1884,14 +1892,20 @@ function toggleSound(){
   try{ localStorage.setItem('mm_snd', SND_ON?'1':'0'); }catch(e){}
   const b=document.getElementById('sndBtn');
   if(b) b.textContent = SND_ON?'🔊 Sound On':'🔇 Sound Off';
-  if(SND_ON) beep('tick');
+  // play the FULL door when switched on, so you hear the real finish sound
+  // rather than guessing at it from a short clank.
+  if(SND_ON) beep('done');
 }
 function setVolume(v){
   SND_VOL=Math.max(0,Math.min(100,parseInt(v,10)||0))/100;
   try{ localStorage.setItem('mm_vol', String(Math.round(SND_VOL*100))); }catch(e){}
   const l=document.getElementById('volPct'); if(l) l.textContent=Math.round(SND_VOL*100);
+  // a short clank while dragging, so setting the level is not a 2-second door
+  // on every nudge; release gives the clank at the new level.
   if(SND_ON) beep('tick');
 }
+/* a button to hear the finish sound on demand, wherever it is wired */
+function testSound(){ if(!SND_ON) toggleSound(); else beep('done'); }
 function applySound(){
   try{
     const on=localStorage.getItem('mm_snd'); if(on!==null) SND_ON = on==='1';
@@ -1989,7 +2003,7 @@ function renderMC(){
       <div class="mc-cell"><div class="mc-v">${s.stillUnfinished||0}</div><div class="mc-k">Still unfinished</div></div>
       <div class="mc-cell"><div class="mc-v">${(BLOCKED.sites||[]).length}</div><div class="mc-k">Blocked sites</div></div>
      </div>
-     `+budgetPanel()+whereTheWorkWent()+decisionLog()+`
+     `+registerSnapshot()+budgetPanel()+whereTheWorkWent()+decisionLog()+`
      <div class="mc-job" id="liveBox"><b>Live:</b> <i>connecting…</i></div>
      <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}${s.samDiag?'<br><b>SAM.gov:</b> '+esc(s.samDiag):''}${s.samAdvice?'<br><i style="color:var(--orange)">'+esc(s.samAdvice)+'</i>':''}</div>
      `+fleetBar();
@@ -1999,6 +2013,36 @@ function renderMC(){
    This breaks the run into the outcomes the bots can reach, so a glance tells
    you whether the budget went on real adjudications or on walking past index
    pages — and every number here is one the crawler recorded, not a guess. */
+/* ================= WHAT IS ON THE REGISTER RIGHT NOW =================
+   The funnel below says what the last RUN did. This says what the register
+   holds as a result -- the standing picture, which is what you act on. */
+function registerSnapshot(){
+  const all=SOLICITATIONS||[];
+  if(!all.length) return '';
+  const live=all.filter(x=>!isDeleted(x));
+  const act=live.filter(x=>!x.archived && !isHidden(x));
+  const c={BID:0,MID:0,NO:0,REVIEW:0};
+  act.forEach(x=>{const t=effTier(x); if(c[t]!=null)c[t]++;});
+  const prov=act.filter(x=>proven(x)).length;
+  const needs=act.filter(x=>reviewNeeded(x).length).length;
+  const arch=live.filter(x=>x.archived).length;
+  const hid=live.filter(x=>isHidden(x)&&!x.archived).length;
+  const cell=(n,label,cls,tip)=>`<div class="wk-cell ${n?(cls||''):'zero'}" title="${esc(tip||'')}">`
+    +`<div class="wk-v">${n}</div><div class="wk-k">${esc(label)}</div></div>`;
+  return `<div class="mc-job wk"><div class="wk-h"><b>What is on the register now</b>`
+    +`<span class="wk-t">${act.length} active &middot; ${arch} archived &middot; ${hid} hidden</span></div>`
+    +`<div class="wk-grid">`
+    + cell(c.BID,'Bid-eligible','good','Ready for you to bid')
+    + cell(c.MID,'Conditional','', 'Biddable with a gap to close')
+    + cell(c.NO,'Non-eligible','', 'Ruled out, with a cited reason')
+    + cell(c.REVIEW,'Need your call','warn','The adjudicator could not decide alone')
+    + cell(prov,'Deadline proven','good','Closing date traced to a line in the source')
+    + cell(act.length-prov,'Deadline unproven','warn','Shown, but not yet traced to the source — do not rely on it')
+    + cell(needs,'Flagged for you','warn','Carry a note asking you to check something')
+    + cell(arch,'Archived','', 'Closed, expired or cancelled — kept in History')
+    + `</div></div>`;
+}
+
 function whereTheWorkWent(){
   const s=STATUS||{};
   const cells=[
