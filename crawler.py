@@ -943,6 +943,17 @@ def run(mode):
     blocked_hosts = {b["host"] for b in blocked_sites}
 
     rows, discovered, completed, abandoned, repaired = [], 0, 0, 0, 0
+    not_sol = 0
+    # A SHORT LOG OF WHAT THE BOTS DECIDED AND WHY, for Mission Control. Counts
+    # alone say a run threw four things away; this says WHAT it threw away, in
+    # the model's own words, so the decision can be argued with.
+    decisions = []
+
+    def note_decision(post, what, outcome, detail=""):
+        decisions.append({"post": post or "", "what": (what or "")[:70],
+                          "outcome": outcome, "detail": (detail or "")[:110],
+                          "at": now_utc()})
+        del decisions[:-24]
     skipped_expired = 0      # closed before we reached them — archived, never adjudicated
     skipped_dupe = 0         # already on the register, finished
     nodate_count = 0         # no date anywhere — recorded, not adjudicated
@@ -983,7 +994,7 @@ def run(mode):
 
     def finish_unit(unit, label):
         """Run ONE solicitation end to end. Returns True if a record was stored."""
-        nonlocal completed, abandoned, skipped_expired, skipped_dupe, nodate_count
+        nonlocal completed, abandoned, skipped_expired, skipped_dupe, nodate_count, not_sol
         rec, rep = pipeline.process_one(
             unit, call_ai=call, analyzer=analyzer, estimator=estimator,
             budget=budget, today=today(), fetch_attachments=read_all,
@@ -993,10 +1004,21 @@ def run(mode):
                 ledger.add(unit["hash"])
                 skipped_dupe += 1
                 return False
+            # The reader says this page is not a procurement notice at all.
+            # Recorded, not stored as a record: an index page is not a thing
+            # Rahul should be asked to review.
+            if rep.get("notSolicitation"):
+                ledger.add(unit["hash"])
+                not_sol += 1
+                note_decision(unit.get("post", ""), rep["notSolicitation"],
+                              "not a solicitation", rep.get("firstPass", ""))
+                return False
             # Already closed before we ever reached it. Rahul's rule is "archive
             # everything, document everything" — so it is still recorded, with the
             # date that killed it, but it never costs an AI call.
             if rep.get("expired"):
+                note_decision(unit.get("post", ""), rep.get("title_guess", ""),
+                              "already closed", rep.get("deadReason", ""))
                 row = {"sol": unit.get("sol_hint", ""), "link": unit.get("link", ""),
                        "title": rep.get("title_guess") or unit.get("sol_hint")
                                 or "(expired solicitation)",
@@ -1058,10 +1080,15 @@ def run(mode):
                 rows.append(row)
                 ledger.add(unit["hash"])
                 nodate_count += 1
+                note_decision(unit.get("post", ""), rep.get("title_guess", ""),
+                              "no deadline stated", rep.get("firstPass", ""))
                 return False
             abandoned += 1
             st.d["lastError"] = rep.get("stage", "")
             return False
+        note_decision(unit.get("post", ""), rec.get("title", ""),
+                      "adjudicated " + str(rec.get("tier", "")),
+                      rep.get("closing_found") and f"closes {rep['closing_found']}" or "")
         row = to_row(rec, post=unit.get("post", ""), country=unit.get("country", ""),
                      source=unit.get("source", "Site"), link=unit.get("link", ""),
                      platform=unit.get("platform", "USGOV"), agency=unit.get("agency", ""),
@@ -1437,6 +1464,8 @@ def run(mode):
     st.d["docCaps"] = __import__("docreader").capabilities()
     st.d["completed"] = completed
     st.d["abandoned"] = abandoned
+    st.d["notSolicitation"] = not_sol
+    st.d["decisions"] = decisions
     st.d["repaired"] = repaired
     st.d["skippedExpired"] = skipped_expired
     st.d["skippedDuplicate"] = skipped_dupe

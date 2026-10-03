@@ -414,6 +414,22 @@ def main(shard_dir):
            "providers": sorted({p for s in statuses for p in (s.get("providers") or [])}),
            "coverage": {k: v for s in statuses for k, v in (s.get("coverage") or {}).items()},
            "bots": len(statuses), "running": False,
+           # what the run DID, broken down — so Mission Control can say where
+           # the work went instead of only how many calls it cost
+           "completed": sum(s.get("completed", 0) for s in statuses),
+           "repaired": sum(s.get("repaired", 0) for s in statuses),
+           "notSolicitation": sum(s.get("notSolicitation", 0) for s in statuses),
+           "skippedExpired": sum(s.get("skippedExpired", 0) for s in statuses),
+           "skippedDuplicate": sum(s.get("skippedDuplicate", 0) for s in statuses),
+           "noDateFound": sum(s.get("noDateFound", 0) for s in statuses),
+           "abandoned": sum(s.get("abandoned", 0) for s in statuses),
+           "stillUnfinished": sum(s.get("stillUnfinished", 0) for s in statuses),
+           "samCalls": sum(s.get("samCalls", 0) for s in statuses),
+           "docCaps": next((s.get("docCaps") for s in statuses if s.get("docCaps")), {}),
+           # every bot's decision log, newest last, trimmed to something readable
+           "decisions": sorted(
+               [d for s in statuses for d in (s.get("decisions") or [])],
+               key=lambda d: d.get("at", ""))[-40:],
            "lastError": next((s.get("lastError") for s in statuses if s.get("lastError")), ""),
            "aiDiag": {"ok": {}, "errors": {}},
            "samDiag": next((x.get("samDiag") for x in statuses if x.get("samDiag") and "not queried" not in str(x.get("samDiag"))), "SAM not queried")}

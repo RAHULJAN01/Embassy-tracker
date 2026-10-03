@@ -53,7 +53,7 @@ else:
 # ---------------------------------------------------------------- no duplicates
 # A function defined twice means an edit landed on top of itself; the second
 # definition silently wins and the first one's callers get the wrong behaviour.
-CRITICAL = ["proven", "budgetPanel", "renderPageTabs", "setPage", "beep",
+CRITICAL = ["proven", "budgetPanel", "whereTheWorkWent", "decisionLog", "renderPageTabs", "setPage", "beep",
             "toggleSound", "setVolume", "soundTheBots", "render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
             "renderAlarm", "renderCompany", "downloadExcel", "buildWorkbook",
             "flagOf", "isoOf", "esc", "reviewNeeded", "needsBox", "collapseAll",
@@ -148,6 +148,18 @@ ok("both settings survive a reload",
 ok("Mission Control shows what is left of the deposit", "function budgetPanel(" in js)
 ok("and it is built from reported tokens, not a guess",
    "counted from what the API reported" in html)
+
+# ------------------------------------------------- Mission Control detail
+# A count of AI calls says what a run cost, not what it bought. These two
+# panels say where the work went and what the bots actually decided.
+ok("Mission Control shows where the run's work went", "function whereTheWorkWent(" in js)
+ok("every outcome the bots can reach is broken out",
+   all(k in html for k in ("Not a solicitation", "Already closed", "No deadline stated",
+                           "Already settled", "Left for next run")))
+ok("it shows the cost per page handled", "calls each" in html)
+ok("the bots' own decisions are listed", "function decisionLog(" in js)
+ok("each decision carries the post and the reason",
+   'class="dl-p"' in html and 'class="dl-d"' in html)
 
 # --------------------------------------------- DEEP SCAN is one record, not all
 # Pressing DEEP SCAN on a solicitation used to dispatch a whole-fleet re-crawl,
