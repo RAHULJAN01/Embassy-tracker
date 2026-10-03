@@ -1,0 +1,30 @@
+{
+ "depositUSD": 40.0,
+ "byModel": {
+  "claude-haiku-4-5-20251001": {
+   "in": 59949,
+   "out": 6240,
+   "calls": 26
+  }
+ },
+ "runs": [
+  {
+   "at": "2026-10-03 12:40 UTC",
+   "in": 59949,
+   "out": 6240,
+   "usd": 0.0911
+  }
+ ],
+ "inputTokens": 59949,
+ "outputTokens": 6240,
+ "calls": 26,
+ "spentUSD": 0.0911,
+ "leftUSD": 39.9089,
+ "rates": {
+  "claude-haiku-4-5-20251001": [
+   1.0,
+   5.0
+  ]
+ },
+ "updated": "2026-10-03 12:40 UTC"
+}

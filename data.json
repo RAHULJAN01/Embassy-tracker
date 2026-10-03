@@ -1,8 +1,8 @@
 {
  "meta": {
-  "lastLive": "2026-10-02 20:33 UTC",
-  "lastDeep": "2026-10-02 20:33 UTC",
-  "lastRoots": "2026-10-02 20:33 UTC",
+  "lastLive": "2026-10-03 12:40 UTC",
+  "lastDeep": "2026-10-03 12:40 UTC",
+  "lastRoots": "2026-10-03 12:40 UTC",
   "ledger": [
    "0077105d4d63c70c",
    "028e18284d2b4cd4",
@@ -19,6 +19,7 @@
    "3a1000920b6f27e1",
    "3a7b8346eef2af42",
    "3ce1d77cae93cbfe",
+   "3cf0f43033ec6f13",
    "43346a745a43a551",
    "4936e1df01c9fd0d",
    "53f8839bb08e5573",
@@ -33,8 +34,10 @@
    "6f52bf17ef991b13",
    "6fdb6f86dc6966a5",
    "77f60b5c6e6fe8f1",
+   "8d9bf07fcf73f876",
    "8ea9748b945c46f7",
    "9130777d29c7ec08",
+   "92960de81adee672",
    "9a390ce238913a3b",
    "9cc493697da3957d",
    "9e854616f90647f6",
@@ -44,6 +47,7 @@
    "abba67c0171db0e0",
    "ac5fbd70bc41705c",
    "adfda7ce3e25aed1",
+   "aeaf36496b4a35a9",
    "bda44bfc331d5e09",
    "c89b3be64ad8e292",
    "c8bd6c82046bbef2",
@@ -52,6 +56,8 @@
    "cec7a73fdde23865",
    "d36b39d5b0445471",
    "d746c61f8124b6b1",
+   "d7af24d7ba1ad061",
+   "db21fae1da09490e",
    "dc3294698958c8bc",
    "dcb4f1788b4fc2e2",
    "dd0bad832815d2c8",
@@ -63,20 +69,22 @@
    "effc68dde415936b",
    "f0e55692c26cdf0c",
    "f3acf36838405839",
+   "f46c1024d8e99390",
    "f51777da8f2033af",
-   "fe6993dc1c47f57e"
+   "fe6993dc1c47f57e",
+   "ff538b91d7b75725"
   ],
   "rebuiltOn": "2026-10-02 18:15 UTC",
   "rebuildNote": "Register cleared and rebuilt from scratch under Claude. Nothing judged by the earlier free models was kept.",
   "counts": {
-   "active": 16,
+   "active": 15,
    "bid": 1,
    "mid": 5,
-   "no": 1,
-   "review": 9,
-   "archived": 30,
-   "verified": 4,
-   "unverified": 12,
+   "no": 2,
+   "review": 7,
+   "archived": 39,
+   "verified": 5,
+   "unverified": 10,
    "deleted": 0,
    "hidden": 0
   }
@@ -798,8 +806,8 @@
    "posted": "2026-10-02",
    "deadline": "2026-10-02",
    "qa": "",
-   "status": "Active",
-   "archived": false,
+   "status": "Expired",
+   "archived": true,
    "updated": "2026-10-02",
    "summary": "",
    "type": "",
@@ -843,8 +851,9 @@
    "fp": "5bc8f35b3240fd98",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 19:55 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:30 UTC",
+   "archivedOn": "2026-10-03"
   },
   {
    "tier": "BID",
@@ -1022,7 +1031,9 @@
    "confidence": 0.92,
    "reviewReason": "",
    "verified": "VERIFIED",
-   "verifyNotes": [],
+   "verifyNotes": [
+    "a re-crawl found this notice is no longer open: the notice says it is over: “Quotations are due by September 14, 2026. No quotations will be accepted after this time.”"
+   ],
    "evidence": "low address: U.S. EMBASSY BUJUMBURA 50, AVENUE DES ETATS-UNIS BUJUMBURA, BURUNDI Notes: all questions should be sent at BujProcurement@state.gov 4 days prior to closing date, to allow response time which should be 2 days prior to closing date. Outside of that the question (s) will neither be considered nor responded! Request for Solicitations: Gate Spare Parts Supply – PR15305534 Request for Solicitations ID : PR15305534 Classification: Product service code : 5130 Hand Tools, Power Driven Naics code : 455219 All Other General Merchandise Retailers Items being acquired: No. Description Qty Unit",
    "fp": "5a5f390fe44dd93d",
    "readFailures": [],
@@ -1044,7 +1055,8 @@
     "confidence": 0.68,
     "estimated": true
    },
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "lastDeepScan": "2026-10-03 12:31 UTC"
   },
   {
    "tier": "MID",
@@ -1221,8 +1233,8 @@
    "readFailures": [],
    "firstSeen": "2026-10-02",
    "changed": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 20:02 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:39 UTC"
   },
   {
    "tier": "NO",
@@ -1508,7 +1520,7 @@
    "archivedOn": "2026-10-02"
   },
   {
-   "tier": "REVIEW",
+   "tier": "NO",
    "sector": "",
    "platform": "USGOV",
    "agency": "",
@@ -1520,11 +1532,11 @@
    "source": "Site",
    "link": "https://bj.usembassy.gov/business/",
    "posted": "",
-   "deadline": "",
+   "deadline": "2026-02-12",
    "qa": "",
-   "status": "Active",
-   "archived": false,
-   "updated": "2026-10-02",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-03",
    "summary": "",
    "type": "",
    "scope": "",
@@ -1550,20 +1562,24 @@
    "challenge": "",
    "citation": null,
    "confidence": 0.0,
-   "reviewReason": "source text too short / unreadable",
+   "reviewReason": "the notice gives a closing date of 2026-02-12, already past",
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
     "no title",
     "not adjudicated",
+    "a re-crawl found this notice is no longer open: the notice gives a closing date of 2026-02-12, already past",
     "re-scan 1/3 did not complete it (skipped: closed on 2026-01-21)"
    ],
    "evidence": "t for Operation of Cafeteria Request For Quotation 19BN1525Q0006, School Shuttle Monitor Services for US Embassy Cotonou Request For Quotati",
-   "fp": "98a6e65e43329c49",
+   "fp": "7dee840f950e425b",
    "readFailures": [],
    "firstSeen": "2026-10-02",
    "repairTries": 2,
-   "lastDeepScan": "2026-10-02 19:55 UTC"
+   "lastDeepScan": "2026-10-03 12:31 UTC",
+   "prevKey": "19BN1525Q0005",
+   "changed": "2026-10-03",
+   "archivedOn": "2026-10-03"
   },
   {
    "tier": "MID",
@@ -2087,14 +2103,14 @@
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
-    "re-scan 2/3 did not complete it (abandoned: nothing readable)"
+    "auto-complete gave up after 3 deep re-scans — needs a human look (abandoned: nothing readable on the page)"
    ],
    "evidence": "t Opportunities Economic Opportunity Commercial Opportunities Request for Proposals REQUEST FOR QUOTATION NUMBER 19KE5026Q0128 UNDERGROUND STORAGE WATER TANK CLEANING – ROSSLYN RIDGE REQUEST FOR QUOTATION NUMBER 19KE5026Q0128 UNDERGR",
    "fp": "2a675da18fb9cd31",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 20:03 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:35 UTC"
   },
   {
    "tier": "NO",
@@ -2167,8 +2183,8 @@
    "fp": "4680c58ea28330c3",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "repairTries": 1,
-   "lastDeepScan": "2026-10-02 20:00 UTC"
+   "repairTries": 2,
+   "lastDeepScan": "2026-10-03 12:38 UTC"
   },
   {
    "tier": "REVIEW",
@@ -2249,8 +2265,8 @@
    "fp": "bc57f54dc4001df6",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 20:02 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:39 UTC"
   },
   {
    "tier": "MID",
@@ -2315,7 +2331,9 @@
    "confidence": 0.65,
    "reviewReason": "",
    "verified": "VERIFIED",
-   "verifyNotes": [],
+   "verifyNotes": [
+    "re-scan 1/3 did not complete it (not a solicitation: index or archive page listing multiple procurement notices)"
+   ],
    "evidence": "LEGAT – CCTV FOR JTTF-K BUILDING Economic Opportunity Commercial Opportunities Request for Proposals REQUEST FOR QUOTATION NUMBER 19KE5026Q0123 CDC DGHP – CCTV CAMERAS & NETWORK VIDEO RECORDER (NVR) REQUEST FOR QUOTATION NUMBER 19KE5026Q0123 CDC DGHP – C",
    "fp": "5aae727459449f0f",
    "readFailures": [],
@@ -2336,7 +2354,9 @@
     "confidence": 0.55,
     "estimated": true
    },
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-03 12:35 UTC"
   },
   {
    "tier": "REVIEW",
@@ -2408,14 +2428,14 @@
    "verifyNotes": [
     "no closing date found",
     "not adjudicated",
-    "re-scan 2/3 did not complete it (skipped: closed on 2021-04-09)"
+    "auto-complete gave up after 3 deep re-scans — needs a human look (abandoned: nothing readable on the page)"
    ],
    "evidence": "CTV CAMERAS & NETWORK VIDEO RECORDER (NVR) Economic Opportunity Commercial Opportunities Request for Proposals Request for Quotation PR16227859 – RR network cabinets rehabilitation/replacement DTI-CIS Request for Quotation P",
    "fp": "731bca916f3685a8",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 20:03 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:35 UTC"
   },
   {
    "tier": "REVIEW",
@@ -2488,11 +2508,11 @@
    "readFailures": [],
    "firstSeen": "2026-10-02",
    "changed": "2026-10-02",
-   "repairTries": 2,
-   "lastDeepScan": "2026-10-02 20:00 UTC"
+   "repairTries": 3,
+   "lastDeepScan": "2026-10-03 12:39 UTC"
   },
   {
-   "sol": "Skip to main content",
+   "sol": "",
    "link": "https://www.iom.int/procurement-opportunities",
    "title": "Procurement opportunities | International Organization for Migration",
    "tier": "",
@@ -2570,7 +2590,7 @@
    "firstSeen": "2026-10-02"
   },
   {
-   "tier": "MID",
+   "tier": "NO",
    "sector": "SERVICES",
    "platform": "USGOV",
    "agency": "",
@@ -2582,11 +2602,11 @@
    "source": "Site",
    "link": "https://dj.usembassy.gov/procurement-acquisitions/",
    "posted": "2026-09-21",
-   "deadline": "",
+   "deadline": "2026-09-21",
    "qa": "",
-   "status": "Active",
-   "archived": false,
-   "updated": "2026-10-02",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-03",
    "summary": "Gardening and landscape maintenance at U.S. Embassy Cameroon (CMR)",
    "type": "Recurring on-site grounds maintenance",
    "scope": "Gardening and landscape maintenance at U.S. Embassy Cameroon (CMR)",
@@ -2627,19 +2647,23 @@
    "challenge": "If the RFP requires the prime contractor's own in-country registration or labour force, request clarification under FAR 52.212-1 whether a qualified local subcontractor's registration and experience may be relied upon, or whether M&M must itself be registered in Cameroon.",
    "citation": null,
    "confidence": 0.65,
-   "reviewReason": "",
+   "reviewReason": "the notice gives a closing date of 2026-09-21, already past",
    "verified": "UNVERIFIED",
    "verifyNotes": [
-    "no closing date found"
+    "no closing date found",
+    "a re-crawl found this notice is no longer open: the notice gives a closing date of 2026-09-21, already past"
    ],
    "evidence": "ll notice 19DJ1026Q0023 Solicitation Gardening Maintenance Services for CMR 09/21/2026 Click to see the full notice 19DJ1026Q0022 Solicitation Swimming Pool Preventive Maintenance Services",
-   "fp": "df17d4d82dfc86b5",
+   "fp": "ea4fbf62851bf56d",
    "readFailures": [],
    "firstSeen": "2026-10-02",
-   "changed": "2026-10-02"
+   "changed": "2026-10-03",
+   "prevKey": "19DJ1026Q0023",
+   "lastDeepScan": "2026-10-03 12:32 UTC",
+   "archivedOn": "2026-10-03"
   },
   {
-   "tier": "REVIEW",
+   "tier": "NO",
    "sector": "",
    "platform": "USGOV",
    "agency": "",
@@ -2651,11 +2675,11 @@
    "source": "Site",
    "link": "https://dj.usembassy.gov/procurement-acquisitions/",
    "posted": "",
-   "deadline": "",
+   "deadline": "2026-09-21",
    "qa": "",
-   "status": "Active",
-   "archived": false,
-   "updated": "2026-10-02",
+   "status": "Expired",
+   "archived": true,
+   "updated": "2026-10-03",
    "summary": "",
    "type": "",
    "scope": "",
@@ -2683,17 +2707,22 @@
    "challenge": "",
    "citation": null,
    "confidence": 0.0,
-   "reviewReason": "source text too short / unreadable",
+   "reviewReason": "the notice gives a closing date of 2026-09-21, already past",
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "a re-crawl found this notice is no longer open: the notice gives a closing date of 2026-09-21, already past"
    ],
    "evidence": "mit a proposal for the request of quotations below: Solicitation Number Procurement Type Title Deadline for Quote Submission More Information PR15786933 Solicitation Spart part",
-   "fp": "354f5f1f5d8f4b31",
+   "fp": "31765e86e07d61e9",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "prevKey": "19DJ1026Q0022",
+   "lastDeepScan": "2026-10-03 12:31 UTC",
+   "changed": "2026-10-03",
+   "archivedOn": "2026-10-03"
   },
   {
    "tier": "MID",
@@ -2760,7 +2789,9 @@
    "confidence": 0.65,
    "reviewReason": "",
    "verified": "VERIFIED",
-   "verifyNotes": [],
+   "verifyNotes": [
+    "re-scan 1/3 did not complete it (abandoned: nothing readable on the page)"
+   ],
    "evidence": "licitation Swimming Pool Preventive Maintenance Services for Deputy Chief of Mission Residence (DCMR) 09/20/2026 Click to see the full notice 19DJ1026Q0021 Solicitation DCMR Gardening Service Co",
    "fp": "36c441444fb0790d",
    "readFailures": [],
@@ -2781,7 +2812,9 @@
     "confidence": 0.55,
     "estimated": true
    },
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-03 12:39 UTC"
   },
   {
    "sol": "PR16106445",
@@ -2877,7 +2910,7 @@
    "firstSeen": "2026-10-02"
   },
   {
-   "tier": "REVIEW",
+   "tier": "NO",
    "sector": "SERVICES",
    "platform": "USGOV",
    "agency": "",
@@ -2889,11 +2922,11 @@
    "source": "Site",
    "link": "https://kz.usembassy.gov/business/",
    "posted": "",
-   "deadline": "",
+   "deadline": "2026-10-03",
    "qa": "",
-   "status": "Active",
+   "status": "Expired",
    "archived": false,
-   "updated": "2026-10-02",
+   "updated": "2026-10-03",
    "summary": "",
    "type": "",
    "scope": "",
@@ -2929,17 +2962,21 @@
    "challenge": "",
    "citation": null,
    "confidence": 0.0,
-   "reviewReason": "no-bid rejected: cited clause not found verbatim in source",
+   "reviewReason": "the notice says it is over: “No proposals will be accepted after that time.”",
    "verified": "UNVERIFIED",
    "verifyNotes": [
     "no closing date found",
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "a re-crawl found this notice is no longer open: the notice says it is over: “No proposals will be accepted after that time.”"
    ],
    "evidence": "ss Alumni Outreach and Engagement and English Access Scholarship Program RFQ16110137 / Electric Forklifts RFQ16110137 / Electric Forklifts grant Notice of Funding Opportunity: Administrative and Programming Support for American Corners Notice of Funding Opportunity: Administrative and Programming Support for American Corners PR16048889 / Legal Services PR16048889",
-   "fp": "a219f80d59f6d238",
+   "fp": "20dfe02d7c8e3180",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "prevKey": "PR16048889",
+   "lastDeepScan": "2026-10-03 12:31 UTC",
+   "changed": "2026-10-03"
   },
   {
    "sol": "RFQ15431200",
@@ -3389,12 +3426,15 @@
    "verifyNotes": [
     "no closing date found",
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (abandoned: nothing readable on the page)"
    ],
    "evidence": "le purchase July 2, 2026 August 1, 2026 19UZ8026Q0021 Vehicle purchase June 18, 2026 July 2, 2026 19UZ8026Q0018 PMSC Standby Generators Tashkent May 22, 2026 June 08, 2026 19UZ802",
    "fp": "7fb8997d779d9044",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-03 12:35 UTC"
   },
   {
    "tier": "REVIEW",
@@ -3515,12 +3555,15 @@
    "verifyNotes": [
     "no closing date found",
     "no title",
-    "not adjudicated"
+    "not adjudicated",
+    "re-scan 1/3 did not complete it (abandoned: nothing readable on the page)"
    ],
    "evidence": "d Drive Large SUV Solicitation Request for Quotations for Event Planning and Production Services for Suva Freedom 250 Showcase Solicitation Request for Quotations – Preventative maintenance service contract Solicitation Request for Quotations Number 19FJ6026Q0003 – Supply of Brand-New Cyber Equipment Solicitation Solicitation Elevator Modernization – Belt Replacement, Pulse Unit Installation Solicitation Request for Quote – Fuelling System Repairs Solicitation Expression of Interest: Architectural and Engineering Services Solicitation Request for Quotation: Replacement of Ansul System 1 2 Next",
    "fp": "fb4b4fa8cd1b35aa",
    "readFailures": [],
-   "firstSeen": "2026-10-02"
+   "firstSeen": "2026-10-02",
+   "repairTries": 1,
+   "lastDeepScan": "2026-10-03 12:39 UTC"
   },
   {
    "tier": "MID",
@@ -3613,6 +3656,364 @@
    },
    "firstSeen": "2026-10-02",
    "archivedOn": "2026-10-02"
+  },
+  {
+   "sol": "19BM8025Q003",
+   "link": "https://mm.usembassy.gov/business/",
+   "title": "Date: 04 December 2024",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Burma",
+   "country": "Burma",
+   "source": "Site",
+   "deadline": "2025-02-10",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice gives a closing date of 2025-02-10, already past",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice gives a closing date of 2025-02-10, already past",
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "46037c3ada7634e4",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "",
+   "link": "https://mm.usembassy.gov/wp-content/uploads/sites/13/2024/12/RFQ-U.S.-Emb-Rangoon-Perimeter-Wall-19BM8025Q0003.pdf",
+   "title": "[ATTACHMENT: https://mm.usembassy.gov/wp-content/uploads/sites/13/2024/12/RFQ-U.S.-Emb-Rangoon-Perimeter-Wall-19BM8025Q0003.pdf]",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Burma",
+   "country": "Burma",
+   "source": "Site",
+   "deadline": "2025-02-10",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice gives a closing date of 2025-02-10, already past",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice gives a closing date of 2025-02-10, already past",
+   "files": [
+    "https://mm.usembassy.gov/wp-content/uploads/sites/13/2024/12/RFQ-U.S.-Emb-Rangoon-Perimeter-Wall-19BM8025Q0003.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "453453073cf6d6c4",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "",
+   "link": "https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/LCF_annoucement_2026.pdf",
+   "title": "[ATTACHMENT: https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/LCF_annoucement_2026.pdf]",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Armenia",
+   "country": "Armenia",
+   "source": "Site",
+   "deadline": "2026-10-03",
+   "status": "Expired",
+   "archived": false,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice says it is over: “CLOSING DATE: October 1, 2026”",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice says it is over: “CLOSING DATE: October 1, 2026”",
+   "files": [
+    "https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/LCF_annoucement_2026.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "016f4df79265fed1",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "",
+   "link": "https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/PCMO-Sample-PSC-Opportunity-Announcement.pdf",
+   "title": "[ATTACHMENT: https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/PCMO-Sample-PSC-Opportunity-Announcement.pdf]",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Armenia",
+   "country": "Armenia",
+   "source": "Site",
+   "deadline": "2026-10-03",
+   "status": "Expired",
+   "archived": false,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice says it is over: “CLOSING DATE: September 7, 2026”",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice says it is over: “CLOSING DATE: September 7, 2026”",
+   "files": [
+    "https://am.usembassy.gov/wp-content/uploads/sites/220/2026/09/PCMO-Sample-PSC-Opportunity-Announcement.pdf"
+   ],
+   "fileCount": 1,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "e7ea774fea540f2d",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "tier": "MID",
+   "sector": "SERVICES",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "title": "PR16298184 – Gardening at Residential Properties",
+   "sol": "PR16298184",
+   "post": "U.S. Embassy Hungary",
+   "country": "Hungary",
+   "source": "Site",
+   "link": "https://hu.usembassy.gov/procurement-section-sales/",
+   "posted": "",
+   "deadline": "2026-10-08",
+   "qa": "",
+   "status": "Active",
+   "archived": false,
+   "updated": "2026-10-03",
+   "summary": "Weekly gardening and groundskeeping services at 3 U.S. Embassy residential properties in Budapest: Mátyás (11,219 SqM), Óra (8,796 SqM), and Bimbó (7,528 SqM). ",
+   "type": "Landscaping and groundskeeping services",
+   "scope": "Weekly gardening and groundskeeping services at 3 U.S. Embassy residential properties in Budapest: Mátyás (11,219 SqM), Óra (8,796 SqM), and Bimbó (7,528 SqM). ",
+   "brief": "U.S. Embassy Budapest seeks weekly gardening and groundskeeping services at 3 residential properties (totaling ~27,543 SqM) for 1 year starting no later than November 1, 2026; quotes close October 8, 2026.",
+   "lineItems": [
+    "Weekly gardening and groundskeeping services at Mátyás property (11,219 SqM)",
+    "Weekly gardening and groundskeeping services at Óra property (8,796 SqM)",
+    "Weekly gardening and groundskeeping services at Bimbó property (7,528 SqM)"
+   ],
+   "submitHow": "Email to Contracting Specialist Zsolt Gulyas at gulyaszs@state.gov",
+   "submitTo": "Zsolt Gulyas, Contracting Specialist, gulyaszs@state.gov",
+   "submitForms": [],
+   "awardBasis": "",
+   "gotchas": [
+    "Offeror must have established business with permanent address and telephone listing IN HUNGARY — M&M is a U.S. LLC with no in-country presence.",
+    "Minimum 5 years of experience in landscaping and lawn care maintenance required.",
+    "Workers must obtain Hungarian 'Certificate of Good Conduct' — a host-country background clearance.",
+    "All local Hungarian licenses and permits required by law must be held.",
+    "Liability insurance required.",
+    "NET30 payment terms (not typical for overseas contracts).",
+    "Very tight deadline: 5 days from today (2026-10-03) to close (2026-10-08)."
+   ],
+   "promotedFromMid": "",
+   "overturnedNobid": "",
+   "datesVerified": true,
+   "droppedDates": [],
+   "dateEvidence": {
+    "closing": "This advertisement is valid through 10/08/2026"
+   },
+   "dateProof": {
+    "closing": "quoted"
+   },
+   "dateWarnings": [],
+   "datesSeen": [],
+   "secondOpinion": null,
+   "value": "$42K – $78K",
+   "shipping": "On-site at Budapest residential properties",
+   "payment": "NET30",
+   "shipAfter": "2026-11-01",
+   "setaside": "",
+   "license": "All licenses and permits required by local, Hungarian law; workers must obtain H",
+   "docs": [
+    "Detailed solicitation package available from Zsolt Gulyas at gulyaszs@state.gov"
+   ],
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [
+    {
+     "t": "have an established business with a permanent address and telephone listing in Hungary",
+     "k": "real",
+     "note": "M&M is a U.S. LLC with no in-country registration or address. A local Hungarian gardening/landscaping contractor must be the prime or a JV partner holding the contract and the Hungarian business registration."
+    },
+    {
+     "t": "have a minimum of 5 years of experience in landscaping and lawn care maintenance",
+     "k": "real",
+     "note": "M&M has no landscaping experience. Experience must be sourced from the local Hungarian contractor or subcontractor performing the work."
+    },
+    {
+     "t": "have all licenses and permits required by local, Hungarian law",
+     "k": "real",
+     "note": "M&M cannot hold Hungarian business licenses. A local Hungarian partner must hold these."
+    },
+    {
+     "t": "workers must obtain Hungarian 'Certificate of Good Conduct'",
+     "k": "real",
+     "note": "M&M has no workers in Hungary. The local contractor's employees must obtain this clearance."
+    },
+    {
+     "t": "have liability insurance",
+     "k": "fix",
+     "note": "Obtainable through the local Hungarian partner or as a cost item in the bid."
+    }
+   ],
+   "route": "M&M acts as prime and partners with or subcontracts to an established Hungarian landscaping/gardening firm that holds: (1) a permanent business address and telephone listing in Hungary; (2) minimum 5 years of landscaping and lawn care experience; (3) all required Hungarian licenses and permits; (4) liability insurance; and (5) workers with Hungarian Certificates of Good Conduct. M&M sources the contract, manages the relationship, invoices the Embassy, and pays the Hungarian partner NET30. The Hungarian partner's experience and credentials satisfy the technical requirements; M&M's role is procu",
+   "challenge": "",
+   "citation": null,
+   "confidence": 0.72,
+   "reviewReason": "",
+   "verified": "VERIFIED",
+   "verifyNotes": [],
+   "evidence": "PR16298184 – Gardening at Residential Properties The U.S. Embassy in Budapest, Hungary requires weekly gardening and groundskeeping services at 3 of its residential properties: “Mátyás” (11,219 SqM), “Óra” (8,796 SqM), and “Bimbó” (7,528 SqM). The performance period is 1 year, expected to commence not later than November 1, 2026. All firms that respond to this solicitation must be technically qualified and financially responsible to perform such a service. At a minimum, each offeror must meet the following requirements to submit a proposal: have an established business with a permanent address",
+   "fp": "f2838fcdefb18a74",
+   "readFailures": [],
+   "estimate": {
+    "low": 42000.0,
+    "likely": 58000.0,
+    "high": 78000.0,
+    "display": "$42K – $78K",
+    "basis": "Total area: 11,219 + 8,796 + 7,528 = 27,543 SqM. Weekly service at 3 properties for 52 weeks. Market rate for professional landscaping in Budapest: ~€8–12/SqM/year (lower than Western Europe, higher than rural Hungary). At €10/SqM midpoint = ~€275k gross; contractor margin + overhead ~20–25%, yielding ~$55–65k USD equivalent. Comparable State Dept. embassy grounds contracts (similar size, Central Europe) typically $40–80k/year. Hungarian labor cost advantage offsets premium for English-capable, insured, 5+ year experienced contractor. No line-item detail provided; estimate based on area and regional market.",
+    "currencyNote": "USD. Embassy contracts typically paid in USD; if invoiced in HUF, assume ~1 USD = 360–380 HUF at time of award.",
+    "drivers": [
+     "Total area (27,543 SqM) across 3 properties",
+     "Weekly frequency (52 cycles/year)",
+     "Budapest market rate for qualified, insured landscaping labor",
+     "Contractor overhead, insurance, equipment, compliance (Hungarian permi",
+     "NET30 payment terms (minor working-capital cost)",
+     "1-year performance period (no multi-year discount)"
+    ],
+    "confidence": 0.65,
+    "estimated": true
+   },
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "PR16212903",
+   "link": "https://xk.usembassy.gov/business/",
+   "title": "RFQ PR16212903 – RSO-LGF Request for Purchase of Uniforms for LGF – U.S. Embassy in Pristina (Closing Date: September 9, 2026 – COB)",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Kosovo",
+   "country": "Kosovo",
+   "source": "Site",
+   "deadline": "2026-09-09",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice gives a closing date of 2026-09-09, already past",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice gives a closing date of 2026-09-09, already past",
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "615577c88a8bdc87",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "19KV4226Q0006",
+   "link": "https://xk.usembassy.gov/business/",
+   "title": "RFQ :Solicitation Notice 19KV4226Q0006 – Purchase of Motor Vehicle – Hybrid for– LGF (Closing Date: May 28, 2026– 15:00 Local time) ",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Kosovo",
+   "country": "Kosovo",
+   "source": "Site",
+   "deadline": "2026-05-28",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice gives a closing date of 2026-05-28, already past",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice gives a closing date of 2026-05-28, already past",
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "71dd028100407901",
+   "firstSeen": "2026-10-03"
+  },
+  {
+   "sol": "19KV4226Q0004",
+   "link": "https://xk.usembassy.gov/business/",
+   "title": "Solicitation Notice –",
+   "tier": "",
+   "sector": "",
+   "platform": "USGOV",
+   "agency": "",
+   "domestic": false,
+   "post": "U.S. Embassy Kosovo",
+   "country": "Kosovo",
+   "source": "Site",
+   "deadline": "2026-06-25",
+   "status": "Expired",
+   "archived": true,
+   "archivedOn": "2026-10-03",
+   "updated": "2026-10-03",
+   "verified": "UNVERIFIED",
+   "verifyNotes": [
+    "the notice gives a closing date of 2026-06-25, already past",
+    "archived without opening its files or spending an AI call"
+   ],
+   "deadReason": "the notice gives a closing date of 2026-06-25, already past",
+   "files": [],
+   "fileCount": 0,
+   "restrictions": [],
+   "docs": [],
+   "gotchas": [],
+   "lineItems": [],
+   "skippedExpired": true,
+   "fp": "d4112f6ec517eb4f",
+   "firstSeen": "2026-10-03"
   }
  ]
 }
