@@ -477,18 +477,49 @@ def group_file_units(file_urls):
     number when present, else by the file's own URL)."""
     units = {}
     for u in file_urls:
-        t = fetcher.read_attachment(u)
+        t, note = fetcher.read_attachment_full(u)
         time.sleep(PAGE_PAUSE)
+
+        # THE FILENAME IS EVIDENCE TOO. The reference number was only ever
+        # looked for inside the text, so a scanned cover sheet, an OCR
+        # truncation or a number that only appears on the covering web page
+        # left the file with no identity -- and every such file became its own
+        # record. One solicitation with five attachments turned into five
+        # records, each adjudicated separately at five times the cost, each
+        # carrying whatever date its own file happened to show. Embassies name
+        # these files after the solicitation, so the URL is checked as well.
+        # underscores and dots are word characters, so "19NP5026Q0014_Pricing"
+        # has no word boundary after the reference and the pattern misses it
+        _name = re.sub(r"[^A-Za-z0-9]+", " ",
+                       urllib.parse.unquote(u.rsplit("/", 1)[-1]))
+        sol = extract_sol_number(t or "") or extract_sol_number(_name)
+
         if not t or len(t) < 120:
+            # A FILE THAT VANISHED USED TO VANISH SILENTLY. Too short to use
+            # was treated as if the file had never been listed: no text, no
+            # failure, nothing on the record. A scanned annex that OCR could
+            # not read is exactly this case, and it is the one most likely to
+            # hold the terms that decide a bid.
+            key = sol or u
+            slot = units.setdefault(key, {"text": [], "files": [], "ok": 0,
+                                          "fail": 0, "sol": sol, "notes": []})
+            slot["fail"] += 1
+            slot["notes"].append({"file": u, "why": note or "no readable text in this file"})
             continue
-        sol = extract_sol_number(t)
+
         key = sol or u
-        slot = units.setdefault(key, {"text": [], "files": [], "ok": 0, "fail": 0, "sol": sol})
+        slot = units.setdefault(key, {"text": [], "files": [], "ok": 0, "fail": 0,
+                                      "sol": sol, "notes": []})
         slot["text"].append(f"\n[ATTACHMENT: {u}]\n{t}")
         slot["files"].append(u)
         slot["ok"] += 1
+        if note:
+            slot["notes"].append({"file": u, "why": note})
+        if sol and not slot.get("sol"):
+            slot["sol"] = sol
     return {k: {"text": "\n\n".join(v["text"]), "files": v["files"],
-                "ok": v["ok"], "fail": v["fail"], "sol": v["sol"]}
+                "ok": v["ok"], "fail": v["fail"], "sol": v["sol"],
+                "notes": v.get("notes") or []}
             for k, v in units.items()}
 
 

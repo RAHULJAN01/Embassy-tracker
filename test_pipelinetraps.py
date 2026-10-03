@@ -99,6 +99,34 @@ for label, raw in [
     t, _n = D.read_bytes(raw, "schedule.csv")
     ok(f"  {label}: the date inside is reachable", "2026-10-12" in A.find_dates(t), repr(t[:40]))
 
+# =============================================== orphan files
+print("\n=== loose files on a listing page form ONE record, not five ===")
+def _fake_read(u, retries=1):
+    m = {"https://x.gov/19NP5026Q0014_SOW.pdf":
+            ("Statement of work for the chancery. " * 20 + "Ref 19NP5026Q0014.", ""),
+         "https://x.gov/19NP5026Q0014_Pricing.pdf":
+            ("", "scanned PDF produced no readable text"),
+         "https://x.gov/19NP5026Q0014%20Annex%20B.pdf":
+            ("Annex B technical schedule. " * 12, ""),
+         "https://x.gov/unrelated-notice.pdf": ("A different notice entirely. " * 12, "")}
+    return m.get(u, ("", "not found"))
+_old_read, _old_pause = C.fetcher.read_attachment_full, C.PAGE_PAUSE
+C.fetcher.read_attachment_full, C.PAGE_PAUSE = _fake_read, 0
+units = C.group_file_units(["https://x.gov/19NP5026Q0014_SOW.pdf",
+                            "https://x.gov/19NP5026Q0014_Pricing.pdf",
+                            "https://x.gov/19NP5026Q0014%20Annex%20B.pdf",
+                            "https://x.gov/unrelated-notice.pdf"])
+C.fetcher.read_attachment_full, C.PAGE_PAUSE = _old_read, _old_pause
+ok("four files become two solicitations", len(units) == 2, str(len(units)))
+ok("the reference is read off the filename when the text has none",
+   "19NP5026Q0014" in units, str(list(units))[:70])
+grp = units.get("19NP5026Q0014") or {}
+ok("all three of its files are in one unit", grp.get("ok", 0) + grp.get("fail", 0) == 3,
+   f"read {grp.get('ok')} + unreadable {grp.get('fail')}")
+ok("the unreadable one is recorded rather than vanishing",
+   grp.get("fail") == 1 and bool(grp.get("notes")), str(grp.get("notes"))[:60])
+ok("the unrelated notice is NOT merged in", "https://x.gov/unrelated-notice.pdf" in units)
+
 # =============================================== a model typo
 print("\n=== a malformed answer from the model costs one record, never a run ===")
 for bad in ({"tier": "BID", "confidence": "high"},
