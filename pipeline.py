@@ -318,6 +318,12 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["noDate"] = True
         report["title_guess"] = _first_title(text)
         report["filesRead"] = report["read_ok"]
+        # the dates that ARE printed, so the record can show a human what the
+        # bots were looking at instead of only saying something is missing
+        try:
+            report["datesSeen"] = sorted(set(analyzer.find_dates(text)))[:12]
+        except Exception:
+            report["datesSeen"] = []
         return None, report
 
     # ---- 2. ADJUDICATE (with one retry, which the reservation already covers)

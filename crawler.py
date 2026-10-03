@@ -921,6 +921,15 @@ def run(mode):
                        "files": unit.get("attachments", [])[:15],
                        "fileCount": len(unit.get("attachments") or []),
                        "restrictions": [], "docs": [], "gotchas": [], "lineItems": [],
+                       # every record gets its one-line brief, including this one:
+                       # it is never adjudicated, so no model ever writes it a
+                       # sentence, and it used to show a blank line on the page
+                       "brief": analyzer.plain_brief(
+                           post=unit.get("post", ""),
+                           title=rep.get("title_guess") or unit.get("sol_hint") or "",
+                           deadline="", no_date=True),
+                       "datesSeen": rep.get("datesSeen") or [],
+                       "needs": "a deadline — open the notice and read the submission date",
                        "noDate": True}
                 row["fp"] = fingerprint(row)
                 rows.append(row)

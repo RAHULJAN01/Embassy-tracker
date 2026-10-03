@@ -364,6 +364,47 @@ def cue_anchored(iso, text, cues, window=200):
 # marker so the claim can be RETRACTED if a later, better-informed step proves a
 # deadline -- substring-matching a sentence would rot the moment the wording
 # changed.
+def plain_brief(post="", title="", deadline="", items=None, no_date=False):
+    """A one-line brief built from what we already know, with no AI call.
+
+    Rahul asked for "THE ONE LINE ON EVERY SOLICAITON OR A QUICK IDEA WHAT IT
+    WANTS" -- on EVERY one. The model writes a better sentence, but it is not
+    always asked (a notice with no provable deadline is never adjudicated, on
+    purpose) and it sometimes omits the field. Every one of those records used to
+    show no line at all. This is the floor: plain, assembled from the title, the
+    post and the date, so the row is never blank.
+    """
+    who = (post or "").strip()
+    what = re.sub(r"\s+", " ", (title or "").strip())
+    # longest first: "request for quotation" would otherwise match
+    # "Request for Quotations:" and leave a stray "s:" behind
+    for junk in sorted(("request for quotation", "request for quotations",
+                        "request for proposal", "request for proposals",
+                        "invitation to bid", "solicitation for", "solicitation",
+                        "rfq", "rfp", "itb", "tender for", "tender"),
+                       key=len, reverse=True):
+        if what.lower().startswith(junk):
+            what = re.sub(r"^[\s\-:–—,.]+", "", what[len(junk):]).strip() or what
+            break
+    bits = []
+    if who:
+        bits.append(who + " wants" if what else who)
+    if what:
+        bits.append(what[:120])
+    if not bits:
+        bits.append("A procurement notice")
+    line = " ".join(bits).strip()
+    if items:
+        first = [str(x) for x in items[:2] if str(x).strip()]
+        if first and what.lower() not in " ".join(first).lower():
+            line += " (" + "; ".join(x[:40] for x in first) + ")"
+    if no_date or not deadline:
+        line += " — no closing date is stated anywhere in it, so it needs checking"
+    else:
+        line += f" — closes {deadline}"
+    return line[:300]
+
+
 NO_CLOSING = "[no-closing]"
 
 
@@ -872,6 +913,14 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
                "a meeting), so none was taken as the deadline"
                if future else " and no future date appears anywhere in them"))
         rec["needs"] = "a deadline — open the notice and read the submission date"
+
+    # --- the one-line brief is not optional. If the model skipped it, one is
+    # assembled from what we already know rather than leaving the row blank.
+    if not (rec.get("brief") or "").strip():
+        rec["brief"] = plain_brief(title=rec.get("title", ""),
+                                   deadline=rec.get("closing", ""),
+                                   items=rec.get("line_items") or [],
+                                   no_date=not rec.get("closing"))
 
     # --- sector fallback
     if not rec["sector"]:
