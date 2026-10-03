@@ -105,8 +105,31 @@ ADJUDICATE_PROMPT = (
     "  NO  = a Stage 1 fatal trigger. You MUST quote the controlling sentence VERBATIM.\n"
     "STANDING RULE: when torn between BID and MID, prefer the one whose route you can actually name. "
     "When torn between MID and NO with no fatal trigger present, choose MID.\n\n"
-    "DATES ARE MANDATORY: find posted / closing(deadline) / Q&A-due dates in the text. Convert any "
-    "format to YYYY-MM-DD. If a date genuinely is not stated anywhere, return \"\" for it.\n\n"
+    "DATES — YOU DO THE READING, AND YOU SHOW YOUR WORK.\n"
+    "  A wrong deadline is the most damaging error in this whole job: it sends us to a\n"
+    "  solicitation that closed last year, or hides one closing on Friday. So for EVERY date\n"
+    "  you report you must also return the EXACT WORDS from the document that state it.\n"
+    "  * `closing_quote` — copy the sentence, line or table row that states the submission\n"
+    "    deadline, CHARACTER FOR CHARACTER as it appears. Do not paraphrase it, do not tidy\n"
+    "    it up, do not translate it, do not fix its spelling. It is checked against the\n"
+    "    document and a quote that is not found there is thrown away along with your date.\n"
+    "  * The quote MUST contain the date itself. 'Offers are due by the date below' is not\n"
+    "    usable; quote the part that carries the date.\n"
+    "  * A deadline is written a hundred different ways and they ALL count. 'No quotations\n"
+    "    will be accepted after 12 October 2026', 'Offers due date: 12-OCT-2026', 'bids shall\n"
+    "    reach this office not later than 1600 hrs on 12.10.2026', 'Submission closes COB\n"
+    "    Monday 12 October', a row in a table reading 'Closing | 2026-10-12' — all are\n"
+    "    deadlines. Read it the way a person would. Do not look for a particular phrase.\n"
+    "  * NEVER report as the closing date: a delivery or completion date, a period of\n"
+    "    performance, a site-visit or pre-bid meeting date, a validity or warranty expiry, a\n"
+    "    contract start date, or the date the notice was issued. If the only dates present are\n"
+    "    of that kind, return closing \"\" — that is the correct answer, not a failure.\n"
+    "  * Same rule for `posted_quote` and `qa_quote` where you report those dates.\n"
+    "  * If a date is genuinely not stated anywhere, return \"\" for it and \"\" for its quote.\n"
+    "    An empty deadline is honest. A guessed one is not, and it will be caught.\n"
+    "  Convert every date you report to YYYY-MM-DD. For a date written day-first vs\n"
+    "  month-first ambiguously (e.g. 03/04/2026), prefer the reading consistent with the rest\n"
+    "  of the document, and if truly ambiguous say so in `gotchas`.\n\n"
     "WRITE THE BRIEF LIKE A HUMAN WOULD SAY IT. `brief` is one plain sentence a busy person "
     "can read in two seconds and know whether to care: who is buying, what exactly, how many, "
     "and by when. Example: \"U.S. Embassy Kathmandu wants 120 office chairs and 60 desks "
@@ -114,6 +137,8 @@ ADJUDICATE_PROMPT = (
     "Return ONLY a JSON object with keys:\n"
     '  brief (one plain sentence, as described above),\n'
     '  title, sol, posted (YYYY-MM-DD|""), closing (YYYY-MM-DD|""), qa_due (YYYY-MM-DD|""),\n'
+    '  closing_quote (the verbatim words stating the deadline, containing the date; "" if none),\n'
+    '  posted_quote (""), qa_quote (""),\n'
     '  sector ("COTS"|"SERVICES"|"CONSTRUCTION"|"MIXED"),\n'
     '  classification, scope, est_value, shipping, payment, ship_after, setaside, license,\n'
     '  line_items (array of strings: the actual things wanted WITH quantities, e.g.\n'
@@ -335,6 +360,176 @@ def cue_anchored(iso, text, cues, window=200):
     return False, ""
 
 
+# Prefix on the warning that says "this notice states no deadline". It is a
+# marker so the claim can be RETRACTED if a later, better-informed step proves a
+# deadline -- substring-matching a sentence would rot the moment the wording
+# changed.
+NO_CLOSING = "[no-closing]"
+
+
+def clear_no_closing(rec):
+    """Retract the no-deadline finding, because a deadline has now been proven."""
+    rec["date_warnings"] = [w for w in (rec.get("date_warnings") or [])
+                            if not w.startswith(NO_CLOSING)]
+    if not rec["date_warnings"]:
+        rec.pop("date_warnings", None)
+    rec.pop("no_closing", None)
+    rec.pop("dates_seen", None)
+    if (rec.get("needs") or "").startswith("a deadline"):
+        rec.pop("needs", None)
+    return rec
+
+
+def date_windows(text, span=260, cap=7000):
+    """The parts of a document that could possibly hold a deadline, and nothing else.
+
+    The date gate has to be model-read to be accurate, but sending a whole
+    40-page solicitation to a model just to ask "which of these dates is the
+    deadline" is paying for 40 pages to answer one question. Every candidate
+    answer is a date that is printed somewhere, so only the text AROUND the
+    printed dates can matter. This returns those windows, merged and capped.
+
+    The payoff is also the cheapest possible no: a document with no dates in it
+    returns "", and the caller skips the model entirely at zero cost.
+    """
+    if not text:
+        return ""
+    spans = []
+    for rx, _kind in _DATE_PATTERNS:
+        for m in rx.finditer(text):
+            spans.append((max(0, m.start() - span), min(len(text), m.end() + span)))
+    if not spans:
+        return ""
+    spans.sort()
+    merged = [list(spans[0])]
+    for lo, hi in spans[1:]:
+        if lo <= merged[-1][1] + 40:
+            merged[-1][1] = max(merged[-1][1], hi)
+        else:
+            merged.append([lo, hi])
+    out, used = [], 0
+    for lo, hi in merged:
+        chunk = text[lo:hi]
+        if used + len(chunk) > cap:
+            chunk = chunk[: max(0, cap - used)]
+        if chunk:
+            out.append(chunk)
+            used += len(chunk)
+        if used >= cap:
+            break
+    return "\n...\n".join(out)
+
+
+DATE_PROMPT = (
+    "You are reading an excerpt of a government procurement notice. Your ONLY job is to "
+    "identify which of the dates printed here is the SUBMISSION DEADLINE — the last moment a "
+    "quote, bid, offer or proposal may be handed in.\n\n"
+    "Read it the way a person would. A deadline is written a hundred different ways and all of "
+    "them count: 'no quotations will be accepted after 12 October 2026', 'offers due date: "
+    "12-OCT-2026', 'bids must be in our hands by 1600 hrs on 12.10.2026', 'the tender box is "
+    "sealed at 15:00 on 12 October 2026', 'nothing submitted past 12/10/2026 shall be "
+    "entertained', a table row reading 'Submission | 2026-10-12', or the same sentence in "
+    "another language. Do not look for a particular phrase; understand the sentence.\n\n"
+    "These are NEVER the submission deadline, no matter how prominent they are:\n"
+    "  * a delivery, completion or installation date\n"
+    "  * a period of performance or contract start/end date\n"
+    "  * a site-visit or pre-bid meeting date\n"
+    "  * a quote-validity period or warranty expiry\n"
+    "  * the date the notice was issued or published\n"
+    "  * a date in a company history, a licence number or an address\n\n"
+    "If none of the dates here is a submission deadline, say so by returning \"\". That is a "
+    "correct and useful answer. Do NOT pick the nearest future date to be helpful — a guess is "
+    "worse than nothing, because it cannot be told apart from a real one.\n\n"
+    "For every date you report, copy the exact words it comes from, CHARACTER FOR CHARACTER as "
+    "they appear in the excerpt. The quote is checked against the document; one that is not "
+    "found there is discarded together with your date, so do not paraphrase, tidy, translate or "
+    "correct it, and make sure the quote contains the date itself.\n\n"
+    "Return ONLY a JSON object:\n"
+    '  {"closing":"YYYY-MM-DD|\\"\\"", "closing_quote":"the exact words",\n'
+    '   "posted":"YYYY-MM-DD|\\"\\"", "posted_quote":"",\n'
+    '   "qa_due":"YYYY-MM-DD|\\"\\"", "qa_quote":"",\n'
+    '   "why":"one short sentence on what made you pick it, or why none of them qualifies"}\n\n'
+    "EXCERPT:\n"
+)
+
+
+def read_dates(text, call_ai, model=None):
+    """Ask the model which printed date is the deadline, and prove its answer.
+
+    Returns (rec_like, note). rec_like carries closing/posted/qa_due plus
+    date_evidence and date_proof, grounded against the FULL text — so a quote
+    the model trimmed from the excerpt is still checked against the real
+    document. ("", note) when there is nothing to find or nothing provable.
+    """
+    excerpt = date_windows(text)
+    if not excerpt:
+        return {}, "no date of any kind is printed in the notice or its documents"
+    try:
+        data = call_ai(DATE_PROMPT + excerpt, model=model) if model else \
+            call_ai(DATE_PROMPT + excerpt)
+    except Exception as e:
+        if type(e).__name__ == "AllExhausted":
+            raise
+        return {}, f"the date reader could not run ({str(e)[:60]})"
+    if not isinstance(data, dict) or data.get("_gerr"):
+        return {}, f"the date reader failed ({(data or {}).get('_gerr', 'no answer')})"
+    rec = {"closing": str(data.get("closing") or "")[:10],
+           "posted": str(data.get("posted") or "")[:10],
+           "qa_due": str(data.get("qa_due") or "")[:10],
+           "closing_quote": str(data.get("closing_quote") or "")[:400],
+           "posted_quote": str(data.get("posted_quote") or "")[:400],
+           "qa_quote": str(data.get("qa_quote") or "")[:400]}
+    ground_dates(rec, text)
+    note = str(data.get("why") or "")[:200]
+    return rec, note
+
+
+def quoted_date(iso, quote, text):
+    """(ok, evidence, why_not) — the model read it, and we check its homework.
+
+    This is the heart of the date repair, and it exists because of a design
+    error worth writing down. The decision used to be made by a Python tuple of
+    cue phrases — "closing date", "offers are due" and forty more — and the
+    model's answer was only accepted if MY regex independently agreed. The
+    thing that is actually good at reading English was benched, and a phrase
+    list I guessed at was put in charge of the most important field on the page.
+    A list like that can never be complete: "bids shall reach this office not
+    later than", "submission closes COB Monday", a bare date in a table cell
+    under a heading three rows up — all invisible to it.
+
+    So the model now reports the date AND copies out the exact words that state
+    it, and the only job here is to police that claim:
+      1. the quoted words must really appear in the document (not paraphrased,
+         not invented) — verify_citation tolerates whitespace and OCR drift;
+      2. the date must be derivable FROM THOSE WORDS, which is what ties the
+         number to the sentence that justifies it.
+    Both hold and the date is real, in any phrasing, in any language of layout,
+    with no list to outgrow. Either fails and the date does not exist.
+    """
+    if not iso:
+        return False, "", "no date given"
+    q = (quote or "").strip()
+    if not q:
+        return False, "", ("it does not appear in the notice or its documents, and the "
+                           "reader gave no words to back it up")
+    if not verify_citation(q, text):
+        return False, "", ("the words the model quoted for this date are not in the "
+                           "document — the date was invented")
+    if iso not in set(find_dates(q)):
+        return False, "", ("the quoted line does not contain this date, so nothing ties "
+                           "the two together")
+    # AND the date must be in the document itself. The quote check tolerates
+    # whitespace and OCR drift on purpose, so a near-copy of a real sentence
+    # with one digit of the YEAR changed passes it — 2026 quoted back as 2027,
+    # a whole year wrong, on a sentence that otherwise matches perfectly. The
+    # quote proves the date is a deadline; this proves the date is the one that
+    # is actually printed. Both are needed and neither is enough alone.
+    if iso not in set(find_dates(text)):
+        return False, "", ("the quoted words are in the document but this exact date is "
+                           "not — the date in the quote was altered")
+    return True, re.sub(r"\s+", " ", q)[:300], ""
+
+
 def ground_dates(rec, text):
     """Keep only the dates we can PROVE, and keep the proof.
 
@@ -344,46 +539,75 @@ def ground_dates(rec, text):
     The line each surviving date came from is stored so a human can check it in
     one glance, and so VERIFIED can mean something.
     """
-    dropped, evidence = [], {}
-    for field, cues in (("closing", _DEADLINE_CUES), ("posted", _POSTED_CUES),
-                        ("qa_due", _QA_CUES)):
+    dropped, evidence, proof = [], {}, {}
+    names = {"closing": "closing date", "posted": "posted date", "qa_due": "Q&A date"}
+    for field, cues, qkey in (("closing", _DEADLINE_CUES, "closing_quote"),
+                              ("posted", _POSTED_CUES, "posted_quote"),
+                              ("qa_due", _QA_CUES, "qa_quote")):
         v = rec.get(field) or ""
         if v:
-            # The closing date is held to a higher standard than the others: it
-            # must sit on a line that states a deadline. A wrong Q&A date is an
-            # inconvenience; a wrong deadline sends Rahul to a solicitation that
-            # closed last year, or hides one closing on Friday.
-            if field == "closing":
-                found, ev = cue_anchored(v, text, _DEADLINE_CUES)
-                if not found and v in set(find_dates(text)):
-                    rec[field] = ""
-                    rec.setdefault("date_warnings", []).append(
-                        f"the closing date {v} does appear in the documents, but not on any "
-                        f"line that calls it a deadline — it is more likely a delivery date "
-                        f"or a performance period, so it was not used")
-                    v = ""
-            else:
-                found, ev = date_in_text(v, text)
-            if v and found:
-                evidence[field] = ev or "(found in the document)"
+            # ROUTE 1 — the model read it and quoted the words. This is the main
+            # path and the only one that handles a phrasing nobody listed.
+            good, ev, why = quoted_date(v, rec.get(qkey), text)
+            if good:
+                evidence[field] = ev
+                proof[field] = "quoted"
                 continue
-            if v:
-                dropped.append((field, v))
-                rec[field] = ""
+            gave_quote = bool((rec.get(qkey) or "").strip())
+
+            # ROUTE 2 — no usable quote, so fall back to the old cue-phrase
+            # corroboration. It is a safety net for a model that forgot to quote,
+            # NOT the decider any more. For the closing date the cue must really
+            # be there; a date that merely exists somewhere is not a deadline.
+            if field == "closing":
+                found, ev2 = cue_anchored(v, text, _DEADLINE_CUES)
+            else:
+                found, ev2 = date_in_text(v, text)
+            if found:
+                # Still real evidence: the date sits beside deadline wording in
+                # the document itself. Graded lower than a quote, and only
+                # flagged when the reader DID quote something and the quote
+                # turned out not to be in the document — that is a fabrication,
+                # and it is worth knowing about even though the date survived.
+                evidence[field] = ev2 or "(found in the document)"
+                proof[field] = "phrase"
+                if gave_quote:
+                    rec.setdefault("date_warnings", []).append(
+                        f"the {names[field]} {v} is in the document, but the words the reader "
+                        f"quoted for it are not — {why}; the date was kept on phrase-matching "
+                        f"alone, so confirm it")
+                continue
+
+            # Neither route. The date does not exist as this kind of date.
+            # Say WHICH of the two failures it was, because they mean very
+            # different things to whoever reads the record: a date that is
+            # simply absent was invented, while a date that is present but
+            # never called a deadline is almost always a delivery date or a
+            # performance period that got mislabelled.
+            if v in set(find_dates(text)):
+                why = ("it is printed in the document but not on any line that calls it a "
+                       + ("deadline" if field == "closing" else names[field])
+                       + ", so it belongs to something else — most often a delivery date "
+                         "or a period of performance")
+            dropped.append((field, v, why))
+            rec[field] = ""
+
+        # Nothing from the model at all — last chance on cue phrases alone.
         h = harvest_date(text, cues)
         if h:
-            found, ev = date_in_text(h, text)
+            found, ev3 = (cue_anchored(h, text, cues) if field == "closing"
+                          else date_in_text(h, text))
             if found:
                 rec[field] = h
-                evidence[field] = ev or "(found in the document)"
+                evidence[field] = ev3 or "(found in the document)"
+                proof[field] = "phrase"
     rec["date_evidence"] = evidence
+    rec["date_proof"] = proof
     if dropped:
-        rec["dropped_dates"] = [f for f, _ in dropped]
-        names = {"closing": "closing date", "posted": "posted date", "qa_due": "Q&A date"}
+        rec["dropped_dates"] = [f for f, _, _ in dropped]
         rec.setdefault("date_warnings", []).append(
-            "; ".join(f"the {names.get(f, f)} {v} does not appear anywhere in the notice "
-                      f"or its documents" for f, v in dropped)
-            + " — discarded as unprovable")
+            "; ".join(f"the {names.get(f, f)} {v} was discarded — {why}"
+                      for f, v, why in dropped))
 
     # --- SANITY. Two dates that are each provable can still be impossible
     # together, and an impossible pair means at least one of them is attached to
@@ -394,7 +618,7 @@ def ground_dates(rec, text):
         rec.setdefault("date_warnings", []).append(
             f"the closing date {cl} is before the posted date {po} — one of the two is "
             f"attached to the wrong thing, so neither can be trusted")
-    return [f for f, _ in dropped]
+    return [f for f, _, _ in dropped]
 
 
 # How real notices actually phrase a deadline. Rahul: "they may find the deadline
@@ -473,6 +697,10 @@ def _coerce(data):
         "title": str(g("title"))[:200], "sol": str(g("sol")).upper()[:60],
         "posted": str(g("posted"))[:10], "closing": str(g("closing"))[:10],
         "qa_due": str(g("qa_due"))[:10], "sector": sector,
+        # the model's own proof for each date, checked against the document
+        "closing_quote": str(g("closing_quote"))[:400],
+        "posted_quote": str(g("posted_quote"))[:400],
+        "qa_quote": str(g("qa_quote"))[:400],
         "classification": str(g("classification"))[:80],
         "scope": str(g("scope"))[:160], "est_value": str(g("est_value"))[:60],
         "shipping": str(g("shipping"))[:80], "payment": str(g("payment"))[:80],
@@ -632,8 +860,13 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
         seen = sorted(set(find_dates(text)))
         future = [d for d in seen if d >= today_iso]
         rec["dates_seen"] = seen[:12]
+        # Marked, not just worded. The date gate may prove a deadline AFTER the
+        # adjudicator ran, and a warning left behind from this branch would keep
+        # the record UNVERIFIED for ever even though its deadline is proven.
+        # clear_no_closing() below is the one way to retract it.
+        rec["no_closing"] = True
         rec.setdefault("date_warnings", []).append(
-            "no line in the notice or its documents states a closing date"
+            NO_CLOSING + ": no line in the notice or its documents states a closing date"
             + (" — dates do appear (" + ", ".join(future[:4]) +
                ") but each belongs to something else (delivery, performance period, "
                "a meeting), so none was taken as the deadline"

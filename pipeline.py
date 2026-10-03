@@ -28,8 +28,15 @@ COST_ADJUDICATE = 1
 COST_ESTIMATE = 1
 COST_RETRY = 1
 COST_SECOND_OPINION = 1
-FULL_JOB_COST = (COST_ADJUDICATE + COST_RETRY + COST_SECOND_OPINION
-                 + COST_ESTIMATE)      # reserve this much
+# Reading the dates. Only spent when phrase-matching cannot find a deadline,
+# which is exactly the case the phrase list was getting wrong. The prompt is
+# sent a compact excerpt of the text around the printed dates, not the whole
+# document, so these are the cheapest calls in the run -- and a document with
+# no dates at all costs nothing, because there is nothing to ask about.
+COST_DATE_READ = 1
+COST_DATE_ESCALATE = 1
+FULL_JOB_COST = (COST_DATE_READ + COST_DATE_ESCALATE + COST_ADJUDICATE
+                 + COST_RETRY + COST_SECOND_OPINION + COST_ESTIMATE)
 
 
 class Budget:
@@ -223,18 +230,67 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = "abandoned: nothing readable"
         return None, report
 
-    # Now the date, proven against everything we hold
-    closing, closing_ev = "", ""
+    # ---- THE DATE GATE. Free first, then the reader, then a stronger reader.
+    #
+    # This gate used to be phrase-matching alone, and that was the whole bug:
+    # a notice saying "nothing submitted past 12/10/2026 shall be entertained"
+    # matched no phrase, so it was filed as having no date and never adjudicated
+    # at all. The phrase list now only gets the FIRST attempt, because when it
+    # works it is free. When it fails the model reads the dates itself, which is
+    # what it is good at, on a compact excerpt rather than the whole document.
+    closing, closing_ev, how = "", "", ""
     try:
         h = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
         if h:
-            found, ev = analyzer.date_in_text(h, text)
+            found, ev = analyzer.cue_anchored(h, text, analyzer._DEADLINE_CUES)
             if found:
-                closing, closing_ev = h, ev
+                closing, closing_ev, how = h, ev, "phrase"
     except Exception:
         pass
+
+    date_rec = {}
+    if not closing:
+        try:
+            import ai as _ai
+            stronger = _ai.REVIEW_MODEL
+        except Exception:
+            stronger = None
+        for stage, model, cost in (("read", None, COST_DATE_READ),
+                                   ("escalated", stronger, COST_DATE_ESCALATE)):
+            if stage == "escalated" and not stronger:
+                break
+            if budget.left < cost:
+                break
+            try:
+                dr, note = analyzer.read_dates(text, call_ai, model=model)
+            except Exception as e:
+                if type(e).__name__ == "AllExhausted":
+                    raise
+                report.setdefault("notes", []).append(f"date reader: {str(e)[:60]}")
+                break
+            if not dr:
+                # nothing printed to read -- no call was made, so nothing spent
+                report["date_note"] = note
+                break
+            budget.spend(cost)
+            report["ai_calls"] += 1
+            report["date_note"] = note
+            date_rec = dr
+            if dr.get("closing"):
+                closing = dr["closing"]
+                closing_ev = (dr.get("date_evidence") or {}).get("closing", "")
+                how = "read" if stage == "read" else "read-by-sonnet"
+                break
+            # The cheap reader found nothing it could prove. Before accepting
+            # that a notice has no deadline -- which takes it out of the
+            # register -- the question goes to the stronger model once. This is
+            # the one place where paying more is obviously worth it: the
+            # alternative is dropping a live contract.
     report["closing_found"] = closing
     report["closing_evidence"] = closing_ev
+    report["closing_how"] = how
+    if date_rec.get("date_warnings"):
+        report["date_warnings"] = date_rec["date_warnings"]
 
     # dead by its own date, now that we have actually looked for it
     if closing and closing < today:
@@ -283,6 +339,35 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         rr = (rec.get("review_reason") or "").lower()
         transient = rec.get("tier") == "REVIEW" and (
             rr.startswith("ai") or "provider" in rr or "quota" in rr or "cooling" in rr)
+
+    # THE GATE'S DATE WINS. The gate resolved this deadline with its own proof
+    # before a cent was spent on adjudication, and it did so with a prompt whose
+    # only job was dates. The adjudicator is thinking about eligibility and
+    # routes; its date is a by-product. So where the gate proved a deadline and
+    # the adjudicator came back with a different one or with nothing, the gate's
+    # is kept, together with the words it came from. Without this the record
+    # could still end up showing a date the gate had already rejected.
+    if closing and not transient:
+        # The adjudicator may have concluded "no deadline stated" from its own
+        # reading. The gate has since proven one, so that finding is retracted
+        # rather than left to sit on the record and hold it at UNVERIFIED.
+        analyzer.clear_no_closing(rec)
+        if rec.get("closing") != closing:
+            if rec.get("closing"):
+                rec.setdefault("date_warnings", []).append(
+                    f"the adjudicator read the deadline as {rec['closing']}; the date check "
+                    f"proved {closing} from the notice's own words, and that is what is shown")
+            rec["closing"] = closing
+        rec.setdefault("date_evidence", {})["closing"] = (
+            closing_ev or rec.get("date_evidence", {}).get("closing") or "")
+        rec.setdefault("date_proof", {})["closing"] = (
+            "quoted" if how.startswith("read") else "phrase")
+        for f in ("posted", "qa_due"):
+            if not rec.get(f) and date_rec.get(f):
+                rec[f] = date_rec[f]
+                ev = (date_rec.get("date_evidence") or {}).get(f)
+                if ev:
+                    rec.setdefault("date_evidence", {})[f] = ev
 
     if transient:
         # the AI never actually answered — do NOT store a half-record

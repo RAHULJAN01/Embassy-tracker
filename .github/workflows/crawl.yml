@@ -58,6 +58,7 @@ jobs:
           python test_page.py
           python test_dates.py
           python test_fetcher.py
+          python test_dategate.py
       - id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then

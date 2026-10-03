@@ -84,9 +84,74 @@ for label, body, bad in [
                                              "restrictions": [], "route": "x"}, today=TODAY)
     ok(f"  {label} is refused", r["closing"] == "", repr(r["closing"]))
     ok("    and the reason says so",
-       any("not on any line that calls it a deadline" in w for w in r.get("date_warnings", [])))
+       any("not on any line that calls it a deadline" in w
+           for w in r.get("date_warnings", [])),
+       (r.get("date_warnings") or [""])[0][:80])
     vv, _ = C.verification_state(r, 1, 0)
     ok("    and the record is not VERIFIED", vv == "UNVERIFIED", vv)
+
+# ============================================ THE READER, NOT THE PHRASE LIST
+# Rahul's objection, and he was right: "THE WORD DEADLINE CAN BE WRITTEN IN MANY
+# WAYS". A tuple of cue phrases can never cover them all. So the model now
+# quotes the words it read the date from, and the code only checks the quote is
+# really in the document and really contains the date.
+#
+# Every phrasing below is deliberately chosen to contain NO phrase from
+# _DEADLINE_CUES. Each one must still work. If someone ever puts the phrase list
+# back in charge, these fail.
+print("\n=== A deadline is read, not pattern-matched (none of these hit a cue) ===")
+ODD = [
+    ("in our hands by",
+     "Bids must be in our hands by 1600 hrs on 12.10.2026 and will be opened the next "
+     "morning in the presence of bidders. "),
+    ("tender box closes",
+     "The tender box at the chancery gate is sealed at 15:00 on 12 October 2026. "),
+    ("nothing entertained",
+     "Nothing submitted past 12/10/2026 shall be entertained by the contracting officer. "),
+    ("window shuts",
+     "The submission window shuts 12-Oct-26 at close of play; late entries are returned "
+     "unopened. "),
+    ("table row",
+     "Procurement schedule\nSite visit | 2026-09-20\nSubmission | 2026-10-12\n"
+     "Award | 2026-11-01\n"),
+    ("hindi-english mix",
+     "Quotation jama karne ki antim tithi 12 October 2026 hai. "),
+]
+for label, line in ODD:
+    body = line * 4
+    # the phrase list must genuinely be useless here, or the test proves nothing
+    assert not A.harvest_date(body, A._DEADLINE_CUES), f"{label}: a cue leaked in"
+    r = A.adjudicate(body, lambda p, q=line: {
+        "tier": "BID", "confidence": 0.9, "title": "X", "sector": "COTS",
+        "closing": "2026-10-12", "closing_quote": q.strip(),
+        "restrictions": [], "route": "x"}, today=TODAY)
+    ok(f"  {label}", r["closing"] == "2026-10-12", repr(r["closing"]))
+    ok("    on the strength of the quote, not a phrase",
+       (r.get("date_proof") or {}).get("closing") == "quoted",
+       str(r.get("date_proof")))
+    ok("    and nothing is flagged", not r.get("date_warnings"),
+       str(r.get("date_warnings"))[:60])
+
+print("\n=== A quote the document does not contain is still refused ===")
+GOOD_BODY = "Bids must be in our hands by 1600 hrs on 12.10.2026. " * 4
+for label, iso, quote in [
+    ("an invented sentence", "2026-10-12",
+     "Offers are due by 12 October 2026 at 1600 hours local time."),
+    ("a real sentence with the date swapped", "2027-10-12",
+     "Bids must be in our hands by 1600 hrs on 12.10.2027."),
+    ("a quote with no date in it", "2026-10-12",
+     "Bids must be in our hands by"),
+]:
+    r = A.adjudicate(GOOD_BODY, lambda p, i=iso, q=quote: {
+        "tier": "BID", "confidence": 0.95, "title": "X", "sector": "COTS",
+        "closing": i, "closing_quote": q, "restrictions": [], "route": "x"}, today=TODAY)
+    # the honest date is still in the document, so phrase-matching may rescue a
+    # correct date -- what must never happen is the FABRICATED one surviving
+    ok(f"  {label} does not survive as given",
+       r["closing"] != iso or iso == "2026-10-12", repr(r["closing"]))
+    if r["closing"] == "2026-10-12":
+        ok("    the rescued date is marked as phrase-matched, not quoted",
+           (r.get("date_proof") or {}).get("closing") == "phrase", str(r.get("date_proof")))
 
 # ============================================================ REAL DATES KEPT
 print("\n=== A real, stated deadline is kept — with the line it came from ===")

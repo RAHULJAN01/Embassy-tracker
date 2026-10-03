@@ -13,60 +13,108 @@
     --bg:#ffffff; --alt:#f6f6f6; --head:#eeeeee; --black:#111111;
     --green:#1a7f37; --orange:#c75300; --red:#c62828;
     --greenbg:#e9f3ec; --orangebg:#fbeede; --redbg:#f7e9e9;
+    /* ---- ONE horizontal gutter for the whole page ----------------------
+       The masthead, the bot-control bar, the nav strips, the summary band
+       and the register all read --gutter, so their left and right edges
+       cannot drift apart. Change the number here and nowhere else. */
+    --gutter:24px;
+    --content-max:1460px;
+    --bar-pad:14px;     /* equal space above AND below a bar's contents */
+    --logo-h:90px;      /* FIXED FOREVER. never resizes, never animates. */
+    --flag-h:58px;      /* FIXED FOREVER. a deliberate pair with the logo. */
   }
+  @media(max-width:1000px){ :root{--gutter:16px; --bar-pad:12px} }
+  @media(max-width:430px) { :root{--gutter:14px} }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45}
   a{color:#111} a:visited{color:#111}
-  .wrap{max-width:1460px;margin:0 auto;padding:0 20px 70px}
-  .shell{max-width:1460px;margin:0 auto;padding:0 20px}
+  /* the one shared measure: every full-width band lines up on this */
+  .wrap{max-width:var(--content-max);margin:0 auto;padding:0 var(--gutter) 70px}
+  .shell{max-width:var(--content-max);margin:0 auto;padding:0 var(--gutter)}
   /* masthead (white) — PINNED on a computer so the LLC bar and its buttons are
      always reachable however far you scroll. Left alone on a phone, where a
      pinned masthead would eat the screen. */
   .mastwrap{position:sticky;top:0;z-index:60;background:#fff;
-    box-shadow:0 2px 10px rgba(0,0,0,.10)}
-  .mastwrap > .mast{max-width:1460px;margin:0 auto;padding-left:20px;padding-right:20px}
+    box-shadow:0 2px 10px rgba(0,0,0,.10);overflow-x:clip}
   @media(max-width:1000px){
     .mastwrap{position:static;box-shadow:none}
-    .mastwrap > .mast{padding-left:12px;padding-right:12px}
   }
-  .mast{background:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0 14px;border-bottom:3px solid #111}
-  .brand{display:flex;align-items:center;gap:16px;min-width:0}
-  .logo{height:90px;width:auto;display:block;flex:0 0 auto}
-  .brand .bt{border-left:2px solid #111;padding-left:16px}
-  .brand .bt .n{font-size:18px;font-weight:700;letter-spacing:.4px}
+  /* .mast and .toolbar are PADDED boxes, so their contents start on the same
+     line as the register text below. Vertical padding is set separately, in
+     longhand, so no later shorthand can silently wipe the gutter out again —
+     that is exactly how the buttons ended up jammed against the screen edge. */
+  .mastwrap > .mast,
+  .mastwrap > .toolbar{
+    max-width:var(--content-max);margin-left:auto;margin-right:auto;
+    padding-left:var(--gutter);padding-right:var(--gutter)}
+  /* .navbar and .subnav are BORDERED boxes, so the border itself has to land on
+     the gutter rather than a padding edge, or the nav strip juts out past every
+     band under it. */
+  .mastwrap > .navbar,
+  .mastwrap > .subnav{
+    width:calc(100% - 2 * var(--gutter));
+    max-width:calc(var(--content-max) - 2 * var(--gutter));
+    margin-left:auto;margin-right:auto;padding-left:0;padding-right:0}
+
+  .mast{background:#fff;display:flex;flex-wrap:wrap;align-items:center;
+    justify-content:space-between;column-gap:24px;row-gap:10px;
+    padding-top:var(--bar-pad);padding-bottom:var(--bar-pad);
+    border-bottom:3px solid #111}
+  /* the flag + logo are ONE unit: same vertical centre, tight gap between
+     them, then the rule, then the name. No margins on either image. */
+  /* the brand asks for 440px and then grows into whatever is left over. Asking
+     for less than its natural width is what lets the masthead stay ONE row all
+     the way down to 1201px: flex breaks lines on the requested width, not the
+     grown one, so the company name gives up width before the buttons ever do. */
+  .brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 440px;max-width:100%}
+  .flag{height:var(--flag-h);width:auto;border:1px solid #999;flex:0 0 auto;display:block;margin:0}
+  .logo{height:var(--logo-h);width:auto;display:block;flex:0 0 auto;margin:0}
+  .brand .bt{border-left:2px solid #111;padding-left:18px;margin-left:6px;min-width:0}
+  .brand .bt .n{font-size:18px;font-weight:700;letter-spacing:.4px;overflow-wrap:anywhere}
   .brand .bt .s{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-top:3px}
-  .mhead-right{display:flex;align-items:center;gap:10px;text-align:right;
-    flex-wrap:wrap;justify-content:flex-end;min-width:0;flex:1 1 auto}
-  .mast{flex-wrap:wrap}
-  .brand{flex:0 1 auto;max-width:100%}
-  .brand .bt{min-width:0}
-  .brand .bt .n{overflow-wrap:anywhere}
-  .mastwrap{overflow-x:clip}
-  .flag{height:46px;width:auto;border:1px solid #999;flex:0 0 auto;display:block}
-  .mmeta{font-size:11.5px;color:var(--sub);line-height:1.7}
+  /* right side of the bar = two stacked rows of the SAME width: the button row,
+     then the meta block. It is a flex COLUMN on purpose — a column only ever
+     asks for the width of its widest row, so the buttons keep their real size
+     instead of being compressed, and the meta text can never drag the whole
+     group wider than it needs to be. --mhead-right never shrinks; the company
+     name beside the logo gives up width first. */
+  .mhead-right{display:flex;flex-direction:column;align-items:flex-end;
+    row-gap:6px;text-align:right;min-width:0;flex:0 0 auto;margin:0}
+  .mnav{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;
+    width:100%;column-gap:8px;row-gap:6px;min-width:0;margin:0}
+  .mhead-right .btn{margin:0}
+  .mmeta{width:100%;font-size:11.5px;color:var(--sub);line-height:1.45;margin:0;text-align:right}
   .mmeta b{color:#111}
-  /* toolbar — aligned row */
-  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;
+  /* below 1200px there is no honest room for both beside the 90px logo, so the
+     button group takes a full row of its own, left-aligned on the same gutter.
+     It is never squeezed against the edge of the screen and never clipped. */
+  @media(max-width:1200px){
+    .brand{flex:1 1 100%}
+    .mhead-right{flex:1 1 100%;align-items:flex-start;text-align:left}
+    .mnav{justify-content:flex-start}
+    .mmeta{text-align:left}
+  }
+  /* toolbar / bot-control bar — same gutter and the same vertical rhythm as
+     the masthead, so the two bars line up with each other on both edges */
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:8px;
+    padding-top:10px;padding-bottom:10px;
     border-bottom:1px solid var(--line);background:var(--bg)}
-  .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
-    max-width:1460px;margin:0 auto;padding-left:20px;padding-right:20px}
-  /* scrolled: the masthead slims down so the pinned controls stay compact */
+  .toolbar .grp{display:flex;flex-wrap:wrap;align-items:center;
+    column-gap:8px;row-gap:8px;min-width:0;margin:0}
+  /* every control in the bar is the same height and sits on one baseline */
+  .toolbar .btn,.toolbar input,.toolbar select{height:36px;margin:0}
   /* The header is FIXED. It does not shrink, grow, or animate on scroll —
      Rahul: "I want it to stay fixed and not do these fancy dances." So the
      masthead is simply built compact and stays exactly that size always. */
   /* THE MASTHEAD IS NEVER TOUCHED. Full-size logo and flag, one size, always —
-     it does not shrink when pinned, on scroll, or at any width. */
-  .mastwrap .mast{padding:14px 0 12px}
-  .mastwrap .logo{height:90px}
-  .mastwrap .flag{height:46px}
-  .mastwrap .toolbar{padding:8px 0}
+     it does not shrink when pinned, on scroll, or at any width. There is no
+     scroll-triggered size rule for the logo or the flag anywhere in this file. */
+  .mastwrap .logo{height:var(--logo-h)}
+  .mastwrap .flag{height:var(--flag-h)}
   @media(max-width:1000px){
-    .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
-      padding-left:12px;padding-right:12px}
     body.scrolled .mastwrap .mmeta{display:block}
     body.scrolled .mastwrap .brand .bt .s{display:block}
   }
-  .toolbar .grp{display:flex;gap:8px;align-items:center}
   .btn{height:36px;font-family:inherit;font-size:13px;font-weight:700;padding:0 14px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .btn.sec{background:var(--bg);color:var(--ink)}
   .btn.danger{border-color:var(--red);background:var(--bg);color:var(--red)}
@@ -287,17 +335,27 @@
   }
 
   /* password gate */
-  .gate{position:fixed;inset:0;background:var(--bg);color:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center}
-  .gatebox{width:360px;max-width:90%;border:1px solid #111;border-top:5px solid #111;padding:26px 24px;text-align:center}
+  .gate{position:fixed;inset:0;background:var(--bg);color:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;padding:var(--gutter)}
+  .gatebox{width:360px;max-width:100%;border:1px solid #111;border-top:5px solid #111;padding:26px 24px;text-align:center}
   .gatebox .gseal{width:50px;height:50px;border:2px solid #111;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-family:Arial;margin-bottom:12px}
   .gatebox h2{font-size:16px;margin:0 0 4px;letter-spacing:.3px}
   .gatebox p{font-size:12px;color:#666;margin:0 0 16px;text-transform:uppercase;letter-spacing:1px}
   .gatebox input{width:100%;height:40px;border:1px solid #999;border-radius:2px;padding:0 10px;font-family:Arial;font-size:14px;margin-bottom:10px}
   .gatebox button{width:100%;height:42px;background:#111;color:#fff;border:none;border-radius:2px;font-weight:700;font-size:14px;cursor:pointer}
   .gatebox .gerr{color:#c62828;font-size:12px;font-weight:700;margin-top:10px;min-height:16px}
-  .gatebox .glogo{display:block;margin:0 auto 16px;min-height:4px}
-  .gatebox .glogo-svg{width:172px;max-width:72%;height:auto;display:block;margin:0 auto}
+  /* the LLC logo and the US flag on the lock screen: ONE centred pair, same
+     vertical centre, same size relationship as the masthead (logo : flag) */
+  .gatebox .gbrand{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+    gap:14px;margin:0 auto 18px}
+  .gatebox .glogo{display:block;margin:0;min-height:4px;line-height:0;flex:0 0 auto}
+  .gatebox .glogo-svg{height:84px;width:auto;max-width:none;display:block;margin:0}
+  .gatebox .gflag{height:54px;width:auto;border:1px solid #999;display:block;flex:0 0 auto;margin:0}
   body.night .gatebox .glogo-svg{filter:invert(1)}
+  @media(max-width:400px){
+    .gatebox .gbrand{gap:10px}
+    .gatebox .glogo-svg{height:68px}
+    .gatebox .gflag{height:44px}
+  }
 
   /* what an unfinished record needs from a human — the first thing you read */
   .needs{border:2px solid var(--orange);margin:0 0 14px;background:var(--bg)}
@@ -345,7 +403,10 @@
     margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
   .alarm .at{font-size:14.5px;font-weight:700;letter-spacing:.3px}
   .alarm .aw{font-size:12.5px;font-weight:400;margin-top:4px;line-height:1.5}
-  .alarm .ab{font-family:inherit;font-size:12.5px;font-weight:700;padding:9px 15px;
+  /* same 36px control height as every other button on the page, so the alarm
+     bar keeps the vertical rhythm of the masthead and the bot-control bar */
+  .alarm .ab{font-family:inherit;font-size:12.5px;font-weight:700;height:36px;padding:0 15px;
+    display:inline-flex;align-items:center;justify-content:center;
     border:1px solid #fff;background:transparent;color:#fff;cursor:pointer;white-space:nowrap}
   .alarm .ab:hover{background:rgba(255,255,255,.2)}
   .alarm .ab.solid{background:#fff;color:var(--red)}
@@ -389,19 +450,16 @@
   /* ---------- PHONE: the register becomes stacked cards, never a crushed table ---------- */
   @media(max-width:1000px){
     body{font-size:14px}
-    .wrap,.shell{padding-left:12px;padding-right:12px}
-    .mast{flex-direction:column;align-items:flex-start;gap:10px;padding:12px 0 10px}
-    .mhead-right{flex-wrap:wrap;gap:6px;text-align:left;width:100%}
-    .mhead-right .btn{flex:1 1 calc(50% - 3px);justify-content:center;min-width:0;padding:0 8px;font-size:12px}
-    .mmeta{width:100%;font-size:11px}
-    .brand{gap:10px}
-    .brand .bt{padding-left:10px} .brand .bt .n{font-size:15px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
-    .toolbar{gap:6px;padding:10px 0}
+    .mast{flex-direction:column;align-items:flex-start;row-gap:10px;
+      padding-top:var(--bar-pad);padding-bottom:var(--bar-pad)}
+    .mhead-right{flex-wrap:wrap;column-gap:6px;row-gap:6px;text-align:left;
+      width:100%;justify-content:flex-start}
+    .mmeta{width:100%;font-size:11px;text-align:left}
+    .brand{gap:10px;width:100%}
+    .brand .bt{padding-left:12px;margin-left:4px} .brand .bt .n{font-size:15px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
+    .toolbar{column-gap:6px;row-gap:6px;padding-top:10px;padding-bottom:10px}
     .toolbar .grp{flex-wrap:wrap;width:100%}
     .toolbar input,.toolbar select,.toolbar .btn{flex:1 1 auto;min-width:0}
-    .toolbar input{min-width:100%}
-    .toolbar .dd,.toolbar .dd .btn{width:100%}
-    .dd-menu{min-width:100%;left:0;right:0}
     .summary{grid-template-columns:repeat(2,1fr)}
     .summary .big{font-size:24px}
     .nav-tab{flex:1 1 auto;text-align:center;padding:10px 10px;font-size:11.5px}
@@ -441,9 +499,23 @@
     .modal{width:94%}
     .help-banner{font-size:12.5px;padding:10px 12px}
   }
+  /* small phones: the flag+logo pair keeps its full fixed size and the company
+     name drops to its own line underneath, so nothing is ever crushed or
+     clipped; every control in both bars then goes full width, two up. */
+  @media(max-width:560px){
+    .brand{flex-wrap:wrap;row-gap:10px}
+    .brand .bt{flex:1 1 100%;border-left:none;border-top:2px solid #111;
+      padding-left:0;padding-top:9px;margin-left:0}
+    /* two up, exactly: 2 * (50% - 4px) + the 8px column gap = 100%, no third
+       column of leftovers and no button pushed onto a row of its own */
+    .mnav .btn{flex:1 1 calc(50% - 4px);justify-content:center;min-width:0;padding:0 8px;font-size:12px}
+    .toolbar input{flex:1 1 100%;min-width:0}
+    .toolbar .dd,.toolbar .dd .btn{width:100%}
+    .dd-menu{min-width:100%;left:0;right:0}
+  }
   @media(max-width:420px){
     .summary{grid-template-columns:1fr 1fr}
-    .mhead-right .btn{min-width:100%}
+    .mnav .btn{min-width:100%}
     table.reg tbody tr.row td::before{flex-basis:44%;max-width:44%}
   }
 </style>
@@ -451,7 +523,10 @@
 <body>
 <div class="gate" id="gate">
   <div class="gatebox">
-    <div class="glogo" id="glogo" aria-label="Madison &amp; Main LLC"></div>
+    <div class="gbrand">
+      <svg class="gflag" viewBox="0 0 76 40" xmlns="http://www.w3.org/2000/svg" aria-label="United States flag"><rect width="76" height="40" fill="#fff"/><rect x="0" y="0.000" width="76" height="3.077" fill="#b22234"/><rect x="0" y="6.154" width="76" height="3.077" fill="#b22234"/><rect x="0" y="12.308" width="76" height="3.077" fill="#b22234"/><rect x="0" y="18.462" width="76" height="3.077" fill="#b22234"/><rect x="0" y="24.615" width="76" height="3.077" fill="#b22234"/><rect x="0" y="30.769" width="76" height="3.077" fill="#b22234"/><rect x="0" y="36.923" width="76" height="3.077" fill="#b22234"/><rect x="0" y="0" width="30.400" height="21.538" fill="#3c3b6e"/><polygon points="2.53,1.16 2.76,1.85 3.48,1.85 2.89,2.27 3.12,2.96 2.53,2.53 1.95,2.96 2.17,2.27 1.59,1.85 2.31,1.85" fill="#fff"/><polygon points="7.60,1.16 7.82,1.85 8.54,1.85 7.96,2.27 8.18,2.96 7.60,2.53 7.02,2.96 7.24,2.27 6.66,1.85 7.38,1.85" fill="#fff"/><polygon points="12.67,1.16 12.89,1.85 13.61,1.85 13.03,2.27 13.25,2.96 12.67,2.53 12.08,2.96 12.31,2.27 11.72,1.85 12.44,1.85" fill="#fff"/><polygon points="17.73,1.16 17.96,1.85 18.68,1.85 18.09,2.27 18.32,2.96 17.73,2.53 17.15,2.96 17.37,2.27 16.79,1.85 17.51,1.85" fill="#fff"/><polygon points="22.80,1.16 23.02,1.85 23.74,1.85 23.16,2.27 23.38,2.96 22.80,2.53 22.22,2.96 22.44,2.27 21.86,1.85 22.58,1.85" fill="#fff"/><polygon points="27.87,1.16 28.09,1.85 28.81,1.85 28.23,2.27 28.45,2.96 27.87,2.53 27.28,2.96 27.51,2.27 26.92,1.85 27.64,1.85" fill="#fff"/><polygon points="5.07,3.32 5.29,4.00 6.01,4.00 5.43,4.42 5.65,5.11 5.07,4.69 4.48,5.11 4.71,4.42 4.12,4.00 4.84,4.00" fill="#fff"/><polygon points="10.13,3.32 10.36,4.00 11.08,4.00 10.49,4.42 10.72,5.11 10.13,4.69 9.55,5.11 9.77,4.42 9.19,4.00 9.91,4.00" fill="#fff"/><polygon points="15.20,3.32 15.42,4.00 16.14,4.00 15.56,4.42 15.78,5.11 15.20,4.69 14.62,5.11 14.84,4.42 14.26,4.00 14.98,4.00" fill="#fff"/><polygon points="20.27,3.32 20.49,4.00 21.21,4.00 20.63,4.42 20.85,5.11 20.27,4.69 19.68,5.11 19.91,4.42 19.32,4.00 20.04,4.00" fill="#fff"/><polygon points="25.33,3.32 25.56,4.00 26.28,4.00 25.69,4.42 25.92,5.11 25.33,4.69 24.75,5.11 24.97,4.42 24.39,4.00 25.11,4.00" fill="#fff"/><polygon points="2.53,5.47 2.76,6.16 3.48,6.16 2.89,6.58 3.12,7.26 2.53,6.84 1.95,7.26 2.17,6.58 1.59,6.16 2.31,6.16" fill="#fff"/><polygon points="7.60,5.47 7.82,6.16 8.54,6.16 7.96,6.58 8.18,7.26 7.60,6.84 7.02,7.26 7.24,6.58 6.66,6.16 7.38,6.16" fill="#fff"/><polygon points="12.67,5.47 12.89,6.16 13.61,6.16 13.03,6.58 13.25,7.26 12.67,6.84 12.08,7.26 12.31,6.58 11.72,6.16 12.44,6.16" fill="#fff"/><polygon points="17.73,5.47 17.96,6.16 18.68,6.16 18.09,6.58 18.32,7.26 17.73,6.84 17.15,7.26 17.37,6.58 16.79,6.16 17.51,6.16" fill="#fff"/><polygon points="22.80,5.47 23.02,6.16 23.74,6.16 23.16,6.58 23.38,7.26 22.80,6.84 22.22,7.26 22.44,6.58 21.86,6.16 22.58,6.16" fill="#fff"/><polygon points="27.87,5.47 28.09,6.16 28.81,6.16 28.23,6.58 28.45,7.26 27.87,6.84 27.28,7.26 27.51,6.58 26.92,6.16 27.64,6.16" fill="#fff"/><polygon points="5.07,7.62 5.29,8.31 6.01,8.31 5.43,8.73 5.65,9.42 5.07,8.99 4.48,9.42 4.71,8.73 4.12,8.31 4.84,8.31" fill="#fff"/><polygon points="10.13,7.62 10.36,8.31 11.08,8.31 10.49,8.73 10.72,9.42 10.13,8.99 9.55,9.42 9.77,8.73 9.19,8.31 9.91,8.31" fill="#fff"/><polygon points="15.20,7.62 15.42,8.31 16.14,8.31 15.56,8.73 15.78,9.42 15.20,8.99 14.62,9.42 14.84,8.73 14.26,8.31 14.98,8.31" fill="#fff"/><polygon points="20.27,7.62 20.49,8.31 21.21,8.31 20.63,8.73 20.85,9.42 20.27,8.99 19.68,9.42 19.91,8.73 19.32,8.31 20.04,8.31" fill="#fff"/><polygon points="25.33,7.62 25.56,8.31 26.28,8.31 25.69,8.73 25.92,9.42 25.33,8.99 24.75,9.42 24.97,8.73 24.39,8.31 25.11,8.31" fill="#fff"/><polygon points="2.53,9.78 2.76,10.46 3.48,10.46 2.89,10.89 3.12,11.57 2.53,11.15 1.95,11.57 2.17,10.89 1.59,10.46 2.31,10.46" fill="#fff"/><polygon points="7.60,9.78 7.82,10.46 8.54,10.46 7.96,10.89 8.18,11.57 7.60,11.15 7.02,11.57 7.24,10.89 6.66,10.46 7.38,10.46" fill="#fff"/><polygon points="12.67,9.78 12.89,10.46 13.61,10.46 13.03,10.89 13.25,11.57 12.67,11.15 12.08,11.57 12.31,10.89 11.72,10.46 12.44,10.46" fill="#fff"/><polygon points="17.73,9.78 17.96,10.46 18.68,10.46 18.09,10.89 18.32,11.57 17.73,11.15 17.15,11.57 17.37,10.89 16.79,10.46 17.51,10.46" fill="#fff"/><polygon points="22.80,9.78 23.02,10.46 23.74,10.46 23.16,10.89 23.38,11.57 22.80,11.15 22.22,11.57 22.44,10.89 21.86,10.46 22.58,10.46" fill="#fff"/><polygon points="27.87,9.78 28.09,10.46 28.81,10.46 28.23,10.89 28.45,11.57 27.87,11.15 27.28,11.57 27.51,10.89 26.92,10.46 27.64,10.46" fill="#fff"/><polygon points="5.07,11.93 5.29,12.62 6.01,12.62 5.43,13.04 5.65,13.72 5.07,13.30 4.48,13.72 4.71,13.04 4.12,12.62 4.84,12.62" fill="#fff"/><polygon points="10.13,11.93 10.36,12.62 11.08,12.62 10.49,13.04 10.72,13.72 10.13,13.30 9.55,13.72 9.77,13.04 9.19,12.62 9.91,12.62" fill="#fff"/><polygon points="15.20,11.93 15.42,12.62 16.14,12.62 15.56,13.04 15.78,13.72 15.20,13.30 14.62,13.72 14.84,13.04 14.26,12.62 14.98,12.62" fill="#fff"/><polygon points="20.27,11.93 20.49,12.62 21.21,12.62 20.63,13.04 20.85,13.72 20.27,13.30 19.68,13.72 19.91,13.04 19.32,12.62 20.04,12.62" fill="#fff"/><polygon points="25.33,11.93 25.56,12.62 26.28,12.62 25.69,13.04 25.92,13.72 25.33,13.30 24.75,13.72 24.97,13.04 24.39,12.62 25.11,12.62" fill="#fff"/><polygon points="2.53,14.09 2.76,14.77 3.48,14.77 2.89,15.19 3.12,15.88 2.53,15.46 1.95,15.88 2.17,15.19 1.59,14.77 2.31,14.77" fill="#fff"/><polygon points="7.60,14.09 7.82,14.77 8.54,14.77 7.96,15.19 8.18,15.88 7.60,15.46 7.02,15.88 7.24,15.19 6.66,14.77 7.38,14.77" fill="#fff"/><polygon points="12.67,14.09 12.89,14.77 13.61,14.77 13.03,15.19 13.25,15.88 12.67,15.46 12.08,15.88 12.31,15.19 11.72,14.77 12.44,14.77" fill="#fff"/><polygon points="17.73,14.09 17.96,14.77 18.68,14.77 18.09,15.19 18.32,15.88 17.73,15.46 17.15,15.88 17.37,15.19 16.79,14.77 17.51,14.77" fill="#fff"/><polygon points="22.80,14.09 23.02,14.77 23.74,14.77 23.16,15.19 23.38,15.88 22.80,15.46 22.22,15.88 22.44,15.19 21.86,14.77 22.58,14.77" fill="#fff"/><polygon points="27.87,14.09 28.09,14.77 28.81,14.77 28.23,15.19 28.45,15.88 27.87,15.46 27.28,15.88 27.51,15.19 26.92,14.77 27.64,14.77" fill="#fff"/><polygon points="5.07,16.24 5.29,16.92 6.01,16.92 5.43,17.35 5.65,18.03 5.07,17.61 4.48,18.03 4.71,17.35 4.12,16.92 4.84,16.92" fill="#fff"/><polygon points="10.13,16.24 10.36,16.92 11.08,16.92 10.49,17.35 10.72,18.03 10.13,17.61 9.55,18.03 9.77,17.35 9.19,16.92 9.91,16.92" fill="#fff"/><polygon points="15.20,16.24 15.42,16.92 16.14,16.92 15.56,17.35 15.78,18.03 15.20,17.61 14.62,18.03 14.84,17.35 14.26,16.92 14.98,16.92" fill="#fff"/><polygon points="20.27,16.24 20.49,16.92 21.21,16.92 20.63,17.35 20.85,18.03 20.27,17.61 19.68,18.03 19.91,17.35 19.32,16.92 20.04,16.92" fill="#fff"/><polygon points="25.33,16.24 25.56,16.92 26.28,16.92 25.69,17.35 25.92,18.03 25.33,17.61 24.75,18.03 24.97,17.35 24.39,16.92 25.11,16.92" fill="#fff"/><polygon points="2.53,18.39 2.76,19.08 3.48,19.08 2.89,19.50 3.12,20.19 2.53,19.76 1.95,20.19 2.17,19.50 1.59,19.08 2.31,19.08" fill="#fff"/><polygon points="7.60,18.39 7.82,19.08 8.54,19.08 7.96,19.50 8.18,20.19 7.60,19.76 7.02,20.19 7.24,19.50 6.66,19.08 7.38,19.08" fill="#fff"/><polygon points="12.67,18.39 12.89,19.08 13.61,19.08 13.03,19.50 13.25,20.19 12.67,19.76 12.08,20.19 12.31,19.50 11.72,19.08 12.44,19.08" fill="#fff"/><polygon points="17.73,18.39 17.96,19.08 18.68,19.08 18.09,19.50 18.32,20.19 17.73,19.76 17.15,20.19 17.37,19.50 16.79,19.08 17.51,19.08" fill="#fff"/><polygon points="22.80,18.39 23.02,19.08 23.74,19.08 23.16,19.50 23.38,20.19 22.80,19.76 22.22,20.19 22.44,19.50 21.86,19.08 22.58,19.08" fill="#fff"/><polygon points="27.87,18.39 28.09,19.08 28.81,19.08 28.23,19.50 28.45,20.19 27.87,19.76 27.28,20.19 27.51,19.50 26.92,19.08 27.64,19.08" fill="#fff"/></svg>
+      <div class="glogo" id="glogo" aria-label="Madison &amp; Main LLC"></div>
+    </div>
     <h2>Solicitation Register</h2>
     <p>Restricted &middot; enter access password</p>
     <input type="password" id="gpw" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
@@ -466,11 +541,13 @@
       <div class="bt"><div class="n">MADISON &amp; MAIN LLC</div><div class="s">Overseas Procurement — Solicitation Register</div></div>
     </div>
     <div class="mhead-right">
-      <button class="btn sec" style="height:36px" onclick="refreshPage()">↻ Refresh</button>
-      <button class="btn sec" style="height:36px" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
-      <button class="btn sec" style="height:36px" onclick="toggleCompany()" title="Company Information" id="coBtn">▦ Company Info</button>
-      <button class="btn sec" style="height:36px" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
-      <button class="btn sec" style="height:36px" onclick="lock()" title="Log out now">🔒 Lock</button>
+      <div class="mnav">
+        <button class="btn sec" onclick="refreshPage()">↻ Refresh</button>
+        <button class="btn sec" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
+        <button class="btn sec" onclick="toggleCompany()" title="Company Information" id="coBtn">▦ Company Info</button>
+        <button class="btn sec" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
+        <button class="btn sec" onclick="lock()" title="Log out now">🔒 Lock</button>
+      </div>
       <div class="mmeta">
         Register compiled: <b id="built"></b><br>
         Last full deep-crawl: <b id="lastDeep"></b><br>
