@@ -796,6 +796,7 @@ def run(mode):
     rows, discovered, completed, abandoned, repaired = [], 0, 0, 0, 0
     skipped_expired = 0      # closed before we reached them — archived, never adjudicated
     skipped_dupe = 0         # already on the register, finished
+    nodate_count = 0         # no date anywhere — recorded, not adjudicated
     # every reference we already hold complete: a second sighting is not re-read
     known_live = {str(r.get("sol", "")).strip().upper()
                   for r in prior.get("solicitations", [])
@@ -833,7 +834,7 @@ def run(mode):
 
     def finish_unit(unit, label):
         """Run ONE solicitation end to end. Returns True if a record was stored."""
-        nonlocal completed, abandoned, skipped_expired, skipped_dupe
+        nonlocal completed, abandoned, skipped_expired, skipped_dupe, nodate_count
         rec, rep = pipeline.process_one(
             unit, call_ai=call, analyzer=analyzer, estimator=estimator,
             budget=budget, today=today(), fetch_attachments=read_all,
@@ -869,6 +870,36 @@ def run(mode):
                 rows.append(row)
                 ledger.add(unit["hash"])          # never look at it again
                 skipped_expired += 1
+                return False
+            # No date anywhere, even after reading every document. Recorded so it
+            # is never silently lost, flagged so a human can settle it, and NOT
+            # adjudicated — we do not pay a model to guess a deadline.
+            if rep.get("noDate"):
+                row = {"sol": unit.get("sol_hint", ""), "link": unit.get("link", ""),
+                       "title": rep.get("title_guess") or unit.get("sol_hint")
+                                or "(solicitation with no stated date)",
+                       "tier": "REVIEW", "sector": "",
+                       "platform": unit.get("platform", "USGOV"),
+                       "agency": unit.get("agency", ""),
+                       "domestic": unit.get("domestic", False),
+                       "post": unit.get("post", ""), "country": unit.get("country", ""),
+                       "source": unit.get("source", "Site"),
+                       "deadline": "", "status": "Check", "archived": False,
+                       "updated": today(), "verified": "UNVERIFIED",
+                       "datesVerified": True, "dateEvidence": {}, "dateWarnings": [],
+                       "verifyNotes": ["no closing date anywhere — not on the page and not in "
+                                       f"any of its {rep.get('filesRead', 0)} document(s)",
+                                       "not adjudicated: a solicitation that cannot be placed "
+                                       "in time is not worth an AI call until the date is known"],
+                       "reviewReason": "no closing date could be found anywhere",
+                       "files": unit.get("attachments", [])[:15],
+                       "fileCount": len(unit.get("attachments") or []),
+                       "restrictions": [], "docs": [], "gotchas": [], "lineItems": [],
+                       "noDate": True}
+                row["fp"] = fingerprint(row)
+                rows.append(row)
+                ledger.add(unit["hash"])
+                nodate_count += 1
                 return False
             abandoned += 1
             st.d["lastError"] = rep.get("stage", "")
@@ -1180,6 +1211,7 @@ def run(mode):
     st.d["repaired"] = repaired
     st.d["skippedExpired"] = skipped_expired
     st.d["skippedDuplicate"] = skipped_dupe
+    st.d["noDateFound"] = nodate_count
     st.d["stillUnfinished"] = sum(1 for r in merged if repairable(r))
     st.finish(note=(f"done — {repaired} unfinished records completed, "
                     f"{completed} new solicitations fully processed, "
@@ -1251,6 +1283,73 @@ def tally(rows):
     return c
 
 
+
+def probe_sites(limit=None, ua_variants=True):
+    """Find out WHICH identity the embassy sites actually accept. No AI, no cost.
+
+    We guessed once and made it worse. This asks the sites directly: try a small
+    sample of posts with each candidate User-Agent and report the status, the
+    server, and whether robots.txt permits us. Then we choose on evidence.
+    """
+    import urllib.request, urllib.error, ssl as _ssl
+    cfg = load(ROOTS, {})
+    roots = cfg.get("roots", [])[: (limit or 14)]
+    ctx = _ssl.create_default_context()
+    IDENTS = {
+        "honest-bot": ("MadisonMainBot/1.0 (+https://madisonmain.us; procurement notice "
+                       "reader; contact@madisonmain.us) Python-urllib"),
+        "plain-urllib": "Python-urllib/3.12",
+        "chrome-claim": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
+    }
+    if not ua_variants:
+        IDENTS = {"honest-bot": IDENTS["honest-bot"]}
+    out = {k: {"ok": 0, "forbidden": 0, "other": 0, "codes": {}} for k in IDENTS}
+    detail = []
+    for root in roots:
+        base = root.get("base", "")
+        for name, ua in IDENTS.items():
+            req = urllib.request.Request(base, headers={
+                "User-Agent": ua, "Accept": "text/html,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9"})
+            code, server = 0, ""
+            try:
+                with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+                    code, server = r.status, (r.headers.get("Server") or "")
+            except urllib.error.HTTPError as e:
+                code = e.code
+                server = (getattr(e, "headers", {}) or {}).get("Server", "") or ""
+            except Exception as e:
+                code, server = -1, type(e).__name__
+            b = out[name]
+            b["codes"][str(code)] = b["codes"].get(str(code), 0) + 1
+            if code == 200:
+                b["ok"] += 1
+            elif code in (401, 403, 429):
+                b["forbidden"] += 1
+            else:
+                b["other"] += 1
+            detail.append({"post": root.get("post"), "ident": name,
+                           "code": code, "server": server[:40]})
+            time.sleep(0.8)
+    rob = []
+    for root in roots[:6]:
+        try:
+            allowed, note = fetcher.robots_ok(root.get("base", "") + "/business/")
+            rob.append({"post": root.get("post"), "allowed": allowed, "note": note})
+        except Exception as e:
+            rob.append({"post": root.get("post"), "allowed": None, "note": str(e)[:50]})
+    result = {"mode": "probe-sites", "startedAt": now_utc(), "heartbeat": now_utc(),
+              "currentJob": "site access probe", "running": False,
+              "sampled": len(roots), "identities": out, "robots": rob,
+              "detail": detail[:80]}
+    save(STATUS, result)
+    print(json.dumps({"identities": out, "robots": rob}, indent=1))
+    for d in detail[:40]:
+        print(f"  {d['ident']:<13} {str(d['code']):<5} {d['server']:<24} {d['post']}")
+    return result
+
+
 def probe():
     rotator, call = ai.make_caller()
     prompt = 'Return ONLY this JSON: {"tier":"BID","confidence":0.9}'
@@ -1275,6 +1374,8 @@ if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "live"
     if mode == "probe":
         probe(); sys.exit(0)
+    if mode == "probe-sites":
+        probe_sites(); sys.exit(0)
     if mode not in ("roots", "live"):
-        print("usage: crawler.py [roots|live|probe]"); sys.exit(1)
+        print("usage: crawler.py [roots|live|probe|probe-sites]"); sys.exit(1)
     run(mode)

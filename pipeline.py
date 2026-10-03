@@ -185,14 +185,32 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["skippedFiles"] = len(unit.get("attachments") or [])
         return None, report
 
-    # ---- 1. NOW it earns the files. Every one that matters, read in full.
-    report["stage"] = "reading documents"
+    # ---- 1. THE DATE COMES FIRST. Rahul's rule: "we need a date first — that's
+    # the very basic thing to even decide whether to check it fully. If there is
+    # no genuine date on the notice or the webpage, go and check the documents."
+    # So: look on the page; if nothing, open the files and look there; only then
+    # decide whether this is worth adjudicating at all.
+    report["stage"] = "finding the closing date"
     if status:
-        status.beat(currentJob=f"reading all documents: {label[:50]}")
-    if text:
-        report["read_ok"] += 1
+        status.beat(currentJob=f"finding the closing date: {label[:44]}")
+    page_date = ""
+    try:
+        page_date = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
+    except Exception:
+        page_date = ""
+
     chosen = pick_attachments(unit.get("attachments") or [])
     report["attachments_skipped"] = max(0, len(unit.get("attachments") or []) - len(chosen))
+
+    if not page_date and chosen:
+        report["dateFrom"] = "documents"
+    elif page_date:
+        report["dateFrom"] = "page"
+
+    # read the files — we need them for the date when the page has none, and for
+    # the adjudication either way
+    if text:
+        report["read_ok"] += 1
     for url, atext, note in fetch_attachments(chosen):
         if atext:
             text += f"\n\n[DOCUMENT: {url}]\n{atext}"
@@ -205,8 +223,28 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = "abandoned: nothing readable"
         return None, report
 
-    # ---- 1b. The closing date is often only inside an attachment. Check again
-    # now that we have them — still free, still before the model.
+    # Now the date, proven against everything we hold
+    closing, closing_ev = "", ""
+    try:
+        h = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
+        if h:
+            found, ev = analyzer.date_in_text(h, text)
+            if found:
+                closing, closing_ev = h, ev
+    except Exception:
+        pass
+    report["closing_found"] = closing
+    report["closing_evidence"] = closing_ev
+
+    # dead by its own date, now that we have actually looked for it
+    if closing and closing < today:
+        report["stage"] = f"skipped: closed on {closing}"
+        report["expired"] = closing
+        report["deadReason"] = f"the documents give a closing date of {closing}, already past"
+        report["title_guess"] = _first_title(text)
+        return None, report
+
+    # dead by its own words, in the documents this time
     v2, detail2 = triage(text, today, None, "")
     if v2 in ("dead", "expired"):
         report["stage"] = ("skipped after reading the files: "
@@ -214,6 +252,16 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["expired"] = detail2 if v2 == "expired" else today
         report["deadReason"] = detail2
         report["title_guess"] = _first_title(text)
+        return None, report
+
+    # NO DATE ANYWHERE — not on the page, not in a single document. We will not
+    # pay to adjudicate something we cannot even place in time, and we will not
+    # let a model invent one. It is recorded, flagged, and handed to a human.
+    if not closing:
+        report["stage"] = "no closing date anywhere — not adjudicated"
+        report["noDate"] = True
+        report["title_guess"] = _first_title(text)
+        report["filesRead"] = report["read_ok"]
         return None, report
 
     # ---- 2. ADJUDICATE (with one retry, which the reservation already covers)

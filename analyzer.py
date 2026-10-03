@@ -347,10 +347,27 @@ def ground_dates(rec, text):
     return dropped
 
 
-_DEADLINE_CUES = ("closing date", "close date", "due date", "offers are due", "quotations are due",
-                  "proposals are due", "bids are due", "submission deadline", "deadline for",
-                  "must be received", "no later than", "closing time", "response date",
-                  "expiration", "expires", "last date")
+# How real notices actually phrase a deadline. Rahul: "they may find the deadline
+# for sure, like 'no quotations are allowed past this date' — they will get the
+# idea." These are the forms that appear in embassy and UN documents; a cue list
+# that only knew "closing date" was walking past deadlines written any other way.
+_DEADLINE_CUES = (
+    "closing date", "close date", "closes on", "closing time", "closing on",
+    "due date", "due by", "due on", "due no later",
+    "offers are due", "quotations are due", "quotes are due", "proposals are due",
+    "bids are due", "offers due", "quotations due", "quotes due", "bids due",
+    "submission deadline", "deadline for", "deadline is", "deadline:",
+    "must be received", "must be submitted", "must reach", "must arrive",
+    "no later than", "not later than", "on or before", "by close of business",
+    "will not be accepted after", "will be accepted until",
+    "no quotations will be accepted", "no offers will be accepted",
+    "no bids will be accepted", "no proposals will be accepted",
+    "accepted after", "received after", "submitted after",
+    "response date", "response due", "last date", "latest date",
+    "expiration", "expires", "valid until", "open until", "closes at",
+    "cob ", "cot ",
+)
+
 _QA_CUES = ("questions are due", "q&a", "questions due", "clarification", "inquiries")
 _POSTED_CUES = ("posted", "issue date", "issued on", "date of issue", "published", "release date")
 

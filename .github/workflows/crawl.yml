@@ -18,7 +18,7 @@ on:
       mode:
         description: "roots = deep re-crawl | live = quick check | probe = provider self-test"
         type: choice
-        options: [roots, live, probe]
+        options: [roots, live, probe, probe-sites]
         default: roots
       force_sam:
         description: "force a SAM pull even outside the SAM windows"

@@ -35,7 +35,13 @@
   .brand .bt{border-left:2px solid #111;padding-left:16px}
   .brand .bt .n{font-size:18px;font-weight:700;letter-spacing:.4px}
   .brand .bt .s{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-top:3px}
-  .mhead-right{display:flex;align-items:center;gap:14px;text-align:right}
+  .mhead-right{display:flex;align-items:center;gap:10px;text-align:right;
+    flex-wrap:wrap;justify-content:flex-end;min-width:0;flex:1 1 auto}
+  .mast{flex-wrap:wrap}
+  .brand{flex:0 1 auto;max-width:100%}
+  .brand .bt{min-width:0}
+  .brand .bt .n{overflow-wrap:anywhere}
+  .mastwrap{overflow-x:clip}
   .flag{height:46px;width:auto;border:1px solid #999;flex:0 0 auto;display:block}
   .mmeta{font-size:11.5px;color:var(--sub);line-height:1.7}
   .mmeta b{color:#111}
@@ -48,10 +54,11 @@
   /* The header is FIXED. It does not shrink, grow, or animate on scroll —
      Rahul: "I want it to stay fixed and not do these fancy dances." So the
      masthead is simply built compact and stays exactly that size always. */
-  .mastwrap .mast{padding:9px 0 8px}
-  .mastwrap .logo{height:46px}
-  .mastwrap .flag{height:30px}
-  .mastwrap .mmeta{font-size:10.5px;line-height:1.5}
+  /* THE MASTHEAD IS NEVER TOUCHED. Full-size logo and flag, one size, always —
+     it does not shrink when pinned, on scroll, or at any width. */
+  .mastwrap .mast{padding:14px 0 12px}
+  .mastwrap .logo{height:90px}
+  .mastwrap .flag{height:46px}
   .mastwrap .toolbar{padding:8px 0}
   @media(max-width:1000px){
     .mastwrap > .navbar,.mastwrap > .subnav,.mastwrap > .toolbar{
@@ -387,7 +394,7 @@
     .mhead-right{flex-wrap:wrap;gap:6px;text-align:left;width:100%}
     .mhead-right .btn{flex:1 1 calc(50% - 3px);justify-content:center;min-width:0;padding:0 8px;font-size:12px}
     .mmeta{width:100%;font-size:11px}
-    .brand{gap:10px} .flag{height:34px}
+    .brand{gap:10px}
     .brand .bt{padding-left:10px} .brand .bt .n{font-size:15px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
     .toolbar{gap:6px;padding:10px 0}
     .toolbar .grp{flex-wrap:wrap;width:100%}

@@ -4,11 +4,14 @@ fetcher.py — resilient web fetch + attachment reading for the crawler.
 Handles HTML pages and PDF/doc attachments, with retries, timeouts, a browser
 User-Agent, and a clear BLOCKED signal so the crawler can raise a HELP flag.
 """
-import io, re, gzip, zlib, time, http.cookiejar
+import io, os, re, gzip, zlib, time, http.cookiejar
 import urllib.request, urllib.error, urllib.parse, ssl
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+# Identify truthfully. A named, contactable crawler that honours robots.txt is
+# what public procurement sites are built to allow; a counterfeit browser is not.
+UA = os.getenv("CRAWLER_UA",
+               "MadisonMainBot/1.0 (+https://madisonmain.us; procurement notice reader; "
+               "contact@madisonmain.us) Python-urllib")
 TIMEOUT = 45
 _CTX = ssl.create_default_context()
 
@@ -21,22 +24,21 @@ _OPENER = urllib.request.build_opener(
     urllib.request.HTTPCookieProcessor(_JAR),
     urllib.request.HTTPSHandler(context=_CTX))
 
+# HONEST headers. The previous set claimed to be Chrome — Sec-Fetch-*, Sec-CH-UA,
+# the lot — from a Python client with none of Chrome's other fingerprints. That
+# is a textbook bot tell, and the embassy CDNs went from letting us through to
+# refusing 167 sites within two runs of shipping it. A plain, truthful client
+# that identifies itself and behaves is allowed in far more places than one that
+# lies badly about being a browser.
 BROWSER_HEADERS = {
     "User-Agent": UA,
-    "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
-               "image/avif,image/webp,application/pdf;q=0.8,*/*;q=0.7"),
+    "Accept": ("text/html,application/xhtml+xml,application/pdf,"
+               "application/msword,*/*;q=0.8"),
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Sec-CH-UA": '"Chromium";v="124", "Not:A-Brand";v="24", "Google Chrome";v="124"',
-    "Sec-CH-UA-Mobile": "?0",
-    "Sec-CH-UA-Platform": '"Windows"',
-    "Connection": "keep-alive",
+    "Connection": "close",
 }
+
 
 # Why a site refused us — recorded so we can tell a login wall (which Rahul can
 # open) from an IP/bot block (which he cannot do anything about).
@@ -154,17 +156,6 @@ def get(url, retries=2):
                 # Try once more after visiting the site root first: many CDNs hand
                 # out a clearance cookie on the landing page and let you through
                 # afterwards. This is a real fix, not a workaround for a login.
-                if not warmed and e.code == 403:
-                    warmed = True
-                    try:
-                        p = urllib.parse.urlparse(url)
-                        root = f"{p.scheme}://{p.netloc}/"
-                        with _OPENER.open(_req(root), timeout=TIMEOUT) as rr:
-                            rr.read(2048)
-                        time.sleep(2.0)
-                        continue
-                    except Exception:
-                        pass
                 BLOCK_DIAG[urllib.parse.urlparse(url).netloc] = why
                 raise Blocked(f"HTTP {e.code} at {url}", kind=kind, detail=why)
             last = f"HTTP {e.code}"
