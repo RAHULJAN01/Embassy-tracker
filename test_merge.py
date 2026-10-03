@@ -107,6 +107,43 @@ r = rows["19IN5026Q0301"]
 ok("the completed version wins", r.get("verified") == "VERIFIED", str(r.get("verified")))
 ok("and it keeps its closing date", r.get("deadline") == "2027-02-02", str(r.get("deadline")))
 
+
+# ============================================== A CORRECTION MUST SURVIVE
+print("\n=== a correction beats the fat, confident, wrong record ===")
+import merge_shards as _M
+# The gate-parts notice: re-read, correctly found closed, the finding written
+# into its own notes -- and it still showed as a live BID, because another bot
+# held the old copy and the old copy had more files on it. Richness was the
+# whole test, and a correction is almost always POORER than what it replaces.
+_STALE = {"sol": "PR15305534", "tier": "BID", "status": "Active", "archived": False,
+          "deadline": "2026-10-12", "files": ["a", "b", "c", "d"],
+          "citation": {"quote": "x"}, "restrictions": ["r1", "r2"],
+          "updated": "2026-10-01", "dateEvidence": {}}
+_FRESH = {"sol": "PR15305534", "tier": "NO", "status": "Expired", "archived": True,
+          "deadline": "2025-10-12", "files": [], "updated": "2026-10-03",
+          "lastDeepScan": "2026-10-03 12:35 UTC", "dateEvidence": {},
+          "verifyNotes": ["a re-crawl found this notice is no longer open"]}
+ok("the newer 'this is closed' wins", _M.better(_STALE, _FRESH) is _FRESH)
+ok("whichever way round they are given", _M.better(_FRESH, _STALE) is _FRESH)
+_m = _M._merge_pair(dict(_STALE), dict(_FRESH))
+ok("and the merged row is archived, not active",
+   _m.get("archived") is True and _m.get("status") == "Expired",
+   f"{_m.get('status')} archived={_m.get('archived')}")
+ok("with the tier dropped out of BID", _m.get("tier") == "NO", str(_m.get("tier")))
+
+print("  -- but a stale 'closed' must not beat a newer re-open --")
+_OLDDEAD = dict(_FRESH, updated="2026-09-01", lastDeepScan="2026-09-01 00:00 UTC")
+_NEWLIVE = dict(_STALE, updated="2026-10-03", lastDeepScan="2026-10-03 13:00 UTC")
+ok("the newer reading wins again", _M.better(_OLDDEAD, _NEWLIVE) is _NEWLIVE)
+
+print("  -- and a provable deadline beats a fatter record with an unprovable one --")
+_PROV = {"sol": "X", "deadline": "2026-11-01", "files": [],
+         "dateEvidence": {"closing": "Quotations are due 1 November 2026"}}
+_FAT = {"sol": "X", "deadline": "2026-12-09", "files": ["a", "b", "c"],
+        "citation": {"q": 1}, "tier": "BID", "dateEvidence": {}}
+ok("the traceable date wins", _M.better(_PROV, _FAT) is _PROV)
+
+
 print("\n" + "=" * 62)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
 print("=" * 62)

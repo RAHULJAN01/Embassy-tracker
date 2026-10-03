@@ -125,8 +125,34 @@ def _merge_pair(a, b):
     return keep
 
 
+def _stamp(r):
+    """When this copy was last actually worked on."""
+    return max(str(r.get("lastDeepScan") or ""), str(r.get("updated") or ""))
+
+
 def better(a, b):
-    """Prefer the richer record: verified > more files > more complete > newer."""
+    """Which of two copies of the same solicitation survives the fleet merge.
+
+    THIS USED TO BE RICHNESS ALONE, AND RICHNESS IS THE WRONG TEST.
+
+    A correction is almost always POORER than the stale record it replaces. When
+    a re-crawl finds a notice cancelled it strips the deadline, drops the tier to
+    NO and archives the row — so it scores lower than the fat, confident, WRONG
+    record sitting beside it, and the stale one won every time.
+
+    That is not hypothetical. A gate-parts notice was re-read, correctly found
+    closed, and the finding was written into the record's own notes — and the
+    row still showed as a live BID with a 2026 deadline, because another bot
+    still held the old copy and the old copy had more files on it.
+
+    So truth and recency are tested BEFORE richness:
+      1. a newer copy that says the notice is closed beats an older one that
+         says it is open — closing is a conclusion, not a loss of data;
+      2. a deadline that can be traced to a line in its own source beats one
+         that cannot, however fat the record carrying it;
+      3. only then, richness;
+      4. and a tie goes to whichever copy was worked on most recently.
+    """
     def score(r):
         s = 0
         if r.get("verified") == "VERIFIED": s += 100
@@ -136,7 +162,22 @@ def better(a, b):
         s += 5 if r.get("citation") else 0
         s += len(r.get("restrictions") or [])
         return s
-    return a if score(a) >= score(b) else b
+
+    # 1. the newer verdict that it is over
+    for x, y in ((a, b), (b, a)):
+        if x.get("archived") and not y.get("archived") and _stamp(x) >= _stamp(y):
+            return x
+    # 2. a provable deadline beats an unprovable one
+    ax = bool((a.get("dateEvidence") or {}).get("closing"))
+    bx = bool((b.get("dateEvidence") or {}).get("closing"))
+    if ax != bx:
+        return a if ax else b
+    # 3. richness
+    sa, sb = score(a), score(b)
+    if sa != sb:
+        return a if sa > sb else b
+    # 4. recency
+    return a if _stamp(a) >= _stamp(b) else b
 
 
 _INDEX_PATHS = ("/business/", "/business", "/procurement/", "/procurement", "/jobs/",
