@@ -126,6 +126,23 @@ jobs:
           REPAIR_SHARE:       "0.65"   # finish existing records before finding new ones
           MAX_REPAIR_TRIES:   "3"      # then stop asking and flag it for a human
         run: python crawler.py "${{ needs.gate.outputs.mode }}"
+      # A diagnostic is useless if nobody can read it. Shard 0 publishes the
+      # probe result straight to the repo so it reaches Mission Control and me,
+      # without the merge job (which is skipped for probes) having to run.
+      - name: Publish probe result
+        if: matrix.shard == 0 && startsWith(needs.gate.outputs.mode, 'probe')
+        run: |
+          git config user.name  "mm-crawler"
+          git config user.email "crawler@users.noreply.github.com"
+          cp status.json probe-result.json
+          git add probe-result.json
+          if git diff --cached --quiet; then
+            echo "no change"
+          else
+            git commit -m "probe: site access report"
+            for i in 1 2 3; do git pull --rebase --autostash && git push && break; sleep 5; done
+          fi
+
       - name: Upload shard result
         uses: actions/upload-artifact@v4
         with:
