@@ -1,22 +1,188 @@
 {
  "mode": "probe-dates",
- "startedAt": "2026-10-03 11:21 UTC",
- "heartbeat": "2026-10-03 11:21 UTC",
+ "startedAt": "2026-10-03 11:30 UTC",
+ "heartbeat": "2026-10-03 11:30 UTC",
  "currentJob": "date accuracy field test",
  "running": false,
  "summary": {
-  "notices": 6,
-  "free": 5,
-  "read": 0,
+  "notices": 13,
+  "free": 0,
+  "read": 9,
   "sonnet": 0,
-  "no_date_printed": 0,
-  "dates_but_no_deadline": 1,
+  "no_date_printed": 1,
+  "dates_but_no_deadline": 3,
   "unreadable": 0,
   "blocked": 0,
-  "ai_calls": 1,
-  "resolved_pct": 83.3
+  "ai_calls": 12,
+  "phrase_would_have_been_wrong": 5,
+  "resolved_pct": 69.2
  },
  "notices": [
+  {
+   "post": "U.S. Embassy Algeria",
+   "country": "Algeria",
+   "link": "https://dz.usembassy.gov/procurement-opportunities/",
+   "files": 3,
+   "title": "Freedom 250 - DZ Alumni Summit Algiers 2026 - U.S. Embassy in Algeria",
+   "all_dates_printed": [
+    "2026-08-09",
+    "2026-09-08",
+    "2026-09-17",
+    "2026-09-18",
+    "2026-09-20",
+    "2026-11-18",
+    "2026-12-17",
+    "2026-12-20"
+   ],
+   "phrase_would_have_said": "2026-09-20",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "September 20, 2026 at 17:00 is explicitly stated as the quotation submission deadline; September 8, 2026 is the solicitation issue date; all other dates are performance/delivery dates.",
+     "closing": "2026-09-20",
+     "warnings": [
+      "the posted date 2026-09-08 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
+     ]
+    }
+   ],
+   "deadline": "2026-09-20",
+   "how": "read (haiku)",
+   "line_it_came_from": "Quotations are due on September 20, 2026, no later than 17:00.",
+   "phrase_agrees": true,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Algeria",
+   "country": "Algeria",
+   "link": "https://dz.usembassy.gov/tag/request-for-quotation/",
+   "files": 0,
+   "title": "Request for Quotation Archives - U.S. Embassy in Algeria",
+   "all_dates_printed": [],
+   "phrase_would_have_said": "",
+   "why_none": "no date of any kind is printed in the notice or its documents",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
+  },
+  {
+   "post": "U.S. Embassy Algeria",
+   "country": "Algeria",
+   "link": "https://dz.usembassy.gov/wp-content/uploads/sites/226/2026/09/RFQ-19AG1026Q0015-DZ-Alumni-2026.docx.pdf",
+   "files": 1,
+   "title": "Table of Contents",
+   "all_dates_printed": [
+    "2026-08-09",
+    "2026-09-08",
+    "2026-09-18",
+    "2026-11-18",
+    "2026-12-17",
+    "2026-12-20"
+   ],
+   "phrase_would_have_said": "2026-12-17",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "Block 8 explicitly states 'OFFER DUE DATE' as 09/18/2026, which is the submission deadline for offers; all other dates are either performance/delivery dates or the solicitation issue date.",
+     "closing": "2026-09-18",
+     "warnings": [
+      "the closing date 2026-09-18 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it",
+      "the posted date 2026-09-08 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
+     ]
+    }
+   ],
+   "deadline": "2026-09-18",
+   "how": "read (haiku)",
+   "line_it_came_from": "OLICITATION a. NAME b. TELEPHONE NUMBER(No collect 8. OFFER DUE DATE/ INFORMATION CALL: Mohamed Reda Sahraoui calls) LOCAL TIME 09/18/2026 / 9.ISSUED BY CODE AG100 10. THIS ACQUISITION IS x UNRESTRICTED OR SET ASIDE: % FOR: AMERICAN EMBASSY ALGIERS SMALL BUSIN",
+   "phrase_agrees": false,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Eritrea",
+   "country": "Eritrea",
+   "link": "https://er.usembassy.gov/business/",
+   "files": 3,
+   "title": "Business - U.S. Embassy in Eritrea - Learn about bilateral investment and trade",
+   "all_dates_printed": [
+    "2019-08-13",
+    "2020-08-13",
+    "2025-02-25",
+    "2025-04-04",
+    "2025-06-09",
+    "2025-06-12",
+    "2025-07-23",
+    "2025-12-06"
+   ],
+   "phrase_would_have_said": "",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "April 4, 2025 appears twice as the closing date for two RFQs in the opening section; the DATE ISSUED fields (02/25/2025 and 06/12/2025) are publication dates, not submission deadlines.",
+     "closing": "2025-04-04",
+     "warnings": []
+    }
+   ],
+   "deadline": "2025-04-04",
+   "how": "read (haiku)",
+   "line_it_came_from": "Invitation to bid for Supply of Reach Truck (Closes April 4, 2025)",
+   "phrase_agrees": null,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Eritrea",
+   "country": "Eritrea",
+   "link": "https://er.usembassy.gov/wp-content/uploads/sites/198/2025/02/RFQ-19ER1025Q0001-Supply-of-Electric-Reach-Truck.pdf",
+   "files": 1,
+   "title": "Asmara, Eritrea",
+   "all_dates_printed": [
+    "2019-08-13",
+    "2020-08-13",
+    "2025-02-25"
+   ],
+   "phrase_would_have_said": "",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "Only the issue date (02/25/2025) appears in the excerpt; no submission deadline date is stated.",
+     "closing": "",
+     "warnings": []
+    }
+   ],
+   "reader_error": "model not available to this account: model: claude-3-7-sonne",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
+  },
+  {
+   "post": "U.S. Embassy Eritrea",
+   "country": "Eritrea",
+   "link": "https://er.usembassy.gov/wp-content/uploads/sites/198/2025/02/RFQ-19ER1025Q0002-Supply-of-Warehouse-Racking-Kit.pdf",
+   "files": 1,
+   "title": "Asmara, Eritrea",
+   "all_dates_printed": [
+    "2019-08-13",
+    "2020-08-13",
+    "2025-02-25"
+   ],
+   "phrase_would_have_said": "",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "Only the issue date (02/25/2025) appears in the excerpt; no submission deadline date is stated.",
+     "closing": "",
+     "warnings": []
+    }
+   ],
+   "reader_error": "model not available to this account: model: claude-sonnet-4-",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
+  },
   {
    "post": "U.S. Embassy India",
    "country": "India",
@@ -37,9 +203,21 @@
     "2026-06-01",
     "2026-06-18"
    ],
-   "deadline": "2026-08-21",
-   "how": "free (phrase)",
+   "phrase_would_have_said": "2026-08-21",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "Multiple submission deadlines identified across different solicitations; QA deadline is the clarification request cutoff for the truck chassis solicitation.",
+     "closing": "2026-09-01",
+     "warnings": [
+      "the closing date 2026-09-01 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
+     ]
+    }
+   ],
+   "deadline": "2026-09-01",
+   "how": "read (haiku)",
    "line_it_came_from": "fter 5 p.m. on August 21, 2026, will not be answered. BID CLOSING DATE Quotations are due no later than 5 p.m. (India Time) on September 1, 2026. All quotations must be submitted electronically to Newdelhibids@state.gov with the subject line “Solicitatio",
+   "phrase_agrees": false,
    "still_open": false
   },
   {
@@ -54,6 +232,7 @@
     "2026-09-11",
     "2026-09-21"
    ],
+   "phrase_would_have_said": "",
    "reader_said": [
     {
      "stage": "read (haiku)",
@@ -62,10 +241,11 @@
      "warnings": []
     }
    ],
-   "reader_error": "model not available to this account: model: claude-3-7-sonne",
+   "reader_error": "model not available to this account: model: claude-sonnet-4-",
    "deadline": "",
    "how": "none",
    "line_it_came_from": "",
+   "phrase_agrees": null,
    "still_open": null
   },
   {
@@ -83,9 +263,82 @@
     "2026-08-21",
     "2026-09-01"
    ],
-   "deadline": "2026-08-21",
-   "how": "free (phrase)",
-   "line_it_came_from": "fter 5 p.m. on August 21, 2026, will not be answered. BID CLOSING DATE Quotations are due no later than 5 p.m. (India Time) on September 1, 2026. All quotations must be submitted electronically to Newdelhibids@state.gov with the subject line “Solicitatio",
+   "phrase_would_have_said": "2026-08-21",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "September 1, 2026 is explicitly stated as the bid closing date with the phrase 'Quotations are due no later than' and 'will not be accepted' after that time.",
+     "closing": "2026-09-01",
+     "warnings": []
+    }
+   ],
+   "deadline": "2026-09-01",
+   "how": "read (haiku)",
+   "line_it_came_from": "Quotations are due no later than 5 p.m. (India Time) on September 1, 2026.",
+   "phrase_agrees": false,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Laos",
+   "country": "Laos",
+   "link": "https://la.usembassy.gov/procurement-and-business-opportunities/",
+   "files": 1,
+   "title": "Procurement and Business Opportunities - U.S. Embassy in Laos",
+   "all_dates_printed": [
+    "2019-08-13",
+    "2020-08-13",
+    "2026-04-09",
+    "2026-09-04",
+    "2026-09-14"
+   ],
+   "phrase_would_have_said": "2026-09-14",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "September 14, 2026 is explicitly stated as the deadline for quotation submission with a specific time (11:59 PM Local Time); September 4, 2026 is the date the RFQ was issued.",
+     "closing": "2026-09-14",
+     "warnings": []
+    }
+   ],
+   "deadline": "2026-09-14",
+   "how": "read (haiku)",
+   "line_it_came_from": "Return the completed SF-18 and quotation package to the address indicated in block 5a of the SF-18 no later than: 11:59 PM Local Time, September 14, 2026.",
+   "phrase_agrees": true,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "country": "Canada",
+   "link": "https://ca.usembassy.gov/business/",
+   "files": 7,
+   "title": "An official website of the United States government",
+   "all_dates_printed": [
+    "2018-10-17",
+    "2019-08-13",
+    "2020-08-13",
+    "2023-12-31",
+    "2024-01-01",
+    "2024-03-01",
+    "2024-10-17",
+    "2025-07-17",
+    "2025-07-31",
+    "2025-09-22",
+    "2026-01-20",
+    "2026-02-03"
+   ],
+   "phrase_would_have_said": "2026-03-20",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "March 20, 2026 is explicitly stated as a submission deadline for the DIBC solicitation RPP-CM-26-01; other dates are either publication dates, pre-application due dates, or informational meeting dates",
+     "closing": "2026-03-20",
+     "warnings": []
+    }
+   ],
+   "deadline": "2026-03-20",
+   "how": "read (haiku)",
+   "line_it_came_from": "Deadline: March 20, 2026, at 5:00 PM ET",
+   "phrase_agrees": true,
    "still_open": false
   },
   {
@@ -108,9 +361,21 @@
     "2026-02-03",
     "2026-03-02"
    ],
-   "deadline": "2023-12-31",
-   "how": "free (phrase)",
-   "line_it_came_from": "d submitted a complete application for certification to SBA on or before December 31, 2023. Service-disabled veteran-owned small business (SDVOSB) Program means a program that authorizes contracting officers to limit competition, including award on a sole-sour",
+   "phrase_would_have_said": "2023-12-31",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "May 13, 2026 at 17:00 is explicitly labeled as 'OFFER DUE DATE/LOCAL TIME' in the solicitation form, making it the submission deadline.",
+     "closing": "2026-05-13",
+     "warnings": [
+      "the posted date 2026-04-23 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
+     ]
+    }
+   ],
+   "deadline": "2026-05-13",
+   "how": "read (haiku)",
+   "line_it_came_from": "May 13, 2026 17:00",
+   "phrase_agrees": false,
    "still_open": false
   },
   {
@@ -133,34 +398,22 @@
     "2026-04-10",
     "2026-04-15"
    ],
-   "deadline": "2023-12-31",
-   "how": "free (phrase)",
-   "line_it_came_from": "d submitted a complete application for certification to SBA on or before December 31, 2023. Service-disabled veteran-owned small business (SDVOSB) Program means a program that authorizes contracting officers to limit competition, including award on a sole-sour",
-   "still_open": false
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "country": "Canada",
-   "link": "https://ca.usembassy.gov/tag/procurement-solicitations/",
-   "files": 3,
-   "title": "Procurement Solicitations Archives - U.S. Embassy & Consulates in Canada",
-   "all_dates_printed": [
-    "2019-08-13",
-    "2020-08-13",
-    "2023-12-31",
-    "2024-01-01",
-    "2024-03-01",
-    "2024-10-17",
-    "2025-07-31",
-    "2025-09-22",
-    "2026-03-02",
-    "2026-04-09",
-    "2026-04-10",
-    "2026-04-15"
+   "phrase_would_have_said": "2023-12-31",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "May 13, 2026 at 17:00 is explicitly labeled as the offer due date in the solicitation form for RFQ 19CA4526Q0002.",
+     "closing": "2026-05-13",
+     "warnings": [
+      "the closing date 2026-05-13 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it",
+      "the posted date 2026-04-23 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
+     ]
+    }
    ],
-   "deadline": "2023-12-31",
-   "how": "free (phrase)",
-   "line_it_came_from": "d submitted a complete application for certification to SBA on or before December 31, 2023. Service-disabled veteran-owned small business (SDVOSB) Program means a program that authorizes contracting officers to limit competition, including award on a sole-sour",
+   "deadline": "2026-05-13",
+   "how": "read (haiku)",
+   "line_it_came_from": "7. FOR SOLICITATION a. NAME b. TELEPHONE NUMBER(No 8. OFFER DUE DATE/ collect calls) LOCAL TIME INFORMATION CALL Shannon Sibayan – Contracting Officer May 13, 2026 17:00 Elias Koutavas – A/GSO- Procurement 9. ISSUED BY CODE 10. THIS ACQUISITION IS U.S. Consula",
+   "phrase_agrees": false,
    "still_open": false
   }
  ],
