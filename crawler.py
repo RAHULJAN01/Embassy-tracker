@@ -1416,6 +1416,152 @@ def probe_sites(limit=None, ua_variants=True):
     return result
 
 
+def probe_dates(posts=10, per_post=3):
+    """FIELD TEST the date engine on real embassy notices. Auditable, not claimed.
+
+    Rahul: "GO THERE IN THE FILED AND TEST UR THEORY ON REAL EMBASSY SITES, AND
+    MAKE SURE THAT WE ARE HITTING THE SAME AMOUNT OF ACCURACY EACH TIME WITH ALL
+    KINDS OF DIFFERENT STYLE PAGES AND FILES AND WHAT NOT."
+
+    A test with made-up fixtures can only prove the code does what I expected.
+    This walks real posts, reads the real pages and their real attachments, runs
+    the real date gate, and writes down for EVERY notice:
+
+        the deadline it settled on, how it got there (free phrase match / read
+        by the cheap model / read by the strong one), THE EXACT LINE it came
+        from, and every other date printed in the document that it did not pick.
+
+    The quoted line is the audit: anyone can read it and see in one glance
+    whether it really states a deadline. A row where the line does not say what
+    the date claims is a failure, visible without trusting me.
+
+    It adjudicates nothing and prices nothing, so it costs only the date calls.
+    """
+    cfg = load(ROOTS, {})
+    roots = cfg.get("roots", [])
+    client, call = ai.make_caller()
+    budget = pipeline.Budget(max(12, MAX_AI_CALLS), TIME_BUDGET_S)
+    rows, stats = [], {"notices": 0, "free": 0, "read": 0, "sonnet": 0,
+                       "no_date_printed": 0, "dates_but_no_deadline": 0,
+                       "unreadable": 0, "blocked": 0, "ai_calls": 0}
+    picked = [r for i, r in enumerate(roots) if i % max(1, len(roots) // max(1, posts)) == 0]
+    for root in picked[:posts]:
+        try:
+            pages = discover_proc_pages(root, cfg)[:2]
+        except fetcher.Blocked as b:
+            stats["blocked"] += 1
+            rows.append({"post": root.get("post"), "error": f"blocked: {b}"})
+            continue
+        except Exception as e:
+            rows.append({"post": root.get("post"), "error": str(e)[:70]})
+            continue
+        seen = 0
+        for pp in pages:
+            if seen >= per_post or budget.left < 2:
+                break
+            try:
+                html_pages, files = collect_candidates(pp, cfg)
+            except Exception as e:
+                rows.append({"post": root.get("post"), "error": f"listing: {str(e)[:50]}"})
+                continue
+            for link in (html_pages[:per_post] + files[:per_post])[: per_post * 2]:
+                if seen >= per_post or budget.left < 2:
+                    break
+                try:
+                    text, atts, ok_n, fail_n, _sid = chase_solicitation(link)
+                except fetcher.Blocked as b:
+                    stats["blocked"] += 1
+                    rows.append({"post": root.get("post"), "link": link,
+                                 "error": f"blocked: {b}"})
+                    continue
+                except Exception as e:
+                    rows.append({"post": root.get("post"), "link": link,
+                                 "error": str(e)[:60]})
+                    continue
+                if len(text or "") < 180 or not looks_like_solicitation(text):
+                    continue
+                # read the attachments too — half the deadlines live in the files
+                for u in pipeline.pick_attachments(atts, limit=6):
+                    t, note = fetcher.read_attachment_full(u)
+                    if t:
+                        text += f"\n\n[DOCUMENT: {u}]\n{t}"
+                    else:
+                        fail_n += 1
+                if fail_n and len(text) < 400:
+                    stats["unreadable"] += 1
+                seen += 1
+                stats["notices"] += 1
+                row = {"post": root.get("post"), "country": root.get("country"),
+                       "link": link, "files": len(atts),
+                       "title": _first_title(text, 90),
+                       "all_dates_printed": sorted(set(analyzer.find_dates(text)))[:12]}
+
+                # exactly the gate the live crawl uses, in the same order
+                h = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
+                got, how, ev = "", "", ""
+                if h:
+                    found, ev2 = analyzer.cue_anchored(h, text, analyzer._DEADLINE_CUES)
+                    if found:
+                        got, how, ev = h, "free (phrase)", ev2
+                if not got:
+                    for stage, model in (("read (haiku)", None),
+                                         ("read (sonnet)", ai.REVIEW_MODEL)):
+                        if budget.left < 1:
+                            break
+                        try:
+                            dr, note = analyzer.read_dates(text, call, model=model)
+                        except Exception as e:
+                            row["reader_error"] = str(e)[:60]
+                            break
+                        if not dr:
+                            row["why_none"] = note
+                            break
+                        budget.spend(1)
+                        stats["ai_calls"] += 1
+                        row.setdefault("reader_said", []).append(
+                            {"stage": stage, "why": note,
+                             "closing": dr.get("closing", ""),
+                             "warnings": dr.get("date_warnings", [])})
+                        if dr.get("closing"):
+                            got, how = dr["closing"], stage
+                            ev = (dr.get("date_evidence") or {}).get("closing", "")
+                            break
+                row["deadline"] = got
+                row["how"] = how or "none"
+                row["line_it_came_from"] = ev
+                row["still_open"] = (got >= today()) if got else None
+                if how.startswith("free"):
+                    stats["free"] += 1
+                elif "haiku" in how:
+                    stats["read"] += 1
+                elif "sonnet" in how:
+                    stats["sonnet"] += 1
+                elif row["all_dates_printed"]:
+                    stats["dates_but_no_deadline"] += 1
+                else:
+                    stats["no_date_printed"] += 1
+                rows.append(row)
+                time.sleep(0.6)
+
+    found_n = stats["free"] + stats["read"] + stats["sonnet"]
+    stats["resolved_pct"] = round(100.0 * found_n / max(1, stats["notices"]), 1)
+    result = {"mode": "probe-dates", "startedAt": now_utc(), "heartbeat": now_utc(),
+              "currentJob": "date accuracy field test", "running": False,
+              "summary": stats, "notices": rows, "model": client.model,
+              "strong_model": ai.REVIEW_MODEL}
+    save(STATUS, result)
+    print(json.dumps(stats, indent=1))
+    for r in rows:
+        if r.get("error"):
+            print(f"  !! {r.get('post','')}: {r['error']}")
+            continue
+        print(f"\n  {r.get('post','')} — {r.get('title','')[:70]}")
+        print(f"     deadline: {r.get('deadline') or '(none)':<12} via {r.get('how')}")
+        print(f"     from    : {(r.get('line_it_came_from') or '(no line)')[:120]}")
+        print(f"     printed : {', '.join(r.get('all_dates_printed') or []) or '(no dates)'}")
+    return result
+
+
 def probe():
     rotator, call = ai.make_caller()
     prompt = 'Return ONLY this JSON: {"tier":"BID","confidence":0.9}'
@@ -1442,6 +1588,11 @@ if __name__ == "__main__":
         probe(); sys.exit(0)
     if mode == "probe-sites":
         probe_sites(); sys.exit(0)
+    if mode == "probe-dates":
+        # field test on real notices; writes nothing to the register
+        if SHARD != 0:
+            print(f"shard {SHARD}: the date field test is shard 0's job"); sys.exit(0)
+        probe_dates(); sys.exit(0)
     if mode == "deepone":
         # ONE solicitation, on the strong model, because a human asked for it.
         # Only one bot may do it: four shards each finding the same record would
@@ -1452,5 +1603,5 @@ if __name__ == "__main__":
             print(f"shard {SHARD}: a single deep scan is shard 0's job"); sys.exit(0)
         run("roots"); sys.exit(0)
     if mode not in ("roots", "live"):
-        print("usage: crawler.py [roots|live|deepone|probe|probe-sites]"); sys.exit(1)
+        print("usage: crawler.py [roots|live|deepone|probe|probe-sites|probe-dates]"); sys.exit(1)
     run(mode)

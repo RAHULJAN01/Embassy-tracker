@@ -18,7 +18,7 @@ on:
       mode:
         description: "roots = deep re-crawl | live = quick check | deepone = ONE solicitation on the strong model | probe = self-test"
         type: choice
-        options: [roots, live, deepone, probe, probe-sites]
+        options: [roots, live, deepone, probe, probe-sites, probe-dates]
         default: roots
       sol:
         description: "deepone only: the solicitation number to re-read on the strong model"
@@ -139,15 +139,20 @@ jobs:
       # without the merge job (which is skipped for probes) having to run.
       - name: Publish probe result
         if: matrix.shard == 0 && startsWith(needs.gate.outputs.mode, 'probe')
+        env:
+          MODE: ${{ needs.gate.outputs.mode }}
         run: |
           git config user.name  "mm-crawler"
           git config user.email "crawler@users.noreply.github.com"
+          # one file per probe, so the site-access report and the date field
+          # test never overwrite each other
+          cp status.json "probe-${MODE}.json"
           cp status.json probe-result.json
-          git add probe-result.json
+          git add "probe-${MODE}.json" probe-result.json
           if git diff --cached --quiet; then
             echo "no change"
           else
-            git commit -m "probe: site access report"
+            git commit -m "probe: ${MODE} report"
             for i in 1 2 3; do git pull --rebase --autostash && git push && break; sleep 5; done
           fi
 
