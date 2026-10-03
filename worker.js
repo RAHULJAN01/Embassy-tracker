@@ -15,6 +15,8 @@
  * Endpoints (all POST except /status):
  *   GET  /status        -> what the bots are doing right now (live, no rebuild)
  *   POST /run           -> { mode: "roots" | "live" }  start a crawl
+ *                          { mode: "deepone", sol: "PR123" } re-read ONE
+ *                          solicitation on the strong model and nothing else
  *   POST /stop          -> halt the whole fleet
  *   POST /resume        -> let the fleet run again
  *   POST /verify        -> { sol: "..." } re-verify one solicitation
@@ -197,7 +199,16 @@ export default {
       const body = await request.json().catch(() => ({}));
 
       if (path === "/run") {
-        const mode = body.mode === "live" ? "live" : body.mode === "probe" ? "probe" : "roots";
+        const ok = ["live", "probe", "probe-sites", "deepone", "roots"];
+        const mode = ok.includes(body.mode) ? body.mode : "roots";
+        // deepone works on ONE solicitation and needs to be told which. Without
+        // a reference it would have nothing to do, so it is refused here rather
+        // than burning a workflow run to find that out.
+        if (mode === "deepone") {
+          const sol = String(body.sol || "").trim();
+          if (!sol) return json({ ok: false, error: "deepone needs a solicitation number" }, 400);
+          return json(await dispatch(env, "crawl.yml", { mode, sol }));
+        }
         return json(await dispatch(env, "crawl.yml", { mode }));
       }
       if (path === "/stop") {

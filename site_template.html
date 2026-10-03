@@ -1049,8 +1049,19 @@ function dossier(s){
       `<div class="quote">&ldquo;${esc(s.citation.quote)}&rdquo;</div><div class="srcline">Source: ${esc(s.citation.doc)}</div>`,"bad");
 
   /* ---- PROVENANCE ---- */
+  // Which model judged this, and how the deadline was established. Both matter
+  // when deciding whether to trust the row enough to bid on it.
+  const dp=(s.dateProof||{}).closing;
   let prov=tbl(kv("Last updated by the bots",s.updated)+kv("Last deep re-scan",s.lastDeepScan)
-    +kv("Documents read",(s.fileCount?String(s.fileCount):"")));
+    +kv("Documents read",(s.fileCount?String(s.fileCount):""))
+    +(s.deepScanBy?kv("Judged by","Claude Sonnet, on your DEEP SCAN"
+        +(s.deepScanOn?" ("+esc(s.deepScanOn)+")":"")):"")
+    +(dp?kv("How the deadline was established",
+        dp==="quoted"?"read out of the notice, with the exact words quoted below"
+                     :"matched by phrase — confirm it before you rely on it"):""));
+  if((s.dateEvidence||{}).closing)
+    prov+=`<div class="sub">The line the deadline came from</div>`
+      +`<div class="quote">&ldquo;${esc(s.dateEvidence.closing)}&rdquo;</div>`;
   if(s.readFailures&&s.readFailures.length)
     prov+=`<div class="sub">Files the bots could not read</div>`
       +list(s.readFailures.map(f=>`${(f.file||'').split('/').pop()} — ${f.why||'unreadable'}`));
@@ -1457,8 +1468,8 @@ function confirmAction(action,id){
       "A fast pass over the register: spot newly posted, amended, withdrawn and expired solicitations and refresh their status and Last-Updated date. It does NOT re-read the attached files. Proceed?"],
     abort:["Abort Running Update",
       "Signal the running update to stop at the next checkpoint. Nothing already written is lost. Proceed?"],
-    deepscan:["DEEP RE-SCAN this solicitation",
-      "Go back to the source for "+(id||'this solicitation')+", download and read every attached file again from scratch, and re-adjudicate it. Use this when something is marked UNVERIFIED or looks wrong. Proceed?"],
+    deepscan:["DEEP SCAN this one — on the strong model",
+      "This sends ONE bot back to the source for "+(id||'this solicitation')+" to download and re-read every attached file from scratch, and to re-do the whole judgement on Claude Sonnet instead of the fast model — the deadline, the dates, the tier, the route and the price. It works on nothing else, so the budget goes entirely on this record. Use it before you commit time to a bid. It takes a few minutes; the record updates itself and will say it was deep-scanned. Proceed?"],
     touch:["QUICK CHECK this solicitation",
       "Re-check "+(id||'this solicitation')+" at its source and refresh its status and Last-Updated date only. The attached files are NOT re-read. Proceed?"],
     delete:["DELETE this solicitation",
@@ -1469,7 +1480,11 @@ function confirmAction(action,id){
     if(action==='delete'){ opAction('delete',id); return; }
     let r;
     if(action==='abort')                        r=await ghDispatch('control.yml',{action:'stop'});
-    else if(action==='deepscan'||action==='roots') r=await ghDispatch('crawl.yml',{mode:'roots'});
+    // DEEP SCAN is ONE solicitation on the strong model, not a fleet re-crawl.
+    // Pressing it on a record used to kick off a deep re-crawl of every source,
+    // which spent the budget everywhere except on the record being asked about.
+    else if(action==='deepscan')  r=await ghDispatch('crawl.yml',{mode:'deepone',sol:id||''});
+    else if(action==='roots')     r=await ghDispatch('crawl.yml',{mode:'roots'});
     else                                        r=await ghDispatch('crawl.yml',{mode:'live'});
     const el=document.getElementById('fleetState');
     if(r&&r.ok){ if(el) el.innerHTML='<b style="color:var(--green)">Request sent.</b>'; alert("Request sent to the bots."); }

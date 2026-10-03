@@ -672,6 +672,9 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
         "datesVerified": True,          # every date proven present in the source
         "droppedDates": rec.get("dropped_dates", []),
         "dateEvidence": rec.get("date_evidence") or {},
+        # "quoted" = the reader copied the words out and they checked out;
+        # "phrase" = matched by phrase, which is weaker and says so on the page
+        "dateProof": rec.get("date_proof") or {},
         "dateWarnings": rec.get("date_warnings") or [],
         # the dates that ARE printed in the notice when none of them is stated
         # to be the deadline — so a human can see what the bots were looking at
@@ -705,6 +708,16 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
 # and it gets a bounded number of attempts so it can never churn the budget.
 MAX_REPAIR_TRIES = int(os.getenv("MAX_REPAIR_TRIES", "3"))
 REPAIR_SHARE = float(os.getenv("REPAIR_SHARE", "0.65"))   # of the AI budget
+
+# DEEP SCAN on a single solicitation, pressed by the operator on the page.
+# Rahul: "IF I THINK I WANT TO BID ON THIS, BUT WANT TO MAKE SURE THE DATA HERE
+# IS CORRECT THEN I'LL HIT THAT DEEP SCAN BUTTON ... THEN ONLY THEN A SINGLE
+# SMART AI DOES THAT JOB FOR THAT PARTICULAR SOLICITATION ONLY."
+# Set to a solicitation number (or link) and the run does nothing else: it
+# re-reads that one notice and every attachment, and does the whole judgement on
+# the strong model instead of the cheap one. One record, one deliberate press,
+# a handful of calls — which is why it can afford the expensive model.
+DEEP_SOL = os.getenv("DEEP_SOL", "").strip()
 
 
 # A refusal reached under the old, looser rules is not to be trusted: four of
@@ -942,6 +955,31 @@ def run(mode):
         # BEFORE a single new one is discovered, so the register converges.
         repairs = repair_queue(prior.get("solicitations", []))
         repair_cap = max(0, int(MAX_AI_CALLS * REPAIR_SHARE))
+
+        # ---- DEEP SCAN of ONE solicitation, on the strong model.
+        # The operator pressed the button on a specific record because he is
+        # thinking about bidding on it and wants the data to be right. So this
+        # run does nothing else, ignores the repair-try ceiling (he asked, so he
+        # gets an attempt), and spends the whole budget on that one notice.
+        deep_call = call
+        if DEEP_SOL:
+            want = DEEP_SOL.strip().upper()
+            all_rows = prior.get("solicitations", [])
+            repairs = [r for r in all_rows
+                       if (r.get("sol") or "").strip().upper() == want
+                       or (r.get("link") or "").strip().upper() == want]
+            repair_cap = MAX_AI_CALLS
+            if not repairs:
+                log(f"DEEP SCAN: no record matches {DEEP_SOL!r} — nothing to do")
+            else:
+                import ai as _ai
+
+                def deep_call(prompt, model=None, _c=call, _m=_ai.REVIEW_MODEL):
+                    """Everything in this run goes to the strong model."""
+                    return _c(prompt, model=model or _m)
+
+                log(f"DEEP SCAN: {repairs[0].get('sol') or repairs[0].get('link')} "
+                    f"on {_ai.REVIEW_MODEL}, up to {MAX_AI_CALLS} calls")
         # Which solicitation numbers are already spoken for. A re-scan may only
         # adopt a newly-read number if no OTHER record already owns it — otherwise
         # a single mis-read number would collapse two live records into one and
@@ -988,7 +1026,7 @@ def run(mode):
                     "domestic": old.get("domestic", False),
                     "link": link, "sol_hint": old.get("sol") or ""}
             rec, rep = pipeline.process_one(
-                unit, call_ai=call, analyzer=analyzer, estimator=estimator,
+                unit, call_ai=deep_call, analyzer=analyzer, estimator=estimator,
                 budget=budget, today=today(), fetch_attachments=read_all,
                 status=st, label=label)
             if not rec:
@@ -1030,6 +1068,12 @@ def run(mode):
             fresh["readFailures"] = rec.get("_read_failures", [])
             fresh["repairTries"] = int(old.get("repairTries", 0) or 0) + 1
             fresh["lastDeepScan"] = now_utc()
+            if DEEP_SOL:
+                # the operator asked for this one by hand, on the strong model
+                import ai as _ai2
+                fresh["deepScanBy"] = _ai2.REVIEW_MODEL
+                fresh["deepScanOn"] = now_utc()
+                fresh["repairTries"] = 0          # a human asked; never counted against it
             fresh["fp"] = fingerprint(fresh)
             if rec.get("_estimate"):
                 fresh["estimate"] = rec["_estimate"]
@@ -1041,10 +1085,19 @@ def run(mode):
             rows.append(fresh)
             st.beat(repaired=repaired, aiCalls=budget.used)
 
+        # A single deep scan ends after the repair phase above. The operator
+        # asked about ONE record; he did not ask to go hunting, and discovery
+        # would spend his money on notices he has not looked at yet. Rather than
+        # re-indenting every phase below under a condition — which is how a
+        # careless edit breaks a working file — each phase is simply given
+        # nothing to work on, via no_discovery().
+        def no_discovery(seq):
+            return [] if DEEP_SOL else seq
+
         # ================= SAM =================
         st.beat(phase="sam", currentJob="querying SAM.gov")
         progress(phase="sam", doing="querying SAM.gov")
-        for op in sam_search(cfg):
+        for op in no_discovery(list(sam_search(cfg))):
             if not budget.can_start_job():
                 break
             text, ok, fail = sam_unit(op)
@@ -1065,8 +1118,8 @@ def run(mode):
                         str(op.get("title", "SAM notice")))
 
         # ================= United Nations =================
-        un_srcs = [s for i, s in enumerate(un_sources.UN_SOURCES)
-                   if SHARDS <= 1 or i % SHARDS == SHARD]
+        un_srcs = no_discovery([s for i, s in enumerate(un_sources.UN_SOURCES)
+                                 if SHARDS <= 1 or i % SHARDS == SHARD])
         for src in un_srcs:
             if not budget.can_start_job():
                 break
@@ -1115,7 +1168,7 @@ def run(mode):
         n = len(mine)
         start = state.get("root_idx", 0) % max(1, n) if mode == "roots" else 0
         coverage, full_pass = {}, True
-        for off in range(n):
+        for off in (range(n) if not DEEP_SOL else ()):
             if not budget.can_start_job():
                 state["root_idx"] = (start + off) % max(1, n)
                 full_pass = False
@@ -1389,6 +1442,15 @@ if __name__ == "__main__":
         probe(); sys.exit(0)
     if mode == "probe-sites":
         probe_sites(); sys.exit(0)
+    if mode == "deepone":
+        # ONE solicitation, on the strong model, because a human asked for it.
+        # Only one bot may do it: four shards each finding the same record would
+        # pay four times over and then fight each other in the merge.
+        if not DEEP_SOL:
+            print("deepone needs DEEP_SOL set to a solicitation number"); sys.exit(1)
+        if SHARD != 0:
+            print(f"shard {SHARD}: a single deep scan is shard 0's job"); sys.exit(0)
+        run("roots"); sys.exit(0)
     if mode not in ("roots", "live"):
-        print("usage: crawler.py [roots|live|probe|probe-sites]"); sys.exit(1)
+        print("usage: crawler.py [roots|live|deepone|probe|probe-sites]"); sys.exit(1)
     run(mode)

@@ -100,6 +100,19 @@ ok("proven() refuses a record carrying a date warning",
 ok("an untraceable deadline is called out to the reader",
    "Do not trust the deadline shown" in html)
 
+# --------------------------------------------- DEEP SCAN is one record, not all
+# Pressing DEEP SCAN on a solicitation used to dispatch a whole-fleet re-crawl,
+# so the budget went everywhere except the record being asked about.
+ok("DEEP SCAN asks for one solicitation on the strong model",
+   "mode:'deepone',sol:id" in js.replace(" ", ""))
+ok("and it no longer triggers a fleet-wide re-crawl",
+   "action==='deepscan'||action==='roots'" not in js.replace(" ", ""))
+ok("the record shows which model judged it", "s.deepScanBy" in js)
+ok("the record shows how the deadline was established",
+   "How the deadline was established" in html)
+ok("and shows the line the deadline came from",
+   "The line the deadline came from" in html)
+
 print("\n" + "=" * 64)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
 print("=" * 64)
