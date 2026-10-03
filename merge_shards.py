@@ -473,9 +473,33 @@ def main(shard_dir):
     if bad_shards:
         print("WARNING: shards that could not be merged -> " + "; ".join(bad_shards))
 
-    rows = [normalize(clean_sol(r)) for r in merged.values() if not is_junk(clean_sol(r))]
-    dropped = len(merged) - len(rows)
-    rows = apply_operator(rows)
+    # ONE BAD RECORD MUST NOT ABORT A RUN THE FLEET ALREADY PAID FOR.
+    #
+    # The fleet merge is the last step, after four bots have spent real money.
+    # A single record with a field in an unexpected shape used to raise out of
+    # this comprehension and take the ENTIRE run down -- every bot's work lost,
+    # nothing published, and no way to see which record did it. Each record is
+    # now normalised inside its own guard: a bad one is dropped with its key and
+    # the exception printed, and the other fifty go through.
+    rows, skipped = [], []
+    for k, r in merged.items():
+        try:
+            cr = clean_sol(r)
+            if is_junk(cr):
+                continue
+            rows.append(normalize(cr))
+        except Exception as e:
+            import traceback
+            skipped.append(k)
+            print(f"  !! dropped record {k!r}: {type(e).__name__}: {str(e)[:120]}")
+            traceback.print_exc()
+    if skipped:
+        print(f"  !! {len(skipped)} record(s) could not be normalised and were dropped: {skipped}")
+    dropped = len(merged) - len(rows) - len(skipped)
+    try:
+        rows = apply_operator(rows)
+    except Exception as e:
+        print(f"  !! apply_operator failed, publishing un-decorated rows: {type(e).__name__}: {e}")
 
     # fleet-wide status roll-up for Mission Control
     agg = {"mode": (statuses[0].get("mode") if statuses else "roots"),
@@ -545,7 +569,12 @@ def main(shard_dir):
     # exact -- they come back from the API with every answer. The dollar figure
     # is those tokens priced at the rates in RATES below, which can be set
     # without touching the code if they ever change.
-    _update_spend_ledger(by_model, tin, tout)
+    try:
+        _update_spend_ledger(by_model, tin, tout)
+    except Exception as e:
+        # the budget meter is a convenience; it must never cost the fleet its
+        # published results if the accounting hits a bad value.
+        print(f"  !! spend ledger update failed (non-fatal): {type(e).__name__}: {e}")
 
     counts = {"active": 0, "bid": 0, "mid": 0, "no": 0, "review": 0, "archived": 0,
               "verified": 0, "unverified": 0, "deleted": 0, "hidden": 0}

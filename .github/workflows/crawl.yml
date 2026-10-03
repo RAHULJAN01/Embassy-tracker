@@ -201,10 +201,12 @@ jobs:
       - name: Merge shards
         run: python merge_shards.py shards
       - name: Commit + redeploy
+        if: always()        # a failed merge still has to publish WHY it failed
         run: |
           git config user.name  "mm-crawler"
           git config user.email "crawler@users.noreply.github.com"
-          git add data.json status.json blocked.json state.json spend.json
+          git add data.json status.json blocked.json state.json
+          [ -f spend.json ] && git add spend.json || true
           if git diff --cached --quiet; then
             echo "no changes"
           else
