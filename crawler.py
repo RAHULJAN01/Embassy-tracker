@@ -914,12 +914,23 @@ def run(mode):
     cfg = load(ROOTS, {})
     if not cfg:
         print("no roots.json"); return
-    if paused():
+    # STOP halts the FLEET. It does not halt a single record the operator has
+    # just asked for by name.
+    #
+    # The workflow already lets a deepone run through while the bots are
+    # stopped, and then this check refused it anyway -- so DEEP SCAN was dead
+    # at exactly the moment it is most wanted: the fleet is off because
+    # something looked wrong, and the one thing you want is to re-read THAT
+    # record and see whether it comes back right. One solicitation, on the
+    # strong model, because a person pressed a button.
+    if paused() and not DEEP_SOL:
         print("PAUSED by control.json — exiting without work")
         s = load(STATUS, {}); s.update({"paused": True, "running": False,
                                         "currentJob": "paused by operator",
                                         "heartbeat": now_utc()})
         save(STATUS, s); return
+    if paused() and DEEP_SOL:
+        print(f"PAUSED, but running a single deep scan on {DEEP_SOL} as asked")
 
     prior = load(DATA, {"meta": {}, "solicitations": []})
     prior_rows = {r.get("sol") or r.get("link"): r for r in prior.get("solicitations", [])}

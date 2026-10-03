@@ -1739,31 +1739,117 @@ async function pollLive(){
    chime when a bot finishes its slice, and a low double beep when something
    went wrong. Browsers refuse to make sound until the page has been clicked,
    so the audio context is created on the first interaction and not before. */
-let SND_ON=true, SND_VOL=0.6, _actx=null;
+let SND_ON=true, SND_VOL=0.6, _actx=null, _noiseBuf=null;
 function _audio(){
   if(_actx) return _actx;
   try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=null; }
   return _actx;
 }
+/* A short burst of noise, made once and reused. Noise is what makes a sound
+   METAL rather than musical: a struck steel door is a band of noise shaped by
+   the resonances of the slab, not a note. */
+function _noise(ac){
+  if(_noiseBuf) return _noiseBuf;
+  const n=Math.floor(ac.sampleRate*2.2);
+  _noiseBuf=ac.createBuffer(1,n,ac.sampleRate);
+  const d=_noiseBuf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  return _noiseBuf;
+}
+function _gain(ac,to){ const g=ac.createGain(); g.connect(to||ac.destination); return g; }
+
+/* one resonant metal partial — a struck slab rings at several at once */
+function _ring(ac,out,hz,t0,dur,amp,q){
+  const o=ac.createOscillator(), g=ac.createGain(), f=ac.createBiquadFilter();
+  o.type='triangle'; o.frequency.setValueAtTime(hz,t0);
+  o.frequency.exponentialRampToValueAtTime(hz*0.965,t0+dur);   // metal sags as it rings down
+  f.type='bandpass'; f.frequency.value=hz; f.Q.value=q||14;
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(amp*SND_VOL,t0+0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(f); f.connect(g); g.connect(out);
+  o.start(t0); o.stop(t0+dur+0.03);
+}
+
+/* a noise band — the scrape of steel on a rail, or the impact transient */
+function _scrape(ac,out,t0,dur,hz,amp,q,sweepTo){
+  const src=ac.createBufferSource(); src.buffer=_noise(ac); src.loop=true;
+  const f=ac.createBiquadFilter(); f.type='bandpass'; f.Q.value=q||6;
+  f.frequency.setValueAtTime(hz,t0);
+  if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo,t0+dur);
+  const g=ac.createGain();
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(amp*SND_VOL,t0+Math.min(0.05,dur*0.2));
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  src.connect(f); f.connect(g); g.connect(out);
+  src.start(t0); src.stop(t0+dur+0.03);
+}
+
+/* the low body you feel rather than hear — the mass of the door */
+function _thud(ac,out,t0,hz,dur,amp){
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(hz,t0);
+  o.frequency.exponentialRampToValueAtTime(hz*0.45,t0+dur);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(amp*SND_VOL,t0+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g); g.connect(out);
+  o.start(t0); o.stop(t0+dur+0.03);
+}
+
+/* ---- THE SOUND RAHUL ASKED FOR ----
+   "I WANT LONG BEEP, NOT A CHIME, I WANT A INDUSTRUAL SOUND, A SOUND FROM A
+   PRISON CELL DOOR OPENING SOMETHING LIKE THAT."
+
+   So: a heavy steel mechanism, built out of noise and resonance rather than
+   notes. A cell door is three events in a row — the bolt throwing, the slab
+   dragging on its rail, and the whole thing slamming home — and that sequence
+   is what makes it read as machinery instead of a notification. */
 function beep(kind){
   if(!SND_ON||!SND_VOL) return;
   const ac=_audio(); if(!ac) return;
   try{ if(ac.state==='suspended') ac.resume(); }catch(e){}
-  const tones = kind==='done' ? [[660,0,.10],[990,.11,.17]]
-              : kind==='error'? [[200,0,.16],[160,.20,.22]]
-              : kind==='start'? [[520,0,.07]]
-              :                 [[780,0,.05]];
-  tones.forEach(([hz,at,dur])=>{
-    try{
-      const o=ac.createOscillator(), g=ac.createGain();
-      o.type='sine'; o.frequency.value=hz;
-      const t0=ac.currentTime+at;
-      g.gain.setValueAtTime(0,t0);
-      g.gain.linearRampToValueAtTime(SND_VOL*0.33,t0+0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
-      o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0+dur+0.02);
-    }catch(e){}
-  });
+  const out=_gain(ac); out.gain.value=1;
+  const t=ac.currentTime+0.02;
+
+  if(kind==='done'){
+    // THE FULL DOOR, about 1.9 seconds. Bolt — long rolling drag — slam.
+    _scrape(ac,out,t,0.10,1700,0.55,9);                 // bolt withdraws
+    _ring(ac,out,430,t,0.22,0.30,18);
+    _thud(ac,out,t+0.02,120,0.22,0.55);
+    _scrape(ac,out,t+0.16,1.05,320,0.42,3.2,780);       // the slab runs its rail
+    _ring(ac,out,196,t+0.16,1.00,0.16,7);
+    _thud(ac,out,t+1.22,74,0.80,0.95);                  // it hits the stop
+    _scrape(ac,out,t+1.22,0.42,900,0.70,4.5,180);
+    _ring(ac,out,138,t+1.22,1.30,0.34,9);
+    _ring(ac,out,311,t+1.23,1.05,0.22,16);
+    _ring(ac,out,523,t+1.23,0.80,0.13,22);
+  } else if(kind==='error'){
+    // a fault klaxon: two long, flat, unpleasant blasts
+    [0,0.62].forEach(off=>{
+      const o=ac.createOscillator(), g=ac.createGain(), f=ac.createBiquadFilter();
+      o.type='sawtooth'; o.frequency.setValueAtTime(138,t+off);
+      o.frequency.linearRampToValueAtTime(128,t+off+0.46);
+      f.type='lowpass'; f.frequency.value=1100;
+      g.gain.setValueAtTime(0,t+off);
+      g.gain.linearRampToValueAtTime(0.42*SND_VOL,t+off+0.04);
+      g.gain.setValueAtTime(0.42*SND_VOL,t+off+0.38);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.50);
+      o.connect(f); f.connect(g); g.connect(out);
+      o.start(t+off); o.stop(t+off+0.54);
+    });
+    _thud(ac,out,t,62,0.50,0.5);
+  } else if(kind==='start'){
+    // the mechanism taking up load before it moves
+    _thud(ac,out,t,88,0.34,0.5);
+    _scrape(ac,out,t,0.34,520,0.30,5,260);
+    _ring(ac,out,233,t,0.40,0.18,12);
+  } else {
+    // a single latch knock as a bot moves to the next job — short, metallic
+    _scrape(ac,out,t,0.07,1250,0.34,8);
+    _ring(ac,out,392,t,0.16,0.20,18);
+    _thud(ac,out,t,150,0.12,0.30);
+  }
 }
 function toggleSound(){
   SND_ON=!SND_ON;
