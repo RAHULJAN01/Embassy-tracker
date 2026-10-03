@@ -1,51 +1,359 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-03 12:30 UTC",
- "heartbeat": "2026-10-03 12:39 UTC",
- "currentJob": "fleet merge FAILED \u2014 this run's work was not merged",
- "found": 11,
- "queued": 36,
- "aiCalls": 16,
+ "startedAt": "2026-10-03 16:28 UTC",
+ "heartbeat": "2026-10-03 16:44 UTC",
+ "currentJob": "fleet run complete",
+ "found": 0,
+ "queued": 109,
+ "aiCalls": 0,
  "aiBudget": 100,
  "providers": [
   "claude"
  ],
  "coverage": {
-  "China": 0,
-  "Malaysia": 0,
-  "Burma": 2,
-  "Philippines": 0,
-  "Timor-Leste": 0,
-  "Armenia": 8,
-  "Bosnia and Herzegovina": 0,
-  "Czech Republic": 0,
-  "France": 2,
-  "Hungary": 2,
-  "Kosovo": 4
+  "Luxembourg": 0,
+  "Netherlands": 2,
+  "Portugal": 3,
+  "Slovenia": 1,
+  "Ukraine": 2,
+  "Barbados": 0,
+  "Canada": 9,
+  "Moldova": 0,
+  "Norway": 1,
+  "Serbia": 8,
+  "Montenegro": 0,
+  "Poland": 1,
+  "Slovakia": 0,
+  "Switzerland": 3,
+  "Bahamas": 2,
+  "Brazil": 4,
+  "Costa Rica": 4,
+  "El Salvador": 3,
+  "Honduras": 15
  },
  "bots": 4,
  "running": false,
- "lastError": "the fleet merge failed: TypeError: unsupported operand type(s) for +: 'int' and 'str'",
+ "completed": 0,
+ "repaired": 0,
+ "notSolicitation": 27,
+ "skippedExpired": 14,
+ "skippedDuplicate": 0,
+ "noDateFound": 0,
+ "abandoned": 5,
+ "stillUnfinished": 33,
+ "samCalls": 0,
+ "docCaps": {
+  "pdf": true,
+  "pdf-fallback": true,
+  "docx": true,
+  "xlsx": true,
+  "ocr": true,
+  "ocr-raster": true,
+  "html": true
+ },
+ "decisions": [
+  {
+   "post": "U.S. Embassy Netherlands",
+   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-08-24, already past",
+   "at": "2026-10-03 16:30 UTC"
+  },
+  {
+   "post": "U.S. Embassy Netherlands",
+   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-08-20, already past",
+   "at": "2026-10-03 16:30 UTC"
+  },
+  {
+   "post": "U.S. Embassy Netherlands",
+   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-11, already past",
+   "at": "2026-10-03 16:30 UTC"
+  },
+  {
+   "post": "U.S. Embassy Portugal",
+   "what": "[ATTACHMENT: https://pt.usembassy.gov/wp-content/uploads/sites/157/202",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2025-05-02, already past",
+   "at": "2026-10-03 16:30 UTC"
+  },
+  {
+   "post": "U.S. Embassy Portugal",
+   "what": "[ATTACHMENT: https://pt.usembassy.gov/wp-content/uploads/sites/157/202",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2025-05-16, already past",
+   "at": "2026-10-03 16:30 UTC"
+  },
+  {
+   "post": "U.S. Embassy Ukraine",
+   "what": "Investment climate statement — informational document",
+   "outcome": "not a solicitation",
+   "detail": "This is a State Department informational report on Ukraine's investment climate, not a solicitation. It contai",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / index page",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice heading or index page with no scope of work, submission instructions, respon",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / index page",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice heading with no scope, statement of work, submission instructions, deadline,",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / index page",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice heading or index page with no scope of work, statement of work, submission i",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / advance notice of future procurement",
+   "outcome": "not a solicitation",
+   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no scope",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "index or navigation page linking to solicitations",
+   "outcome": "not a solicitation",
+   "detail": "This is a heading/navigation page that only names a pre-solicitation notice and links to solicitations; it con",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "index or archive page listing solicitations",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that only lists solicitation reference numbers and titles without providing sc",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / index page",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice heading/index page with no scope of work, response instructions, submission ",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice / index page",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice heading/index page with no scope of work, statement of work, submission inst",
+   "at": "2026-10-03 16:31 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "index or archive page listing procurement solicitations",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that only links to notices; it contains no scope, statement of work, response ",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "index or navigation page listing procurement solicitations",
+   "outcome": "not a solicitation",
+   "detail": "This is a procurement index or listing page that only links to notices; it contains no scope, statement of wor",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "index or landing page listing procurement solicitations",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that only links to multiple RFQs without providing scope, statement of work, r",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "index or archive page linking to multiple procurement notices",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that lists multiple procurement notices with links; it does not itself invite ",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-05-13, already past",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "pre-solicitation notice announcing a future RFQ",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation announcement, not a live solicitation. It explicitly states the RFQ is not yet read",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "what": "index or archive page listing multiple procurement notices",
+   "outcome": "not a solicitation",
+   "detail": "This is a procurement index page that only links to notices; it does not itself invite quotations, contain a s",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice announcing a future BPA",
+   "outcome": "not a solicitation",
+   "detail": "A pre-solicitation notice announces an upcoming procurement but does not itself invite bids; it contains no su",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice",
+   "outcome": "not a solicitation",
+   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no submi",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice",
+   "outcome": "not a solicitation",
+   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no submi",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "index or archive page listing multiple pre-solicitation notices",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that only links to multiple pre-solicitation notices; it does not itself invit",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "index or archive page listing multiple pre-solicitation notices",
+   "outcome": "not a solicitation",
+   "detail": "This is an index or listing page displaying multiple pre-solicitation notices (19RB1023Q0021, 19RB1023Q0020, 1",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice announcement",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice announcing a future solicitation, not an active solicitation inviting bids w",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice announcing a future solicitation",
+   "outcome": "not a solicitation",
+   "detail": "This is a pre-solicitation notice that announces an upcoming requirement but does not itself invite bids; the ",
+   "at": "2026-10-03 16:32 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "pre-solicitation notice announcing a future BPA",
+   "outcome": "not a solicitation",
+   "detail": "A pre-solicitation notice announces an upcoming procurement but does not itself invite bids; it contains no su",
+   "at": "2026-10-03 16:33 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "index or archive page listing multiple procurement notices",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page that only links to multiple notices; it does not itself invite submission of g",
+   "at": "2026-10-03 16:33 UTC"
+  },
+  {
+   "post": "U.S. Embassy Serbia",
+   "what": "tender agreement form and rate quote sheet template",
+   "outcome": "not a solicitation",
+   "detail": "This is a blank form template for carriers to complete and submit to the Embassy's Tender of Service program, ",
+   "at": "2026-10-03 16:33 UTC"
+  },
+  {
+   "post": "U.S. Embassy Brazil",
+   "what": "Procurement and Contract Opportunities - U.S. Embassy & Consulates in ",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-28, already past",
+   "at": "2026-10-03 16:34 UTC"
+  },
+  {
+   "post": "U.S. Embassy Brazil",
+   "what": "Statement of Work document for general construction services",
+   "outcome": "not a solicitation",
+   "detail": "This is a SOW (Statement of Work) — a specification document that describes work to be performed — not a solic",
+   "at": "2026-10-03 16:34 UTC"
+  },
+  {
+   "post": "U.S. Embassy Costa Rica",
+   "what": "[ATTACHMENT: https://cr.usembassy.gov/wp-content/uploads/sites/129/202",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-08-12, already past",
+   "at": "2026-10-03 16:34 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "Computer Equipment",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-11, already past",
+   "at": "2026-10-03 16:35 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "Video Conference Equipment",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-11, already past",
+   "at": "2026-10-03 16:35 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "Social Media Influencers Program",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-03, already past",
+   "at": "2026-10-03 16:35 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "requires commercial social media consulting services",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-10, already past",
+   "at": "2026-10-03 16:35 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "Dear contractors,",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-08, already past",
+   "at": "2026-10-03 16:35 UTC"
+  },
+  {
+   "post": "U.S. Embassy El Salvador",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1 Q ION } PEGE SORTA",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2026-09-10, already past",
+   "at": "2026-10-03 16:35 UTC"
+  }
+ ],
+ "lastError": "U.S. Embassy Canada: model not available to this account: model: claude-3-7-sonnet-latest",
  "aiDiag": {
   "ok": {
-   "claude": 26
+   "claude": 61
   },
   "errors": {
    "claude": "model not available to this account: model: claude-sonnet-4-5-20250929"
   },
   "model": "claude-haiku-4-5-20251001",
   "keyVar": "ANTHROPIC_API_KEY",
-  "inputTokens": 59949,
-  "outputTokens": 6240,
+  "down": "model not available to this account: model: claude-sonnet-4-5-20250929",
+  "inputTokens": 116234,
+  "outputTokens": 11207,
   "byModel": {
    "claude-haiku-4-5-20251001": {
-    "in": 59949,
-    "out": 6240,
-    "calls": 26
+    "in": 116234,
+    "out": 11207,
+    "calls": 61
    }
   },
-  "spendUSD": 0.0911
+  "spendUSD": 0.1723
  },
- "samDiag": "SAM not queried",
- "mergeError": "Traceback (most recent call last):\n  File \"/home/runner/work/Embassy-tracker/Embassy-tracker/merge_shards.py\", line 615, in <module>\n    main(sys.argv[1] if len(sys.argv) > 1 else \"shards\")\n  File \"/home/runner/work/Embassy-tracker/Embassy-tracker/merge_shards.py\", line 526, in main\n    \"samCalls\": sum(s.get(\"samCalls\", 0) for s in statuses),\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: unsupported operand type(s) for +: 'int' and 'str'\n"
+ "samDiag": "SAM not queried"
 }
