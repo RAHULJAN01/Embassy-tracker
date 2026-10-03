@@ -69,7 +69,12 @@ jobs:
 
   crawl:
     needs: gate
-    if: needs.gate.outputs.paused != 'true'
+    # STOP halts real crawling, but never the read-only diagnostics: they write
+    # nothing to the register and spend no AI, and they are exactly what you
+    # need while the fleet is stopped.
+    if: >-
+      needs.gate.outputs.paused != 'true' ||
+      startsWith(needs.gate.outputs.mode, 'probe')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -135,7 +140,9 @@ jobs:
   # ---- merge every shard's findings into one register, then deploy ----
   merge:
     needs: [gate, crawl]
-    if: always() && needs.gate.outputs.paused != 'true'
+    if: >-
+      always() && needs.gate.outputs.paused != 'true' &&
+      !startsWith(needs.gate.outputs.mode, 'probe')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
