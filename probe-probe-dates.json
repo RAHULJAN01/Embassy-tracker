@@ -1,102 +1,52 @@
 {
  "mode": "probe-dates",
- "startedAt": "2026-10-03 11:30 UTC",
- "heartbeat": "2026-10-03 11:30 UTC",
+ "startedAt": "2026-10-03 12:09 UTC",
+ "heartbeat": "2026-10-03 12:09 UTC",
  "currentJob": "date accuracy field test",
  "running": false,
  "summary": {
-  "notices": 13,
+  "notices": 12,
   "free": 0,
-  "read": 9,
+  "read": 5,
   "sonnet": 0,
-  "no_date_printed": 1,
-  "dates_but_no_deadline": 3,
+  "no_date_printed": 0,
+  "dates_but_no_deadline": 7,
   "unreadable": 0,
   "blocked": 0,
   "ai_calls": 12,
-  "phrase_would_have_been_wrong": 5,
-  "resolved_pct": 69.2
+  "not_a_solicitation": 4,
+  "phrase_would_have_been_wrong": 2,
+  "resolved_pct": 41.7
  },
  "notices": [
   {
    "post": "U.S. Embassy Algeria",
    "country": "Algeria",
-   "link": "https://dz.usembassy.gov/procurement-opportunities/",
-   "files": 3,
-   "title": "Freedom 250 - DZ Alumni Summit Algiers 2026 - U.S. Embassy in Algeria",
+   "link": "https://dz.usembassy.gov/wp-content/uploads/sites/226/2025/04/Appendix-B-Application-1.pdf",
+   "files": 1,
+   "title": "Human Resources Office, U.S. Embassy-Algiers",
    "all_dates_printed": [
-    "2026-08-09",
-    "2026-09-08",
-    "2026-09-17",
-    "2026-09-18",
-    "2026-09-20",
-    "2026-11-18",
-    "2026-12-17",
-    "2026-12-20"
+    "2017-04-06",
+    "2017-06-04"
    ],
-   "phrase_would_have_said": "2026-09-20",
+   "phrase_would_have_said": "",
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "September 20, 2026 at 17:00 is explicitly stated as the quotation submission deadline; September 8, 2026 is the solicitation issue date; all other dates are performance/delivery dates.",
-     "closing": "2026-09-20",
-     "warnings": [
-      "the posted date 2026-09-08 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
-     ]
+     "why": "This is a blank application form template with no invitation to submit, no reference number, no scope of work, no submission instructions, and no deadline. The date 6/4/2017 is a form version date, no",
+     "closing": "",
+     "warnings": []
     }
    ],
-   "deadline": "2026-09-20",
-   "how": "read (haiku)",
-   "line_it_came_from": "Quotations are due on September 20, 2026, no later than 17:00.",
-   "phrase_agrees": true,
-   "still_open": false
-  },
-  {
-   "post": "U.S. Embassy Algeria",
-   "country": "Algeria",
-   "link": "https://dz.usembassy.gov/tag/request-for-quotation/",
-   "files": 0,
-   "title": "Request for Quotation Archives - U.S. Embassy in Algeria",
-   "all_dates_printed": [],
-   "phrase_would_have_said": "",
-   "why_none": "no date of any kind is printed in the notice or its documents",
+   "is_solicitation": false,
+   "what_it_is": "application form for foreign national student intern program",
+   "open_or_closed": "open",
+   "closed_because": "",
    "deadline": "",
    "how": "none",
    "line_it_came_from": "",
    "phrase_agrees": null,
    "still_open": null
-  },
-  {
-   "post": "U.S. Embassy Algeria",
-   "country": "Algeria",
-   "link": "https://dz.usembassy.gov/wp-content/uploads/sites/226/2026/09/RFQ-19AG1026Q0015-DZ-Alumni-2026.docx.pdf",
-   "files": 1,
-   "title": "Table of Contents",
-   "all_dates_printed": [
-    "2026-08-09",
-    "2026-09-08",
-    "2026-09-18",
-    "2026-11-18",
-    "2026-12-17",
-    "2026-12-20"
-   ],
-   "phrase_would_have_said": "2026-12-17",
-   "reader_said": [
-    {
-     "stage": "read (haiku)",
-     "why": "Block 8 explicitly states 'OFFER DUE DATE' as 09/18/2026, which is the submission deadline for offers; all other dates are either performance/delivery dates or the solicitation issue date.",
-     "closing": "2026-09-18",
-     "warnings": [
-      "the closing date 2026-09-18 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it",
-      "the posted date 2026-09-08 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
-     ]
-    }
-   ],
-   "deadline": "2026-09-18",
-   "how": "read (haiku)",
-   "line_it_came_from": "OLICITATION a. NAME b. TELEPHONE NUMBER(No collect 8. OFFER DUE DATE/ INFORMATION CALL: Mohamed Reda Sahraoui calls) LOCAL TIME 09/18/2026 / 9.ISSUED BY CODE AG100 10. THIS ACQUISITION IS x UNRESTRICTED OR SET ASIDE: % FOR: AMERICAN EMBASSY ALGIERS SMALL BUSIN",
-   "phrase_agrees": false,
-   "still_open": false
   },
   {
    "post": "U.S. Embassy Eritrea",
@@ -118,11 +68,15 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "April 4, 2025 appears twice as the closing date for two RFQs in the opening section; the DATE ISSUED fields (02/25/2025 and 06/12/2025) are publication dates, not submission deadlines.",
+     "why": "This is an index page listing active solicitations with reference numbers, scopes, and closing dates; the page itself is not a solicitation but links to live RFQs still open for bidding.",
      "closing": "2025-04-04",
      "warnings": []
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "Index page with links to three active RFQs for embassy supplies",
+   "open_or_closed": "open",
+   "closed_because": "",
    "deadline": "2025-04-04",
    "how": "read (haiku)",
    "line_it_came_from": "Invitation to bid for Supply of Reach Truck (Closes April 4, 2025)",
@@ -144,11 +98,18 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "Only the issue date (02/25/2025) appears in the excerpt; no submission deadline date is stated.",
+     "why": "This is a live RFQ with reference number 19ER1025Q0001, detailed specifications for an electrical reach truck, submission instructions (Standard Form 18), contact email (AsmaraProcurement@state.gov), ",
      "closing": "",
-     "warnings": []
+     "warnings": [
+      "the posted date 2025-02-25 is in the document, but the words the reader quoted for it are not — the quoted line does not contain this date, so nothing ties the two together; the date was kept on phrase-matching alone, so confirm it",
+      "the closing date 2025-03-06 was discarded — the quoted line does not contain this date, so nothing ties the two together; the Q&A date 2025-03-06 was discarded — the quoted line does not contain this date, so nothing ties the two together"
+     ]
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "RFQ for supply and delivery of one electrical reach truck",
+   "open_or_closed": "open",
+   "closed_because": "",
    "reader_error": "model not available to this account: model: claude-3-7-sonne",
    "deadline": "",
    "how": "none",
@@ -171,11 +132,18 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "Only the issue date (02/25/2025) appears in the excerpt; no submission deadline date is stated.",
+     "why": "This is a live RFQ with reference number 19ER1025Q0002, scope (warehouse racking kit), specifications, delivery address, and contact email for submission. The document does not state it is closed. The",
      "closing": "",
-     "warnings": []
+     "warnings": [
+      "the posted date 2025-02-25 is in the document, but the words the reader quoted for it are not — the quoted line does not contain this date, so nothing ties the two together; the date was kept on phrase-matching alone, so confirm it",
+      "the Q&A date 2025-03-06 was discarded — the quoted line does not contain this date, so nothing ties the two together"
+     ]
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "RFQ for supply and delivery of warehouse racking kit",
+   "open_or_closed": "open",
+   "closed_because": "",
    "reader_error": "model not available to this account: model: claude-sonnet-4-",
    "deadline": "",
    "how": "none",
@@ -207,18 +175,20 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "Multiple submission deadlines identified across different solicitations; QA deadline is the clarification request cutoff for the truck chassis solicitation.",
-     "closing": "2026-09-01",
-     "warnings": [
-      "the closing date 2026-09-01 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
-     ]
+     "why": "This is a navigation/index page that links to multiple solicitations rather than a single solicitation itself; it contains no scope, statement of work, or submission instructions of its own.",
+     "closing": "",
+     "warnings": []
     }
    ],
-   "deadline": "2026-09-01",
-   "how": "read (haiku)",
-   "line_it_came_from": "fter 5 p.m. on August 21, 2026, will not be answered. BID CLOSING DATE Quotations are due no later than 5 p.m. (India Time) on September 1, 2026. All quotations must be submitted electronically to Newdelhibids@state.gov with the subject line “Solicitatio",
-   "phrase_agrees": false,
-   "still_open": false
+   "is_solicitation": false,
+   "what_it_is": "index or archive page listing multiple solicitations",
+   "open_or_closed": "open",
+   "closed_because": "",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
   },
   {
    "post": "U.S. Embassy India",
@@ -236,11 +206,15 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "The excerpt shows September 11, 2026 as the notice issue date and September 21, 2026 as an amendment signature date, but contains no explicit submission deadline for bids/quotations; the text is trunc",
+     "why": "This is a live RFQ (191N6526Q0115) with scope, location, and invitation to submit offers, but the submission deadline is not stated in the excerpt provided—the amendment text is truncated at 'The hour",
      "closing": "",
      "warnings": []
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "RFQ for supply, installation, testing and commissioning of audio-visual equipmen",
+   "open_or_closed": "open",
+   "closed_because": "",
    "reader_error": "model not available to this account: model: claude-sonnet-4-",
    "deadline": "",
    "how": "none",
@@ -267,11 +241,15 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "September 1, 2026 is explicitly stated as the bid closing date with the phrase 'Quotations are due no later than' and 'will not be accepted' after that time.",
+     "why": "This is a live RFQ with solicitation number, scope (truck cabin chassis), submission email address, and explicit bid closing deadline of September 1, 2026.",
      "closing": "2026-09-01",
      "warnings": []
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "RFQ for supply of 2 truck cabin chassis for water tanker",
+   "open_or_closed": "open",
+   "closed_because": "",
    "deadline": "2026-09-01",
    "how": "read (haiku)",
    "line_it_came_from": "Quotations are due no later than 5 p.m. (India Time) on September 1, 2026.",
@@ -279,31 +257,59 @@
    "still_open": false
   },
   {
-   "post": "U.S. Embassy Laos",
-   "country": "Laos",
-   "link": "https://la.usembassy.gov/procurement-and-business-opportunities/",
+   "post": "U.S. Embassy Portugal",
+   "country": "Portugal",
+   "link": "https://pt.usembassy.gov/wp-content/uploads/sites/157/2025/04/VA-ORE-Lisbon-2025-02-Housekeeper.pdf",
    "files": 1,
-   "title": "Procurement and Business Opportunities - U.S. Embassy in Laos",
+   "title": "SEEKING A HOUSEKEEPER FOR A U.S. OFFICIAL RESIDENCE",
    "all_dates_printed": [
-    "2019-08-13",
-    "2020-08-13",
-    "2026-04-09",
-    "2026-09-04",
-    "2026-09-14"
+    "2025-05-02"
    ],
-   "phrase_would_have_said": "2026-09-14",
+   "phrase_would_have_said": "",
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "September 14, 2026 is explicitly stated as the deadline for quotation submission with a specific time (11:59 PM Local Time); September 4, 2026 is the date the RFQ was issued.",
-     "closing": "2026-09-14",
+     "why": "This is a solicitation inviting applications with a clear submission deadline, scope of work, qualifications, and submission address; status is open as no closure language appears.",
+     "closing": "2025-05-02",
      "warnings": []
     }
    ],
-   "deadline": "2026-09-14",
+   "is_solicitation": true,
+   "what_it_is": "Job posting for housekeeper at U.S. Ambassador's residence in Lisbon",
+   "open_or_closed": "open",
+   "closed_because": "",
+   "deadline": "2025-05-02",
    "how": "read (haiku)",
-   "line_it_came_from": "Return the completed SF-18 and quotation package to the address indicated in block 5a of the SF-18 no later than: 11:59 PM Local Time, September 14, 2026.",
-   "phrase_agrees": true,
+   "line_it_came_from": "Send your email to: trabalhohrusva@gmail.com by Friday, May 2, 2025.",
+   "phrase_agrees": null,
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Portugal",
+   "country": "Portugal",
+   "link": "https://pt.usembassy.gov/wp-content/uploads/sites/157/2025/04/VA-Lisbon-2025-03-CMR-Chef.pdf",
+   "files": 1,
+   "title": "VA ORE-Lisbon-2025-03",
+   "all_dates_printed": [
+    "2025-05-16"
+   ],
+   "phrase_would_have_said": "",
+   "reader_said": [
+    {
+     "stage": "read (haiku)",
+     "why": "This is a solicitation inviting applications for a chef position with a clear submission deadline, email address for responses, and required documents (CV and work permit).",
+     "closing": "2025-05-16",
+     "warnings": []
+    }
+   ],
+   "is_solicitation": true,
+   "what_it_is": "Job solicitation for a Chef at the U.S. Ambassador's Official Residence in Lisbo",
+   "open_or_closed": "open",
+   "closed_because": "",
+   "deadline": "2025-05-16",
+   "how": "read (haiku)",
+   "line_it_came_from": "Send your email to: trabalhohrusva@gmail.com by Friday, May 16, 2025.",
+   "phrase_agrees": null,
    "still_open": false
   },
   {
@@ -330,16 +336,20 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "March 20, 2026 is explicitly stated as a submission deadline for the DIBC solicitation RPP-CM-26-01; other dates are either publication dates, pre-application due dates, or informational meeting dates",
-     "closing": "2026-03-20",
+     "why": "This is a navigation/index page that links to multiple procurement solicitations rather than a single solicitation itself; it contains no scope, statement of work, or submission instructions for a sin",
+     "closing": "",
      "warnings": []
     }
    ],
-   "deadline": "2026-03-20",
-   "how": "read (haiku)",
-   "line_it_came_from": "Deadline: March 20, 2026, at 5:00 PM ET",
-   "phrase_agrees": true,
-   "still_open": false
+   "is_solicitation": false,
+   "what_it_is": "index or archive page listing procurement notices",
+   "open_or_closed": "open",
+   "closed_because": "",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
   },
   {
    "post": "U.S. Embassy Canada",
@@ -365,18 +375,20 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "May 13, 2026 at 17:00 is explicitly labeled as 'OFFER DUE DATE/LOCAL TIME' in the solicitation form, making it the submission deadline.",
-     "closing": "2026-05-13",
-     "warnings": [
-      "the posted date 2026-04-23 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it"
-     ]
+     "why": "This is a navigation and archive page that only links to procurement notices; it does not itself invite quotations, contain a scope of work, or provide a submission address or deadline for this page.",
+     "closing": "",
+     "warnings": []
     }
    ],
-   "deadline": "2026-05-13",
-   "how": "read (haiku)",
-   "line_it_came_from": "May 13, 2026 17:00",
-   "phrase_agrees": false,
-   "still_open": false
+   "is_solicitation": false,
+   "what_it_is": "procurement index and archive page linking to multiple notices",
+   "open_or_closed": "open",
+   "closed_because": "",
+   "deadline": "",
+   "how": "none",
+   "line_it_came_from": "",
+   "phrase_agrees": null,
+   "still_open": null
   },
   {
    "post": "U.S. Embassy Canada",
@@ -402,7 +414,7 @@
    "reader_said": [
     {
      "stage": "read (haiku)",
-     "why": "May 13, 2026 at 17:00 is explicitly labeled as the offer due date in the solicitation form for RFQ 19CA4526Q0002.",
+     "why": "This is a live RFQ with solicitation number, scope (preventive maintenance and facilities services), contact information, and a clear submission deadline; however, the deadline of May 13, 2026 has pas",
      "closing": "2026-05-13",
      "warnings": [
       "the closing date 2026-05-13 is in the document, but the words the reader quoted for it are not — the words the model quoted for this date are not in the document — the date was invented; the date was kept on phrase-matching alone, so confirm it",
@@ -410,6 +422,10 @@
      ]
     }
    ],
+   "is_solicitation": true,
+   "what_it_is": "RFQ for Preventive Maintenance and Facilities Services at U.S. Consulate General",
+   "open_or_closed": "open",
+   "closed_because": "",
    "deadline": "2026-05-13",
    "how": "read (haiku)",
    "line_it_came_from": "7. FOR SOLICITATION a. NAME b. TELEPHONE NUMBER(No 8. OFFER DUE DATE/ collect calls) LOCAL TIME INFORMATION CALL Shannon Sibayan – Contracting Officer May 13, 2026 17:00 Elias Koutavas – A/GSO- Procurement 9. ISSUED BY CODE 10. THIS ACQUISITION IS U.S. Consula",
