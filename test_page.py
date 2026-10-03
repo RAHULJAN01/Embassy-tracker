@@ -100,6 +100,23 @@ ok("proven() refuses a record carrying a date warning",
 ok("an untraceable deadline is called out to the reader",
    "Do not trust the deadline shown" in html)
 
+# ------------------------------------------------- the masthead's shape is fixed
+# The bar was a logo pinned far left, five buttons pinned far right, and 400px
+# of nothing between them, because the brand was told to grow into the leftover
+# space. It is now two rows that share one left edge with every band below:
+# brand + timestamps, then the buttons. Each of these is the rule that holds
+# that shape, so each one is a test.
+ok("the logo and flag never resize", "--logo-h:90px" in html and "--flag-h:58px" in html)
+ok("no scroll-triggered size rule survives anywhere",
+   "body.scrolled .mastwrap .logo" not in html and "body.scrolled .mastwrap .flag" not in html)
+ok("the brand does not grow into empty space", "flex:0 1 auto;max-width:100%}" in html)
+ok("the buttons take a full row of their own", ".mnav{" in html and "flex:1 1 100%" in html)
+ok("and they start on the same gutter, not the screen edge",
+   "justify-content:flex-start" in html)
+ok("the old right-hand stack is gone", "mhead-right" not in html)
+ok("the control bar's spacer no longer steals width from the search controls",
+   ".toolbar .spacer{display:none}" in html)
+
 # --------------------------------------------- DEEP SCAN is one record, not all
 # Pressing DEEP SCAN on a solicitation used to dispatch a whole-fleet re-crawl,
 # so the budget went everywhere except the record being asked about.
