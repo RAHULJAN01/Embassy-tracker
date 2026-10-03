@@ -450,6 +450,7 @@ def main(shard_dir):
     meta = load(base, {"meta": {}}).get("meta", {}) or {}
     ledger = set(meta.get("ledger", []))
     blocked, statuses = [], []
+    recovered_any = set()
     seen_hosts = set()
     state = load(HERE / "state.json", {"root_idx": 0})
 
@@ -481,7 +482,11 @@ def main(shard_dir):
         for s in b.get("sites", []):
             if s.get("host") and s["host"] not in seen_hosts:
                 seen_hosts.add(s["host"]); blocked.append(s)
+        # A host that ANY shard reached this run is not blocked, whatever another
+        # shard recorded -- so recovered sites come off the fleet-wide alarm too.
         st = load(sd / "status.json", {})
+        for h in (st.get("recoveredHosts") or []):
+            recovered_any.add(h)
         if st:
             statuses.append(st)
         sstate = load(sd / "state.json", {})
@@ -617,6 +622,7 @@ def main(shard_dir):
     (HERE / "data.json").write_text(json.dumps({"meta": meta, "solicitations": rows},
                                                indent=1, ensure_ascii=False))
     (HERE / "status.json").write_text(json.dumps(agg, indent=1, ensure_ascii=False))
+    blocked = [b for b in blocked if b.get("host") not in recovered_any]
     (HERE / "blocked.json").write_text(json.dumps({"sites": blocked, "updated": stamp},
                                                   indent=1, ensure_ascii=False))
     (HERE / "state.json").write_text(json.dumps(state, indent=1))

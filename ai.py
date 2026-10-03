@@ -158,6 +158,8 @@ class Claude:
         self.down_reason = ""          # non-empty => the portal raises the alarm
         self._last = 0.0
         self._tried_models = set()
+        self._bad_models = set()        # ids the API said are not available
+        self._review_ok = True          # until a review model proves unavailable
         # kept so existing callers (crawler.probe) keep working
         self.providers = [["claude", self.key, None, 0]] if self.key else []
 
@@ -184,17 +186,26 @@ class Claude:
             time.sleep(MIN_INTERVAL - gap)
 
     def _next_model(self, review=None):
-        """A model id this account has not tried yet, or None.
+        """The next model id to try — the first in the pool NOT KNOWN BAD.
 
-        We never 'probe' the model with a throwaway call — that burned a real
-        API call on every shard of every run (24 wasted calls a day) to learn
-        something the first genuine call tells us for free. If a real call comes
-        back 404 we simply move to the next id and REPLAY THE SAME PROMPT, so
-        nothing is paid for twice and nothing is lost.
+        This used to skip any model already TRIED, which is wrong: a model that
+        worked is "tried" too, so once every id had been seen once, this
+        returned None and the caller concluded the whole API was exhausted --
+        and raised the DOWN alarm -- even though the primary model was working
+        perfectly. That is exactly what happened on this account: the Sonnet
+        review models are 'not available to this account', and once they had
+        each 404'd, the fallback to Haiku (which works) was treated as 'already
+        tried', so the review call found 'nothing left' and knocked everything
+        offline.
+
+        So the filter is _bad_models (ids that actually 404'd), never
+        _tried_models. The primary model, Haiku, sits at the tail of BOTH pools
+        and is never bad, so a review call whose Sonnet ids are unavailable
+        falls cleanly through to Haiku instead of failing.
         """
         pool = ([REVIEW_MODEL] + REVIEW_FALLBACKS) if review else ([MODEL] + MODEL_FALLBACKS)
         for m in pool:
-            if m not in self._tried_models:
+            if m not in self._bad_models:
                 return m
         return None
 
@@ -204,6 +215,10 @@ class Claude:
                                 "secret ANTHROPIC_API_KEY")
             raise AllExhausted(self.down_reason)
         use = model or self.model
+        # Don't spend a call to re-learn a model is unavailable. If this id has
+        # already 404'd this run, jump straight to the next good one.
+        if use in self._bad_models:
+            use = self._next_model(review=model) or MODEL
         self._tried_models.add(use)
 
         wait = 3.0
@@ -243,23 +258,38 @@ class Claude:
             why, fatal = _why(status, text)
             last = why
             self.errors["claude"] = why
+            is_review = bool(model)
             if status == 404:
-                # this model id isn't available to the account — switch and
-                # replay the SAME prompt, so the call isn't wasted
-                nxt = self._next_model(model)
-                if nxt:
+                # this model id is not available to the account. Remember it is
+                # bad, switch to the next id that is not known bad, and replay
+                # the SAME prompt so the call is not wasted. Because Haiku (the
+                # working primary) is at the tail of both pools, a review call
+                # whose Sonnet ids are unavailable lands on Haiku here.
+                self._bad_models.add(use)
+                if is_review:
+                    self._review_ok = False          # stop paying to find out again
+                nxt = self._next_model(review=model)
+                if nxt and nxt != use:
                     use = nxt
-                    if not model:
+                    if not is_review:
                         self.model = nxt
-                    self._tried_models.add(nxt)
                     continue
+
+            # A REVIEW CALL CAN NEVER TAKE THE SYSTEM DOWN. The second opinion
+            # is a bonus; if no review model is available, the caller simply
+            # does without one. Only the PRIMARY model failing is a real outage.
+            if is_review:
+                return {"_gerr": f"review model unavailable ({why})"}
+
             if fatal:
                 self.down_reason = why
                 raise AllExhausted(why)
             time.sleep(wait)
             wait = min(wait * 2, 30)
 
-        # retries used up on a transient fault — treat as down so the alarm fires
+        # retries used up on a transient fault on the PRIMARY model — down.
+        if model:
+            return {"_gerr": f"review model gave up: {last}"}
         self.down_reason = f"{last} (gave up after {MAX_RETRIES} attempts)"
         raise AllExhausted(self.down_reason)
 

@@ -63,6 +63,8 @@ jobs:
           python test_dates.py
           python test_static.py
           python test_fetcher.py
+          python test_resilience.py
+          python test_archive.py
           python test_datetraps.py
           python test_pipelinetraps.py
           python test_deepscan.py

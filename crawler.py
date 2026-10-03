@@ -1467,6 +1467,16 @@ def run(mode):
     meta["ledger"] = sorted(ledger)[-8000:]
     save(DATA, {"meta": meta, "solicitations": merged})
     save(STATE, state)
+    # CLEAR RECOVERED SITES. Any host that answered a request this run comes off
+    # the blocked list -- otherwise a site blocked once stays on the alarm for
+    # ever, which is exactly why it kept crying "166 blocked" long after the
+    # sites were reachable again. The still-blocked list is only the hosts that
+    # did NOT answer this run.
+    recovered = set(fetcher.OK_HOSTS)
+    before = len(blocked_sites)
+    blocked_sites = [b for b in blocked_sites if b.get("host") not in recovered]
+    st.d["recoveredHosts"] = sorted(recovered)
+    st.d["unblockedThisRun"] = before - len(blocked_sites)
     save(BLOCKED, {"sites": blocked_sites, "updated": stamp})
     st.d["aiDiag"] = rotator.diag()
     st.d["samDiag"] = SAM_DIAG.get("last", "SAM not queried this run")

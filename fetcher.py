@@ -57,6 +57,10 @@ BROWSER_HEADERS = {
 # open) from an IP/bot block (which he cannot do anything about).
 BLOCK_DIAG = {}
 
+# Every host that answered a request this run. The crawler subtracts these from
+# the blocked list, so a site that recovers drops off the alarm automatically.
+OK_HOSTS = set()
+
 
 class Blocked(Exception):
     """Site actively refused the bot. `kind` says whether a human can help."""
@@ -160,6 +164,15 @@ def get(url, retries=2):
     for attempt in range(retries + 1):
         try:
             with _OPENER.open(_req(url), timeout=TIMEOUT) as r:
+                # This host answered. Record it so the crawler can CLEAR it from
+                # the blocked list -- a site that was blocked once (e.g. during
+                # the bad-headers incident) must not stay on the alarm for ever
+                # after it starts working again.
+                try:
+                    OK_HOSTS.add(urllib.parse.urlparse(r.geturl()).netloc)
+                    OK_HOSTS.add(urllib.parse.urlparse(url).netloc)
+                except Exception:
+                    pass
                 return _body(r), (r.headers.get("Content-Type") or "").lower(), r.geturl()
         except urllib.error.HTTPError as e:
             try:
