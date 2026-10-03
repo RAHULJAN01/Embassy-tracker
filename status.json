@@ -1,46 +1,41 @@
 {
  "mode": "roots",
- "startedAt": "2026-10-03 16:28 UTC",
- "heartbeat": "2026-10-03 16:44 UTC",
+ "startedAt": "2026-10-03 17:10 UTC",
+ "heartbeat": "2026-10-03 17:18 UTC",
  "currentJob": "fleet run complete",
  "found": 0,
- "queued": 109,
+ "queued": 40,
  "aiCalls": 0,
  "aiBudget": 100,
  "providers": [
   "claude"
  ],
  "coverage": {
-  "Luxembourg": 0,
-  "Netherlands": 2,
-  "Portugal": 3,
-  "Slovenia": 1,
-  "Ukraine": 2,
-  "Barbados": 0,
-  "Canada": 9,
-  "Moldova": 0,
-  "Norway": 1,
-  "Serbia": 8,
-  "Montenegro": 0,
-  "Poland": 1,
-  "Slovakia": 0,
-  "Switzerland": 3,
-  "Bahamas": 2,
-  "Brazil": 4,
-  "Costa Rica": 4,
-  "El Salvador": 3,
-  "Honduras": 15
+  "China": 0,
+  "Nicaragua": 3,
+  "Suriname": 1,
+  "Benin": 9,
+  "Cabo Verde": 1,
+  "Democratic Republic of the Congo": 4,
+  "Panama": 5,
+  "Trinidad and Tobago": 1,
+  "Botswana": 3,
+  "Cameroon": 3,
+  "Republic of the Congo": 1,
+  "Equatorial Guinea": 0,
+  "Gabon": 0,
+  "Kenya": 9
  },
  "bots": 4,
  "running": false,
  "completed": 0,
  "repaired": 0,
- "notSolicitation": 27,
- "skippedExpired": 14,
- "skippedDuplicate": 0,
- "noDateFound": 0,
- "abandoned": 5,
- "stillUnfinished": 33,
+ "notSolicitation": 5,
+ "skippedExpired": 12,
+ "skippedDuplicate": 2,
+ "noDateFound": 7,
+ "abandoned": 1,
+ "stillUnfinished": 29,
  "samCalls": 0,
  "docCaps": {
   "pdf": true,
@@ -53,307 +48,195 @@
  },
  "decisions": [
   {
-   "post": "U.S. Embassy Netherlands",
-   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
+   "post": "U.S. Embassy Panama",
+   "what": "vendor registration guide for SAM.gov",
+   "outcome": "not a solicitation",
+   "detail": "This is instructional material on how to register as a vendor in SAM.gov, not a solicitation inviting bids or ",
+   "at": "2026-10-03 17:11 UTC"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "what": "Overseas Request for Quotation (RFQ) for Supplies/Services/Equipment",
+   "outcome": "no deadline stated",
+   "detail": "This is a Peace Corps RFQ document inviting quotations for conference services, but the excerpt provided does ",
+   "at": "2026-10-03 17:12 UTC"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "what": "Overseas Request for Quotation (RFQ) for Supplies/Services/Equipment",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-08-24, already past",
-   "at": "2026-10-03 16:30 UTC"
+   "detail": "the notice gives a closing date of 2024-11-15, already past",
+   "at": "2026-10-03 17:12 UTC"
   },
   {
-   "post": "U.S. Embassy Netherlands",
-   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
+   "post": "U.S. Embassy Nicaragua",
+   "what": "procurement index or landing page",
+   "outcome": "not a solicitation",
+   "detail": "This is a navigation/index page listing procurement notices; it does not itself invite bids with a scope, stat",
+   "at": "2026-10-03 17:14 UTC"
+  },
+  {
+   "post": "U.S. Embassy Nicaragua",
+   "what": "Statement of Work document for a field rehabilitation project",
+   "outcome": "not a solicitation",
+   "detail": "This is a SOW document describing scope and performance terms, not a solicitation inviting bids; it lacks a re",
+   "at": "2026-10-03 17:15 UTC"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "what": "Request For Quotation 19BN1525Q0003, Gardening and Landscaping service",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-08-20, already past",
-   "at": "2026-10-03 16:30 UTC"
+   "detail": "the notice gives a closing date of 2026-02-12, already past",
+   "at": "2026-10-03 17:16 UTC"
   },
   {
-   "post": "U.S. Embassy Netherlands",
-   "what": "John Adams Park 1, 2244 BZ Wassenaar The Netherlands",
-   "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-11, already past",
-   "at": "2026-10-03 16:30 UTC"
-  },
-  {
-   "post": "U.S. Embassy Portugal",
-   "what": "[ATTACHMENT: https://pt.usembassy.gov/wp-content/uploads/sites/157/202",
-   "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2025-05-02, already past",
-   "at": "2026-10-03 16:30 UTC"
-  },
-  {
-   "post": "U.S. Embassy Portugal",
-   "what": "[ATTACHMENT: https://pt.usembassy.gov/wp-content/uploads/sites/157/202",
-   "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2025-05-16, already past",
-   "at": "2026-10-03 16:30 UTC"
-  },
-  {
-   "post": "U.S. Embassy Ukraine",
-   "what": "Investment climate statement — informational document",
-   "outcome": "not a solicitation",
-   "detail": "This is a State Department informational report on Ukraine's investment climate, not a solicitation. It contai",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / index page",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice heading or index page with no scope of work, submission instructions, respon",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / index page",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice heading with no scope, statement of work, submission instructions, deadline,",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / index page",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice heading or index page with no scope of work, statement of work, submission i",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / advance notice of future procurement",
-   "outcome": "not a solicitation",
-   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no scope",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "index or navigation page linking to solicitations",
-   "outcome": "not a solicitation",
-   "detail": "This is a heading/navigation page that only names a pre-solicitation notice and links to solicitations; it con",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "index or archive page listing solicitations",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that only lists solicitation reference numbers and titles without providing sc",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / index page",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice heading/index page with no scope of work, response instructions, submission ",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice / index page",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice heading/index page with no scope of work, statement of work, submission inst",
-   "at": "2026-10-03 16:31 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "what": "index or archive page listing procurement solicitations",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that only links to notices; it contains no scope, statement of work, response ",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "what": "index or navigation page listing procurement solicitations",
-   "outcome": "not a solicitation",
-   "detail": "This is a procurement index or listing page that only links to notices; it contains no scope, statement of wor",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "what": "index or landing page listing procurement solicitations",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that only links to multiple RFQs without providing scope, statement of work, r",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "what": "index or archive page linking to multiple procurement notices",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that lists multiple procurement notices with links; it does not itself invite ",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
+   "post": "U.S. Embassy Benin",
    "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-05-13, already past",
-   "at": "2026-10-03 16:32 UTC"
+   "detail": "the notice gives a closing date of 2025-06-30, already past",
+   "at": "2026-10-03 17:16 UTC"
   },
   {
-   "post": "U.S. Embassy Canada",
-   "what": "pre-solicitation notice announcing a future RFQ",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation announcement, not a live solicitation. It explicitly states the RFQ is not yet read",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "what": "index or archive page listing multiple procurement notices",
-   "outcome": "not a solicitation",
-   "detail": "This is a procurement index page that only links to notices; it does not itself invite quotations, contain a s",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice announcing a future BPA",
-   "outcome": "not a solicitation",
-   "detail": "A pre-solicitation notice announces an upcoming procurement but does not itself invite bids; it contains no su",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice",
-   "outcome": "not a solicitation",
-   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no submi",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice",
-   "outcome": "not a solicitation",
-   "detail": "A pre-solicitation notice announces a future procurement but does not itself invite bids; it contains no submi",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "index or archive page listing multiple pre-solicitation notices",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that only links to multiple pre-solicitation notices; it does not itself invit",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "index or archive page listing multiple pre-solicitation notices",
-   "outcome": "not a solicitation",
-   "detail": "This is an index or listing page displaying multiple pre-solicitation notices (19RB1023Q0021, 19RB1023Q0020, 1",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice announcement",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice announcing a future solicitation, not an active solicitation inviting bids w",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice announcing a future solicitation",
-   "outcome": "not a solicitation",
-   "detail": "This is a pre-solicitation notice that announces an upcoming requirement but does not itself invite bids; the ",
-   "at": "2026-10-03 16:32 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "pre-solicitation notice announcing a future BPA",
-   "outcome": "not a solicitation",
-   "detail": "A pre-solicitation notice announces an upcoming procurement but does not itself invite bids; it contains no su",
-   "at": "2026-10-03 16:33 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "index or archive page listing multiple procurement notices",
-   "outcome": "not a solicitation",
-   "detail": "This is a navigation/index page that only links to multiple notices; it does not itself invite submission of g",
-   "at": "2026-10-03 16:33 UTC"
-  },
-  {
-   "post": "U.S. Embassy Serbia",
-   "what": "tender agreement form and rate quote sheet template",
-   "outcome": "not a solicitation",
-   "detail": "This is a blank form template for carriers to complete and submit to the Embassy's Tender of Service program, ",
-   "at": "2026-10-03 16:33 UTC"
-  },
-  {
-   "post": "U.S. Embassy Brazil",
-   "what": "Procurement and Contract Opportunities - U.S. Embassy & Consulates in ",
+   "post": "U.S. Embassy Benin",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-28, already past",
-   "at": "2026-10-03 16:34 UTC"
+   "detail": "the notice gives a closing date of 2025-05-14, already past",
+   "at": "2026-10-03 17:16 UTC"
   },
   {
-   "post": "U.S. Embassy Brazil",
-   "what": "Statement of Work document for general construction services",
-   "outcome": "not a solicitation",
-   "detail": "This is a SOW (Statement of Work) — a specification document that describes work to be performed — not a solic",
-   "at": "2026-10-03 16:34 UTC"
+   "post": "U.S. Embassy Benin",
+   "what": "[ATTACHMENT: https://bj.usembassy.gov/wp-content/uploads/sites/191/202",
+   "outcome": "no deadline stated",
+   "detail": "This is a live invitation to bid (appel d'offres) for cafeteria services with a clear submission deadline, con",
+   "at": "2026-10-03 17:16 UTC"
   },
   {
-   "post": "U.S. Embassy Costa Rica",
-   "what": "[ATTACHMENT: https://cr.usembassy.gov/wp-content/uploads/sites/129/202",
+   "post": "U.S. Embassy Benin",
+   "what": "[ATTACHMENT: https://bj.usembassy.gov/wp-content/uploads/sites/191/202",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-08-12, already past",
-   "at": "2026-10-03 16:34 UTC"
+   "detail": "the notice gives a closing date of 2026-02-12, already past",
+   "at": "2026-10-03 17:16 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "Computer Equipment",
+   "post": "U.S. Embassy Benin",
+   "what": "[ATTACHMENT: https://bj.usembassy.gov/wp-content/uploads/sites/191/202",
+   "outcome": "already closed",
+   "detail": "the notice gives a closing date of 2025-05-15, already past",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "Request for Proposals",
+   "outcome": "no deadline stated",
+   "detail": "This is a Request for Quotation with a reference number (19KE5026Q0128) and scope (underground storage water t",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "Request for Proposals",
+   "outcome": "no deadline stated",
+   "detail": "This is a solicitation (RFQ with reference number 19KE5026Q0126 and scope stated), but the excerpt provided co",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "incomplete RFQ header page with no scope, items, response instructions",
+   "outcome": "not a solicitation",
+   "detail": "Page shows only a title and reference number (PR16227859) but lacks statement of work, items to be supplied, s",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "Request for Proposals",
+   "outcome": "no deadline stated",
+   "detail": "This is a solicitation (RFQ with reference number PR16251147 and scope stated), but the excerpt provided conta",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "index or header page with RFQ reference only",
+   "outcome": "not a solicitation",
+   "detail": "Page shows only a title and RFQ reference number (PR16233448) with no scope of work, submission instructions, ",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Kenya",
+   "what": "Request for Proposals",
+   "outcome": "no deadline stated",
+   "detail": "This is a solicitation (RFQ with reference number 19KE5026Q0116 and scope stated), but the excerpt provided co",
+   "at": "2026-10-03 17:16 UTC"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "RFQ 19CG5026Q0018 – Dedicated Internet Connectivity for CDC",
+   "outcome": "no deadline stated",
+   "detail": "This is a solicitation (RFQ with reference number 19CG5026Q0018 and scope stated), but the excerpt provided co",
+   "at": "2026-10-03 17:18 UTC"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "RFQ 19CG5026Q0008 SOLLICITATION FOR MOVING SERVICE",
    "outcome": "already closed",
    "detail": "the notice gives a closing date of 2026-09-11, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "at": "2026-10-03 17:18 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "Video Conference Equipment",
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
    "outcome": "already closed",
    "detail": "the notice gives a closing date of 2026-09-11, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "at": "2026-10-03 17:18 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "Social Media Influencers Program",
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-03, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "detail": "the notice gives a closing date of 2026-08-10, already past",
+   "at": "2026-10-03 17:18 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "requires commercial social media consulting services",
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "IMPORTANT - The “offer” section on the reverse must be fully completed",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-10, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "detail": "the notice gives a closing date of 2026-08-03, already past",
+   "at": "2026-10-03 17:18 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "Dear contractors,",
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "2. CONTRACT (Proc. Inst. Ident.) NO. 3. SOLICITATION NO. 4. TYPE OF SO",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-08, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "detail": "the notice gives a closing date of 2026-07-25, already past",
+   "at": "2026-10-03 17:18 UTC"
   },
   {
-   "post": "U.S. Embassy El Salvador",
-   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1 Q ION } PEGE SORTA",
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "what": "SOLICITATION/CONTRACT/ORDER FOR COMMERCIAL ITEMS 1. REQUISITION NUMBER",
    "outcome": "already closed",
-   "detail": "the notice gives a closing date of 2026-09-10, already past",
-   "at": "2026-10-03 16:35 UTC"
+   "detail": "the notice gives a closing date of 2026-06-15, already past",
+   "at": "2026-10-03 17:18 UTC"
   }
  ],
- "lastError": "U.S. Embassy Canada: model not available to this account: model: claude-3-7-sonnet-latest",
+ "lastError": "skipped before opening anything: Quotations are due by April 15, 2025, at 10:00 AM. No quotations will ",
  "aiDiag": {
   "ok": {
-   "claude": 61
+   "claude": 30,
+   "claude-review": 7
   },
   "errors": {
-   "claude": "model not available to this account: model: claude-sonnet-4-5-20250929"
+   "claude": "model not available to this account: model: claude-3-7-sonnet-latest"
   },
   "model": "claude-haiku-4-5-20251001",
   "keyVar": "ANTHROPIC_API_KEY",
-  "down": "model not available to this account: model: claude-sonnet-4-5-20250929",
-  "inputTokens": 116234,
-  "outputTokens": 11207,
+  "inputTokens": 71201,
+  "outputTokens": 6979,
   "byModel": {
    "claude-haiku-4-5-20251001": {
-    "in": 116234,
-    "out": 11207,
-    "calls": 61
+    "in": 71201,
+    "out": 6979,
+    "calls": 37
    }
   },
-  "spendUSD": 0.1723
+  "spendUSD": 0.1061
  },
  "samDiag": "SAM not queried"
 }
