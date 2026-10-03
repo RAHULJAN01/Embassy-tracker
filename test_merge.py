@@ -144,6 +144,36 @@ _FAT = {"sol": "X", "deadline": "2026-12-09", "files": ["a", "b", "c"],
 ok("the traceable date wins", _M.better(_PROV, _FAT) is _PROV)
 
 
+
+
+# ============================================================ THE SAMCALLS CRASH
+# A shard reports samCalls as a human string ("3/10 this run"); the fleet
+# roll-up summed it as an int and the WHOLE merge died with a TypeError the
+# moment SAM was queried -- throwing away four bots' work every run and making
+# an unrelated fix look like it had failed when it had simply never run.
+print("\n=== a string count from a shard can never abort the merge ===")
+import merge_shards as _M
+_cases = [("3/10 this run", 3), (5, 5), (None, 0), ("", 0), ("nope", 0),
+          (True, 0), ("12 calls", 12), (0, 0)]
+_oknum = all(_M._num(v) == want for v, want in _cases)
+print(("  PASS  " if _oknum else "  FAIL  ") + "_num coerces every shape a shard might write"
+      + ("" if _oknum else "   " + str([(v, _M._num(v)) for v, _ in _cases])))
+if not _oknum:
+    FAILS.append("_num coercion")
+
+# the real roll-up line, exercised with the exact offending value
+_statuses = [{"found": 3, "samCalls": "3/10 this run", "completed": 2},
+             {"found": 1, "samCalls": "0/10 this run", "completed": 1}]
+try:
+    _tot = sum(_M._num(x.get("samCalls")) for x in _statuses)
+    _crash = False
+except Exception:
+    _crash = True
+print(("  PASS  " if (not _crash and _tot == 3) else "  FAIL  ")
+      + "summing a string samCalls yields a number, not a crash   [" + str(_tot) + "]")
+if _crash or _tot != 3:
+    FAILS.append("samCalls sum")
+
 print("\n" + "=" * 62)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
 print("=" * 62)

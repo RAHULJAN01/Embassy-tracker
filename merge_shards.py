@@ -420,6 +420,25 @@ def _update_spend_ledger(by_model, tin, tout):
     return led
 
 
+def _num(v):
+    """A count from a shard, coerced to an int no matter how it was written.
+
+    A shard reports samCalls as a human string like "3/10 this run", and the
+    fleet roll-up summed it as an int -- TypeError, and the WHOLE merge died on
+    it, every run, as soon as SAM was queried. That one line threw away four
+    bots' work and made it look like the archive fix had failed when it had
+    simply never run. A roll-up field is a convenience; it must never be able to
+    abort the merge, so every count is now coerced and a value that carries no
+    number becomes 0.
+    """
+    if isinstance(v, bool):
+        return 0
+    if isinstance(v, (int, float)):
+        return int(v)
+    m = re.match(r"\s*(\d+)", str(v or ""))
+    return int(m.group(1)) if m else 0
+
+
 def main(shard_dir):
     base = HERE / "data.json"
     merged = {}
@@ -506,24 +525,24 @@ def main(shard_dir):
            "startedAt": min([s.get("startedAt", "") for s in statuses] or [""]) or "",
            "heartbeat": max([s.get("heartbeat", "") for s in statuses] or [""]) or "",
            "currentJob": "fleet run complete",
-           "found": sum(s.get("found", 0) for s in statuses),
-           "queued": sum(s.get("queued", 0) for s in statuses),
-           "aiCalls": sum(s.get("aiCalls", 0) for s in statuses),
-           "aiBudget": sum(s.get("aiBudget", 0) for s in statuses),
+           "found": sum(_num(s.get("found")) for s in statuses),
+           "queued": sum(_num(s.get("queued")) for s in statuses),
+           "aiCalls": sum(_num(s.get("aiCalls")) for s in statuses),
+           "aiBudget": sum(_num(s.get("aiBudget")) for s in statuses),
            "providers": sorted({p for s in statuses for p in (s.get("providers") or [])}),
            "coverage": {k: v for s in statuses for k, v in (s.get("coverage") or {}).items()},
            "bots": len(statuses), "running": False,
            # what the run DID, broken down — so Mission Control can say where
            # the work went instead of only how many calls it cost
-           "completed": sum(s.get("completed", 0) for s in statuses),
-           "repaired": sum(s.get("repaired", 0) for s in statuses),
-           "notSolicitation": sum(s.get("notSolicitation", 0) for s in statuses),
-           "skippedExpired": sum(s.get("skippedExpired", 0) for s in statuses),
-           "skippedDuplicate": sum(s.get("skippedDuplicate", 0) for s in statuses),
-           "noDateFound": sum(s.get("noDateFound", 0) for s in statuses),
-           "abandoned": sum(s.get("abandoned", 0) for s in statuses),
-           "stillUnfinished": sum(s.get("stillUnfinished", 0) for s in statuses),
-           "samCalls": sum(s.get("samCalls", 0) for s in statuses),
+           "completed": sum(_num(s.get("completed")) for s in statuses),
+           "repaired": sum(_num(s.get("repaired")) for s in statuses),
+           "notSolicitation": sum(_num(s.get("notSolicitation")) for s in statuses),
+           "skippedExpired": sum(_num(s.get("skippedExpired")) for s in statuses),
+           "skippedDuplicate": sum(_num(s.get("skippedDuplicate")) for s in statuses),
+           "noDateFound": sum(_num(s.get("noDateFound")) for s in statuses),
+           "abandoned": sum(_num(s.get("abandoned")) for s in statuses),
+           "stillUnfinished": sum(_num(s.get("stillUnfinished")) for s in statuses),
+           "samCalls": sum(_num(s.get("samCalls")) for s in statuses),
            "docCaps": next((s.get("docCaps") for s in statuses if s.get("docCaps")), {}),
            # every bot's decision log, newest last, trimmed to something readable
            "decisions": sorted(
