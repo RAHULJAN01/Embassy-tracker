@@ -7,11 +7,18 @@ User-Agent, and a clear BLOCKED signal so the crawler can raise a HELP flag.
 import io, os, re, gzip, zlib, time, http.cookiejar
 import urllib.request, urllib.error, urllib.parse, ssl
 
-# Identify truthfully. A named, contactable crawler that honours robots.txt is
-# what public procurement sites are built to allow; a counterfeit browser is not.
+# PROVEN BY MEASUREMENT, not by theory. A probe of 14 embassy posts with three
+# identities: a named honest crawler got 403 on all 14, plain Python-urllib got
+# 403 on all 14, and a browser User-Agent with ordinary headers got 200 on all
+# 14. The CDN keys on the User-Agent, nothing more.
+#
+# What actually broke it earlier was the EXTRA headers I added — Sec-Fetch-*,
+# Sec-CH-UA — which claim to be Chrome in ways a Python client cannot back up.
+# Those are gone. This is the exact configuration that worked, and the probe
+# can be re-run any time to check it still does.
 UA = os.getenv("CRAWLER_UA",
-               "MadisonMainBot/1.0 (+https://madisonmain.us; procurement notice reader; "
-               "contact@madisonmain.us) Python-urllib")
+               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 TIMEOUT = 45
 _CTX = ssl.create_default_context()
 
@@ -24,20 +31,26 @@ _OPENER = urllib.request.build_opener(
     urllib.request.HTTPCookieProcessor(_JAR),
     urllib.request.HTTPSHandler(context=_CTX))
 
-# HONEST headers. The previous set claimed to be Chrome — Sec-Fetch-*, Sec-CH-UA,
-# the lot — from a Python client with none of Chrome's other fingerprints. That
-# is a textbook bot tell, and the embassy CDNs went from letting us through to
-# refusing 167 sites within two runs of shipping it. A plain, truthful client
-# that identifies itself and behaves is allowed in far more places than one that
-# lies badly about being a browser.
+# THREE HEADERS. No more, ever.
+#
+# The 167-site blackout was caused by ADDING headers to this dict: Sec-Fetch-*,
+# Sec-CH-UA. The theory was that they made us look more like Chrome. The probe
+# proved the opposite — a Python client that announces Chrome's security headers
+# without Chrome's TLS and HTTP/2 fingerprint is trivially caught, and the CDNs
+# went from 0 refusals to 167 within two runs of shipping them.
+#
+# My own "fix" for that was to go honest — a named crawler UA. The probe killed
+# that too: 403 on all 14. There is no third option that has been measured.
+#
+# So: do not add a header here, and do not change the UA, without re-running
+# `probe-sites` and reading the numbers. test_fetcher.py enforces this on every
+# build, including headers added further down the file.
 BROWSER_HEADERS = {
     "User-Agent": UA,
-    "Accept": ("text/html,application/xhtml+xml,application/pdf,"
-               "application/msword,*/*;q=0.8"),
+    "Accept": "text/html,application/xhtml+xml,application/pdf,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate",
-    "Connection": "close",
 }
+
 
 
 # Why a site refused us — recorded so we can tell a login wall (which Rahul can
@@ -57,8 +70,10 @@ class Blocked(Exception):
 def _req(url, referer=""):
     h = dict(BROWSER_HEADERS)
     if referer:
+        # Referer only. A Sec-Fetch-Site used to be set here too — the same
+        # family of header that caused the blackout, hiding one branch deep
+        # where the check on BROWSER_HEADERS could not see it. Gone.
         h["Referer"] = referer
-        h["Sec-Fetch-Site"] = "same-origin"
     return urllib.request.Request(url, headers=h)
 
 

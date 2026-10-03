@@ -673,6 +673,10 @@ def to_row(rec, *, post, country, source, link, platform="USGOV", agency="",
         "droppedDates": rec.get("dropped_dates", []),
         "dateEvidence": rec.get("date_evidence") or {},
         "dateWarnings": rec.get("date_warnings") or [],
+        # the dates that ARE printed in the notice when none of them is stated
+        # to be the deadline — so a human can see what the bots were looking at
+        # instead of being told only that something is missing
+        "datesSeen": rec.get("dates_seen") or [],
         "secondOpinion": rec.get("second_opinion") or None,
         "value": rec.get("est_value", ""), "shipping": rec.get("shipping", ""),
         "payment": rec.get("payment", ""), "shipAfter": rec.get("ship_after", ""),
@@ -726,7 +730,16 @@ def suspect_date(row):
     a deadline from before the proof requirement existed are re-checked."""
     if row.get("deleted") or not row.get("deadline"):
         return False
-    return not (row.get("dateEvidence") or {}).get("closing")
+    if not (row.get("dateEvidence") or {}).get("closing"):
+        return True
+    # Fallback-era deadlines. For a while any future date printed in the
+    # document was promoted to "the deadline" and given an evidence line, so
+    # these look proven and are not. They are the gate-parts records: a 2025
+    # notice showing a live 2026 date. Every one of them is re-judged.
+    w = " ".join(row.get("dateWarnings") or []).lower()
+    return ("soonest future date" in w
+            or "no line says this is the closing date" in w
+            or "confirm it before you rely on it" in w)
 
 
 def repairable(row):

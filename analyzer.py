@@ -312,6 +312,29 @@ def date_in_text(iso, text):
     return True, ""
 
 
+def cue_anchored(iso, text, cues, window=200):
+    """(anchored, evidence). Does this date sit on a line that SAYS it is a
+    deadline — not merely somewhere in the document?
+
+    Existence was the old test, and it is not enough. A delivery date, a period
+    of performance, a warranty expiry and a pre-bid meeting all exist in the
+    document, and any of them passed an existence check and went onto the page
+    labelled "Deadline". This asks the only question that matters: is there a
+    phrase next to it that calls it a closing date.
+    """
+    if not iso or not text:
+        return False, ""
+    low = text.lower()
+    for cue in cues:
+        i = low.find(cue)
+        while i != -1:
+            seg = text[max(0, i - 60): i + window]
+            if iso in find_dates(seg):
+                return True, re.sub(r"\s+", " ", seg).strip()
+            i = low.find(cue, i + 1)
+    return False, ""
+
+
 def ground_dates(rec, text):
     """Keep only the dates we can PROVE, and keep the proof.
 
@@ -326,12 +349,27 @@ def ground_dates(rec, text):
                         ("qa_due", _QA_CUES)):
         v = rec.get(field) or ""
         if v:
-            found, ev = date_in_text(v, text)
-            if found:
+            # The closing date is held to a higher standard than the others: it
+            # must sit on a line that states a deadline. A wrong Q&A date is an
+            # inconvenience; a wrong deadline sends Rahul to a solicitation that
+            # closed last year, or hides one closing on Friday.
+            if field == "closing":
+                found, ev = cue_anchored(v, text, _DEADLINE_CUES)
+                if not found and v in set(find_dates(text)):
+                    rec[field] = ""
+                    rec.setdefault("date_warnings", []).append(
+                        f"the closing date {v} does appear in the documents, but not on any "
+                        f"line that calls it a deadline — it is more likely a delivery date "
+                        f"or a performance period, so it was not used")
+                    v = ""
+            else:
+                found, ev = date_in_text(v, text)
+            if v and found:
                 evidence[field] = ev or "(found in the document)"
                 continue
-            dropped.append(field)
-            rec[field] = ""
+            if v:
+                dropped.append((field, v))
+                rec[field] = ""
         h = harvest_date(text, cues)
         if h:
             found, ev = date_in_text(h, text)
@@ -340,11 +378,23 @@ def ground_dates(rec, text):
                 evidence[field] = ev or "(found in the document)"
     rec["date_evidence"] = evidence
     if dropped:
-        rec["dropped_dates"] = dropped
+        rec["dropped_dates"] = [f for f, _ in dropped]
+        names = {"closing": "closing date", "posted": "posted date", "qa_due": "Q&A date"}
         rec.setdefault("date_warnings", []).append(
-            "the model supplied " + ", ".join(dropped)
-            + " that appear nowhere in the document — discarded")
-    return dropped
+            "; ".join(f"the {names.get(f, f)} {v} does not appear anywhere in the notice "
+                      f"or its documents" for f, v in dropped)
+            + " — discarded as unprovable")
+
+    # --- SANITY. Two dates that are each provable can still be impossible
+    # together, and an impossible pair means at least one of them is attached to
+    # the wrong thing — exactly the failure that put a 2025 solicitation in the
+    # BID section with a 2026 deadline. It gets flagged, never silently kept.
+    cl, po = rec.get("closing") or "", rec.get("posted") or ""
+    if cl and po and cl < po:
+        rec.setdefault("date_warnings", []).append(
+            f"the closing date {cl} is before the posted date {po} — one of the two is "
+            f"attached to the wrong thing, so neither can be trusted")
+    return [f for f, _ in dropped]
 
 
 # How real notices actually phrase a deadline. Rahul: "they may find the deadline
@@ -552,25 +602,43 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     # invented one is not.
     dropped = ground_dates(rec, text)
 
-    # a title sometimes carries the deadline, e.g. "... (by 18 August 2026)"
+    # A title sometimes carries the deadline, e.g. "... (by 18 August 2026)".
+    # Only when the title itself says the date is a deadline — a title that just
+    # mentions a year ("FY2026 Supplies") must not hand us a closing date.
     if not rec["closing"] and rec.get("title"):
-        for d in find_dates(rec["title"]):
-            found, ev = date_in_text(d, text)
-            if found:
-                rec["closing"] = d
-                rec.setdefault("date_evidence", {})["closing"] = ev or "(from the title)"
-                break
-    # last resort: the soonest future date actually printed in the document
+        t_low = (rec["title"] or "").lower()
+        if any(w in t_low for w in ("by ", "due", "deadline", "closing", "closes",
+                                    "close ", "before", "until", "no later")):
+            for d in find_dates(rec["title"]):
+                found, ev = date_in_text(d, text)
+                if found:
+                    rec["closing"] = d
+                    rec.setdefault("date_evidence", {})["closing"] = ev or "(from the title)"
+                    break
+
+    # NO CUE, NO DEADLINE. There used to be a "last resort" here that took the
+    # soonest future date printed anywhere in the document and called it the
+    # closing date. That is how a 2025 gate-parts notice with a 2027 delivery
+    # date ended up sitting in the BID section with a live 2026 deadline: a
+    # delivery date, a period of performance, a warranty expiry and a meeting
+    # date are all future dates, and none of them is a deadline.
+    #
+    # A guess dressed as a deadline is the single most expensive thing this
+    # register can do, because it is indistinguishable from a real one on the
+    # page. So when no line states a deadline, the record says so, carries the
+    # dates it DID see for a human to look at, and never claims one.
     if not rec["closing"]:
         today_iso = today or datetime.date.today().isoformat()
-        future = sorted(d for d in find_dates(text) if d >= today_iso)
-        if future:
-            rec["closing"] = future[0]
-            found, ev = date_in_text(future[0], text)
-            rec.setdefault("date_evidence", {})["closing"] = ev or "(found in the document)"
-            rec.setdefault("date_warnings", []).append(
-                "no line says this is the closing date — it is the soonest future date "
-                "printed in the document, so confirm it before you rely on it")
+        seen = sorted(set(find_dates(text)))
+        future = [d for d in seen if d >= today_iso]
+        rec["dates_seen"] = seen[:12]
+        rec.setdefault("date_warnings", []).append(
+            "no line in the notice or its documents states a closing date"
+            + (" — dates do appear (" + ", ".join(future[:4]) +
+               ") but each belongs to something else (delivery, performance period, "
+               "a meeting), so none was taken as the deadline"
+               if future else " and no future date appears anywhere in them"))
+        rec["needs"] = "a deadline — open the notice and read the submission date"
 
     # --- sector fallback
     if not rec["sector"]:

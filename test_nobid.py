@@ -180,7 +180,7 @@ ok("an invented posted date is discarded", _r["posted"] == "", repr(_r["posted"]
 ok("an invented Q&A date is discarded", _r["qa_due"] == "", repr(_r["qa_due"]))
 _warn = " ".join(_r.get("date_warnings") or []) + " " + (_r.get("review_reason") or "")
 ok("and the record says the dates were invented",
-   "appear nowhere" in _warn or "do not appear" in _warn, _warn[:70])
+   "not appear" in _warn or "appear nowhere" in _warn, _warn[:70])
 ok("the discarded fields are named", set(_r.get("dropped_dates") or []) ==
    {"closing", "posted", "qa_due"}, str(_r.get("dropped_dates")))
 
