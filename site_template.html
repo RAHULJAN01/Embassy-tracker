@@ -767,7 +767,7 @@ function downloadExcel(){
     ["Conditional",all.filter(s=>active(s)&&effTier(s)==="MID").length],
     ["Non-eligible",all.filter(s=>active(s)&&effTier(s)==="NO").length],
     ["Under review",all.filter(s=>active(s)&&effTier(s)==="REVIEW").length],
-    ["Verified",all.filter(s=>active(s)&&s.verified==="VERIFIED").length],
+    ["Verified",all.filter(s=>active(s)&&proven(s)).length],
     ["Hidden",all.filter(s=>isHidden(s)&&!s.archived&&!isDeleted(s)).length],
     ["Archived",all.filter(s=>s.archived&&!isDeleted(s)).length],
     ["Deleted",all.filter(isDeleted).length],
@@ -1029,12 +1029,46 @@ function rowHTML(s,i,num){
 /* ================= WHAT DOES THIS ACTUALLY NEED FROM YOU? =================
    "Under review" on its own is useless. Every unfinished record now says what
    the bots could not settle, why, and the one thing you could do about it. */
+// ONE definition of "proven", used everywhere on this page.
+//
+// A VERIFIED badge sat on 24 records whose deadline could not be traced to a
+// single line in the source — including a 2025 gate-parts notice displaying a
+// live 2026 deadline. The stored flag was written by code that only asked
+// whether A date was present. So the page no longer trusts the flag on its
+// own: a deadline must carry the line it came from, and carry no warning,
+// before anything here calls the record proven. A record written by older code
+// therefore cannot claim the badge, with no re-crawl needed to stop the lie.
+function proven(s){
+  if(s.verified!=='VERIFIED') return false;
+  if(!s.deadline) return false;
+  if(!(s.dateEvidence && s.dateEvidence.closing)) return false;
+  if((s.dateWarnings||[]).length) return false;
+  return true;
+}
+
 function reviewNeeded(s){
   const out=[], notes=(s.verifyNotes||[]).join(" ").toLowerCase();
   const add=(what,why,action)=>out.push({what,why,action});
 
   (s.dateWarnings||[]).forEach(w=>add("Check the dates yourself", w,
      "Open the notice and confirm the closing date before you rely on it."));
+
+  // the deadline is on the page but nothing proves it belongs to this notice
+  if(s.deadline && !(s.dateEvidence && s.dateEvidence.closing))
+    add("Do not trust the deadline shown",
+        "The deadline on this record ("+esc(s.deadline)+") was never traced back to a line "
+        +"in the notice or its attachments. It was written before the bots were required to "
+        +"prove a date, so it may belong to a delivery date, a performance period — or to "
+        +"nothing at all.",
+        "Open the notice and read the real submission date. It is already queued to be "
+        +"re-checked; press DEEP SCAN to push it to the front.");
+
+  if((s.datesSeen||[]).length && !s.deadline)
+    add("Pick the deadline out of the dates that are there",
+        "No line in the notice calls any date a deadline, but these dates do appear in it: "
+        +(s.datesSeen||[]).join(", ")+". Each one belongs to something else as far as the "
+        +"bots can tell, so none was used.",
+        "Open the notice and see which of them is the submission date.");
 
   if(!s.deadline || /no closing date/.test(notes))
     add("Confirm the closing date",
@@ -1081,7 +1115,7 @@ function reviewNeeded(s){
         (s.verifyNotes||[]).find(n=>/re-scan \d+\//.test(n))||"",
         "It will try again automatically. Press DEEP SCAN to push it up the queue.");
 
-  if(!out.length && s.verified!=='VERIFIED')
+  if(!out.length && !proven(s))
     add("Something is still missing",
         (s.verifyNotes||[]).join("; ")||"The record did not pass every completeness check.",
         "Press DEEP SCAN to have the bots read it again from scratch.");
@@ -1089,7 +1123,7 @@ function reviewNeeded(s){
 }
 
 function needsBox(s){
-  if(s.verified==='VERIFIED' && s.tier!=='REVIEW' && !s.overturnedNobid) return '';
+  if(proven(s) && s.tier!=='REVIEW' && !s.overturnedNobid) return '';
   const n=reviewNeeded(s); if(!n.length) return '';
   return `<div class="needs"><div class="needs-h">⚑ What this needs from you</div>`
     + n.map(x=>`<div class="need">
@@ -1100,7 +1134,7 @@ function needsBox(s){
     + `</div>`;
 }
 function needsTag(s){
-  if(s.verified==='VERIFIED' && s.tier!=='REVIEW') return '';
+  if(proven(s) && s.tier!=='REVIEW') return '';
   const n=reviewNeeded(s); if(!n.length) return '';
   return `<div class="needtag" title="${esc(n.map(x=>x.what).join(' · '))}">⚑ ${esc(n[0].what)}`
        + (n.length>1?` <span class="needmore">+${n.length-1} more</span>`:'')+`</div>`;
@@ -1117,8 +1151,10 @@ function setAsideTag(s){
 }
 // VERIFIED = every doc read, dates found, fields complete. Otherwise it's a button to fix it.
 function verifyBadge(s){
-  if(s.verified==='VERIFIED') return `<span class="vb ok" title="All documents read, dates and fields confirmed">VERIFIED</span>`;
-  const why=(s.verifyNotes||[]).join('; ')||'not fully verified';
+  if(proven(s)) return `<span class="vb ok" title="All documents read, and the closing date traced to a line in the source">VERIFIED</span>`;
+  let why=(s.verifyNotes||[]).join('; ')||'not fully verified';
+  if(s.verified==='VERIFIED' && !(s.dateEvidence && s.dateEvidence.closing))
+    why='the deadline shown was never traced to a line in the notice — queued for re-check';
   return `<span class="vb no" title="${esc(why)}" onclick="event.stopPropagation();confirmAction('reverify','${esc(s.sol)}')">VERIFY ⟳</span>`;
 }
 function tgl(i){const r=document.getElementById('d'+i);if(r)r.classList.toggle('hidden');}
@@ -1379,7 +1415,7 @@ function init(){
   const bid=act.filter(s=>effTier(s)==='BID').length,mid=act.filter(s=>effTier(s)==='MID').length,no=act.filter(s=>effTier(s)==='NO').length;
   const arch=SOLICITATIONS.filter(s=>s.archived&&!isDeleted(s)).length;
   const delN=SOLICITATIONS.filter(s=>isDeleted(s)).length, hidN=SOLICITATIONS.filter(s=>isHidden(s)&&!s.archived&&!isDeleted(s)).length;
-  const ver=act.filter(s=>s.verified==='VERIFIED').length;
+  const ver=act.filter(s=>proven(s)).length;
   document.getElementById('cov').innerHTML="<b>"+act.length+"</b> active &middot; <b>"+ver+"</b> verified &middot; <b>"+arch+"</b> archived"
     +(hidN?" &middot; <b>"+hidN+"</b> hidden":"")+(delN?" &middot; <b>"+delN+"</b> deleted":"")
     +"<br><span id='opSync' style='font-style:italic'></span>";

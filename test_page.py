@@ -53,7 +53,7 @@ else:
 # ---------------------------------------------------------------- no duplicates
 # A function defined twice means an edit landed on top of itself; the second
 # definition silently wins and the first one's callers get the wrong behaviour.
-CRITICAL = ["render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
+CRITICAL = ["proven", "render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
             "renderAlarm", "renderCompany", "downloadExcel", "buildWorkbook",
             "flagOf", "isoOf", "esc", "reviewNeeded", "needsBox", "collapseAll",
             "opAction", "effTier", "init", "unlock", "_sheetXML"]
@@ -84,6 +84,21 @@ for label, needle in MUST.items():
 # the header must not resize itself any more
 ok("the header does not resize on scroll",
    "body.scrolled .mastwrap .logo" not in html)
+
+# ------------------------------------------- VERIFIED must mean one thing only
+# Five separate places each decided for themselves what VERIFIED meant, and the
+# badge ended up on 24 records whose deadline could not be traced to any line in
+# the source. There is now exactly one definition and every caller uses it; a
+# new raw comparison to the stored flag is a regression, so it fails the build.
+raw = len(re.findall(r"""verified\s*===?\s*['"]VERIFIED['"]""", js))
+ok("nothing compares the stored VERIFIED flag directly except proven()'s own note",
+   raw <= 1, f"{raw} raw comparisons")
+ok("proven() requires the deadline to carry its source line",
+   "dateEvidence && s.dateEvidence.closing" in js)
+ok("proven() refuses a record carrying a date warning",
+   "(s.dateWarnings||[]).length" in js)
+ok("an untraceable deadline is called out to the reader",
+   "Do not trust the deadline shown" in html)
 
 print("\n" + "=" * 64)
 print("ALL PASS" if not FAILS else f"{len(FAILS)} FAILED:\n  - " + "\n  - ".join(FAILS))
