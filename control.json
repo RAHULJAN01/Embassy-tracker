@@ -1,6 +1,6 @@
 {
- "paused": true,
- "updated": "2026-10-03 13:02 UTC",
- "by": "mission-control",
+ "paused": false,
+ "updated": "2026-10-03 15:50 UTC",
+ "by": "resume-after-archive-fix",
  "controlUrl": "https://mm-control.rahuljangir5120.workers.dev"
 }
