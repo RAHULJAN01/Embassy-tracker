@@ -1,0 +1,320 @@
+{
+ "mode": "probe-sites",
+ "startedAt": "2026-10-03 05:18 UTC",
+ "heartbeat": "2026-10-03 05:18 UTC",
+ "currentJob": "site access probe",
+ "running": false,
+ "sampled": 14,
+ "identities": {
+  "honest-bot": {
+   "ok": 0,
+   "forbidden": 14,
+   "other": 0,
+   "codes": {
+    "403": 14
+   }
+  },
+  "plain-urllib": {
+   "ok": 0,
+   "forbidden": 14,
+   "other": 0,
+   "codes": {
+    "403": 14
+   }
+  },
+  "chrome-claim": {
+   "ok": 14,
+   "forbidden": 0,
+   "other": 0,
+   "codes": {
+    "200": 14
+   }
+  }
+ },
+ "robots": [
+  {
+   "post": "U.S. Embassy Algeria",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  },
+  {
+   "post": "U.S. Embassy Angola",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  },
+  {
+   "post": "U.S. Embassy Botswana",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  },
+  {
+   "post": "U.S. Embassy Burkina Faso",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  },
+  {
+   "post": "U.S. Embassy Burundi",
+   "allowed": true,
+   "note": "robots.txt unreadable (HTTPError)"
+  }
+ ],
+ "detail": [
+  {
+   "post": "U.S. Embassy Algeria",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Algeria",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Algeria",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Angola",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Angola",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Angola",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Benin",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Botswana",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Botswana",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Botswana",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Burkina Faso",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Burkina Faso",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Burkina Faso",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Burundi",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Burundi",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Burundi",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Cabo Verde",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cabo Verde",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cabo Verde",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cameroon",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Central African Republic",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Central African Republic",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Central African Republic",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Chad",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Chad",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Chad",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Democratic Republic of the Congo",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Republic of the Congo",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Republic of the Congo",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Republic of the Congo",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Cote d'Ivoire",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cote d'Ivoire",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Cote d'Ivoire",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  },
+  {
+   "post": "U.S. Embassy Djibouti",
+   "ident": "honest-bot",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Djibouti",
+   "ident": "plain-urllib",
+   "code": 403,
+   "server": "AmazonS3"
+  },
+  {
+   "post": "U.S. Embassy Djibouti",
+   "ident": "chrome-claim",
+   "code": 200,
+   "server": "Apache"
+  }
+ ]
+}
