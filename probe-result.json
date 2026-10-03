@@ -1,7 +1,7 @@
 {
  "mode": "probe-sites",
- "startedAt": "2026-10-03 05:18 UTC",
- "heartbeat": "2026-10-03 05:18 UTC",
+ "startedAt": "2026-10-03 05:29 UTC",
+ "heartbeat": "2026-10-03 05:29 UTC",
  "currentJob": "site access probe",
  "running": false,
  "sampled": 14,
@@ -35,32 +35,32 @@
   {
    "post": "U.S. Embassy Algeria",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   },
   {
    "post": "U.S. Embassy Angola",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   },
   {
    "post": "U.S. Embassy Benin",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   },
   {
    "post": "U.S. Embassy Botswana",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   },
   {
    "post": "U.S. Embassy Burkina Faso",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   },
   {
    "post": "U.S. Embassy Burundi",
    "allowed": true,
-   "note": "robots.txt unreadable (HTTPError)"
+   "note": ""
   }
  ],
  "detail": [
