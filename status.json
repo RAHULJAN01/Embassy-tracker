@@ -2,7 +2,7 @@
  "mode": "roots",
  "startedAt": "2026-10-03 12:30 UTC",
  "heartbeat": "2026-10-03 12:39 UTC",
- "currentJob": "fleet run complete",
+ "currentJob": "fleet merge FAILED \u2014 this run's work was not merged",
  "found": 11,
  "queued": 36,
  "aiCalls": 16,
@@ -25,7 +25,7 @@
  },
  "bots": 4,
  "running": false,
- "lastError": "not a solicitation: procurement category index page",
+ "lastError": "the fleet merge failed: TypeError: unsupported operand type(s) for +: 'int' and 'str'",
  "aiDiag": {
   "ok": {
    "claude": 26
@@ -46,5 +46,6 @@
   },
   "spendUSD": 0.0911
  },
- "samDiag": "SAM not queried"
+ "samDiag": "SAM not queried",
+ "mergeError": "Traceback (most recent call last):\n  File \"/home/runner/work/Embassy-tracker/Embassy-tracker/merge_shards.py\", line 615, in <module>\n    main(sys.argv[1] if len(sys.argv) > 1 else \"shards\")\n  File \"/home/runner/work/Embassy-tracker/Embassy-tracker/merge_shards.py\", line 526, in main\n    \"samCalls\": sum(s.get(\"samCalls\", 0) for s in statuses),\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: unsupported operand type(s) for +: 'int' and 'str'\n"
 }
