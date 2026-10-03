@@ -129,7 +129,7 @@ def fake_collect_candidates(pp, cfg):
 
 def fake_chase(url):
     n = abs(hash(url)) % 9000
-    return sol_text(n), ["https://x/sow.pdf"], 1, 0, ""
+    return sol_text(n), ["https://x/sow.pdf"], 1, 0, "", []
 
 
 def fake_group_file_units(files):

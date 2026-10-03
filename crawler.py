@@ -216,6 +216,35 @@ def classify_page(text, url=""):
     return "solicitation" if signals >= 1 and not looks_index else "noise"
 
 
+def _looks_iso(s):
+    """A YYYY-MM-DD date and nothing else. The dead-notice path may be handed a
+    reason sentence instead of a date, and a sentence must never be written into
+    the deadline field."""
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", str(s or "")))
+
+
+def _heading_lead(text, pos, max_back=220):
+    """Where a notice's block should start: its own heading, and nothing above it.
+
+    A fixed 400-character reach backwards looks harmless and is not — it lands
+    in the MIDDLE of the previous notice, so the previous notice's "Quotations
+    are due ..." line ends up inside this notice's block and gets harvested as
+    this notice's deadline. Walking back by whole lines instead picks up the
+    heading that belongs to this reference and stops.
+    """
+    ls = text.rfind("\n", 0, pos)
+    if ls == -1:
+        return 0
+    start = text.rfind("\n", 0, ls)
+    if start == -1:
+        start = ls
+    if pos - start < 80:                               # heading is short; take one more
+        up = text.rfind("\n", 0, start)
+        if up != -1 and pos - up <= max_back:
+            start = up
+    return max(0, max(start, pos - max_back))
+
+
 def split_inline_solicitations(text, min_len=200):
     """Many embassies publish each solicitation INLINE on one page with no
     attachment. Cut that page into one block per solicitation reference so each
@@ -223,10 +252,23 @@ def split_inline_solicitations(text, min_len=200):
     marks = all_sol_numbers(text or "")
     if len(marks) < 2:
         return []
+    # THE BOUNDARY MATTERS. This used to end each block 400 characters BEFORE
+    # the next reference number, to leave a lead-in for that one's heading. The
+    # effect was that the last 400 characters of every notice -- which is
+    # precisely where "Quotations are due ..." sits -- were filed under the
+    # FOLLOWING solicitation. On a page with two notices the first lost its
+    # deadline entirely and became a no-date record, while the second was
+    # published carrying a deadline belonging to its neighbour.
+    #
+    # Each block now runs to the next reference and the lead-in overlaps
+    # backwards instead, clamped so a block can never swallow the previous
+    # reference number and claim its identity.
     blocks = []
     for i, (pos, sol) in enumerate(marks):
-        start = max(0, pos - 400)                      # keep the heading above the ref
-        end = marks[i + 1][0] - 400 if i + 1 < len(marks) else len(text)
+        start = _heading_lead(text, pos)
+        if i > 0:
+            start = max(start, marks[i - 1][0] + 1)    # never reach into the one above
+        end = marks[i + 1][0] if i + 1 < len(marks) else len(text)
         chunk = (text or "")[start:max(start + min_len, end)].strip()
         if len(chunk) >= min_len:
             blocks.append((sol, chunk))
@@ -276,7 +318,8 @@ def collect_candidates(proc_url, cfg):
 
 
 _SAM_LINK = re.compile(r"https?://(?:www\.)?sam\.gov/opp/([0-9a-fA-F]{8,})", re.I)
-_DOC_EXT = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".rtf", ".txt")
+_DOC_EXT = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".xlsm", ".rtf", ".txt",
+            ".csv", ".odt", ".ods", ".zip", ".ppt", ".pptx")
 
 
 def _sam_notice_text(notice_id):
@@ -317,6 +360,7 @@ def chase_solicitation(start_url, max_hops=3):
     (text, files, read_ok, read_fail, sam_id)."""
     seen, queue = set(), [(start_url, 0)]
     parts, files, ok, fail = [], [], 0, 0
+    doc_notes = []          # why a file could not be read, per file
     sam_id = ""
 
     while queue:
@@ -334,13 +378,30 @@ def chase_solicitation(start_url, max_hops=3):
             continue
 
         low_url = url.lower().split("?")[0]
-        if "pdf" in (ct or "") or low_url.endswith(".pdf"):
-            t = fetcher.pdf_text(raw)
-            if t and not t.startswith("[pdf unreadable"):
+        # EVERY DOCUMENT GOES THROUGH THE DOCUMENT READER, not just PDFs.
+        #
+        # This branch used to special-case .pdf and let everything else fall
+        # through to html_text() — so a .docx was "read" by stripping HTML tags
+        # out of a ZIP archive. The result was ~29,000 characters beginning
+        # PK..[Content_Types].xml, appended to the notice as page text and
+        # counted as a successful read. Four things went wrong at once: the
+        # deadline inside the file was invisible, the mojibake pushed the real
+        # notice out of the 18,000-character adjudication window, read_fail
+        # stayed at zero so the record could still be marked VERIFIED, and the
+        # file was never added to `files`, so the pipeline never re-read it with
+        # the reader that would have worked. docreader handles docx, doc, xlsx,
+        # rtf, zip and scanned PDFs; it has been here the whole time.
+        if docreader.is_document(url, ct):
+            t, note = docreader.read_bytes(raw, url, ct)
+            if t and len(t.strip()) >= 40:
                 parts.append(f"\n[DOCUMENT: {url}]\n{t}"); ok += 1
-                if url not in files: files.append(url)
+                if url not in files:
+                    files.append(url)
+                if note:
+                    doc_notes.append({"file": url, "why": note})
             else:
                 fail += 1
+                doc_notes.append({"file": url, "why": note or "no readable text"})
             continue
 
         page = fetcher.html_text(raw)
@@ -375,7 +436,8 @@ def chase_solicitation(start_url, max_hops=3):
                     queue.append((href.split("#")[0], hop + 1))
         time.sleep(PAGE_PAUSE)
 
-    return "\n\n".join(p for p in parts if p).strip(), files, ok, fail, sam_id
+    return ("\n\n".join(p for p in parts if p).strip(), files, ok, fail, sam_id,
+            doc_notes)
 
 
 def build_unit_from_page(sol_url):
@@ -979,7 +1041,7 @@ def run(mode):
                        or (r.get("link") or "").strip().upper() == want]
             repair_cap = MAX_AI_CALLS
             if not repairs:
-                log(f"DEEP SCAN: no record matches {DEEP_SOL!r} — nothing to do")
+                print(f"DEEP SCAN: no record matches {DEEP_SOL!r} — nothing to do")
             else:
                 import ai as _ai
 
@@ -987,8 +1049,8 @@ def run(mode):
                     """Everything in this run goes to the strong model."""
                     return _c(prompt, model=model or _m)
 
-                log(f"DEEP SCAN: {repairs[0].get('sol') or repairs[0].get('link')} "
-                    f"on {_ai.REVIEW_MODEL}, up to {MAX_AI_CALLS} calls")
+                print(f"DEEP SCAN: {repairs[0].get('sol') or repairs[0].get('link')} "
+                      f"on {_ai.REVIEW_MODEL}, up to {MAX_AI_CALLS} calls")
         # Which solicitation numbers are already spoken for. A re-scan may only
         # adopt a newly-read number if no OTHER record already owns it — otherwise
         # a single mis-read number would collapse two live records into one and
@@ -1013,7 +1075,7 @@ def run(mode):
             try:
                 if link and not link.lower().split("?")[0].endswith(
                         (".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip")):
-                    text, more, _ok, _f, sam_id = chase_solicitation(link)
+                    text, more, _ok, _f, sam_id, _dn = chase_solicitation(link)
                     for u in more:
                         if u not in atts:
                             atts.append(u)
@@ -1039,6 +1101,37 @@ def run(mode):
                 budget=budget, today=today(), fetch_attachments=read_all,
                 status=st, label=label)
             if not rec:
+                # THE RE-CRAWL MAY HAVE FOUND IT DEAD. process_one returns no
+                # record both when it could not read the notice AND when the
+                # notice turns out to be cancelled, awarded or past its closing
+                # date. Those were treated identically: the old row was copied
+                # verbatim, so tier, status, archived and deadline were left
+                # untouched and the cancellation survived only as a sentence
+                # buried in the verification notes. The notice went on showing
+                # as a live BID until its original deadline passed, and after
+                # three tries it left the repair queue for good. This is the
+                # original complaint — a dead notice sitting in BID — and it was
+                # still reachable from here.
+                if rep.get("expired") or rep.get("deadReason"):
+                    dead = dict(old)
+                    dead["prevKey"] = old.get("sol") or old.get("link") or ""
+                    when = rep.get("expired") or today()
+                    dead.update({
+                        "tier": "NO", "status": "Expired", "archived": True,
+                        "deadline": when if _looks_iso(when) else old.get("deadline", ""),
+                        "verified": "UNVERIFIED", "updated": today(),
+                        "lastDeepScan": now_utc(),
+                        "reviewReason": (rep.get("deadReason")
+                                         or "the re-crawl found this notice closed"),
+                    })
+                    notes = [n for n in (dead.get("verifyNotes") or [])
+                             if not n.startswith(("re-scan", "auto-complete"))]
+                    notes.append("a re-crawl found this notice is no longer open: "
+                                 + str(rep.get("deadReason") or f"closed {when}"))
+                    dead["verifyNotes"] = notes[:6]
+                    dead["fp"] = fingerprint(dead)
+                    rows.append(dead)
+                    continue
                 # nothing readable / AI unavailable — count the try, keep the old row
                 repaired_fail(old, rep.get("stage", "could not be completed"))
                 continue
@@ -1205,7 +1298,7 @@ def run(mode):
                         break
                     try:
                         if pre is None:
-                            text, attach, ok, fail, sam_id = chase_solicitation(key)
+                            text, attach, ok, fail, sam_id, _dn = chase_solicitation(key)
                             link, atts = key, attach
                         else:
                             text, atts = pre["text"], pre["files"]
@@ -1477,7 +1570,7 @@ def probe_dates(posts=10, per_post=3):
                 if seen >= per_post or budget.left < 2:
                     break
                 try:
-                    text, atts, ok_n, fail_n, _sid = chase_solicitation(link)
+                    text, atts, ok_n, fail_n, _sid, _dn = chase_solicitation(link)
                 except fetcher.Blocked as b:
                     stats["blocked"] += 1
                     rows.append({"post": root.get("post"), "link": link,
@@ -1502,7 +1595,7 @@ def probe_dates(posts=10, per_post=3):
                 stats["notices"] += 1
                 row = {"post": root.get("post"), "country": root.get("country"),
                        "link": link, "files": len(atts),
-                       "title": _first_title(text, 90),
+                       "title": pipeline._first_title(text, 90),
                        "all_dates_printed": sorted(set(analyzer.find_dates(text)))[:12]}
 
                 # exactly the gate the live crawl uses, in the same order

@@ -33,11 +33,13 @@ def _clean(t):
 
 
 # ---------------------------------------------------------------- PDF
-def _pdf_text_layer(raw):
+def _pdf_text_layer(raw, _trunc=None):
+    _trunc = _trunc if _trunc is not None else {}
     out = []
     try:
         import pdfplumber
         with pdfplumber.open(io.BytesIO(raw)) as pdf:
+            _trunc["pages"], _trunc["read"] = len(pdf.pages), min(80, len(pdf.pages))
             for p in pdf.pages[:80]:
                 out.append(p.extract_text() or "")
                 try:
@@ -72,9 +74,16 @@ def _pdf_ocr(raw):
     except Exception:
         return "", "scanned PDF (OCR libraries unavailable)"
     try:
-        pages = convert_from_bytes(raw, dpi=200, fmt="png")[:OCR_MAX_PAGES]
+        allpages = convert_from_bytes(raw, dpi=200, fmt="png")
     except Exception as e:
         return "", f"scanned PDF (could not rasterise: {str(e)[:50]})"
+    # SAY WHEN WE STOPPED. OCR is capped for cost, and a 15-page scan whose
+    # submission section sits on page 14 was returned as a clean, complete
+    # read: note was "", the text was non-empty, so read_ok went up, read_fail
+    # stayed at zero, and the record could be stamped VERIFIED on a document
+    # two thirds of which had never been looked at.
+    pages = allpages[:OCR_MAX_PAGES]
+    cut = max(0, len(allpages) - len(pages))
     chunks = []
     for im in pages:
         try:
@@ -82,12 +91,23 @@ def _pdf_ocr(raw):
         except Exception as e:
             return "", f"scanned PDF (OCR failed: {str(e)[:50]})"
     t = _clean("\n".join(chunks))
-    return (t, "") if len(t) >= MIN_TEXT else ("", "scanned PDF produced no readable text")
+    if len(t) < MIN_TEXT:
+        return "", "scanned PDF produced no readable text"
+    if cut:
+        return t, (f"TRUNCATED: scanned PDF has {len(allpages)} pages and only the first "
+                   f"{len(pages)} were read by OCR — {cut} page(s), which may hold the "
+                   f"deadline or the terms, were not looked at")
+    return t, ""
 
 
 def read_pdf(raw):
-    t = _pdf_text_layer(raw)
+    trunc = {}
+    t = _pdf_text_layer(raw, trunc)
     if t:
+        pages, read = trunc.get("pages", 0), trunc.get("read", 0)
+        if pages and read and pages > read:
+            return t, (f"TRUNCATED: PDF has {pages} pages and only the first {read} were "
+                       f"read — {pages - read} page(s) were not looked at")
         return t, ""
     return _pdf_ocr(raw)
 
@@ -212,6 +232,66 @@ def read_zip(raw):
     return t, note
 
 
+def _decode_text(raw):
+    """Decode a text file in whatever encoding it was actually written in.
+
+    `raw.decode("utf-8", "replace")` was used, which turns a UTF-16 file into
+    "\\ufffd\\ufffdR F Q 1 9 N P ..." — every character separated by a NUL that
+    became a space. Excel and ordinary Windows tools write UTF-16 CSVs all the
+    time. The file was counted as read successfully, contributed nothing
+    usable, and the closing date inside it was unreachable, while read_fail
+    stayed at zero so the record remained eligible to be called VERIFIED. A
+    cp1252 file did the same to any accented word ("Clôture" -> "Cl?ture").
+    """
+    if not raw:
+        return ""
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff") or raw[:4] in (b"\xff\xfe\x00\x00",
+                                                            b"\x00\x00\xfe\xff"):
+        for enc in ("utf-32", "utf-16"):
+            try:
+                return _clean(raw.decode(enc))
+            except Exception:
+                pass
+    # a UTF-16 file with no BOM shows as NULs between the characters
+    if raw.count(b"\x00") > len(raw) // 4:
+        for enc in ("utf-16-le", "utf-16-be"):
+            try:
+                t = _clean(raw.decode(enc))
+                if t:
+                    return t
+            except Exception:
+                pass
+    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return _clean(raw.decode(enc))
+        except Exception:
+            continue
+    return _clean(raw.decode("utf-8", "replace"))
+
+
+# What this reader can handle. The crawler asks before deciding to treat a
+# download as a web page -- it used to run HTML tag-stripping over .docx
+# archives, which "succeeded" and produced 29,000 characters of ZIP header.
+_READABLE_EXT = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".xlsm", ".rtf",
+                 ".txt", ".csv", ".tsv", ".zip", ".odt", ".ods")
+_READABLE_CT = ("pdf", "wordprocessingml", "msword", "spreadsheetml",
+                "ms-excel", "rtf", "zip", "opendocument", "csv",
+                "octet-stream")
+
+
+def is_document(name_or_url="", content_type=""):
+    """Should this download go to the document reader rather than be treated as
+    a web page? Errs towards yes: a mislabelled document read as HTML yields
+    silent garbage, while HTML sent here is handled correctly anyway."""
+    low = (name_or_url or "").lower().split("?")[0]
+    ct = (content_type or "").lower()
+    if low.endswith((".htm", ".html", ".aspx", ".php", "/")):
+        return False
+    if "html" in ct:
+        return False
+    return low.endswith(_READABLE_EXT) or any(k in ct for k in _READABLE_CT)
+
+
 # ---------------------------------------------------------------- dispatcher
 def read_bytes(raw, name_or_url="", content_type=""):
     """Read any supported document. Returns (text, failure_note)."""
@@ -240,7 +320,7 @@ def read_bytes(raw, name_or_url="", content_type=""):
     if low.endswith((".htm", ".html")) or "html" in ct:
         return read_html(raw)
     if low.endswith((".txt", ".csv", ".tsv")) or "text" in ct:
-        return _clean(raw.decode("utf-8", "replace")), ""
+        return _decode_text(raw), ""
     # unknown: sniff
     if raw[:2] == b"PK":                      # zip-based (docx/xlsx/zip)
         for fn in (read_docx, read_xlsx, read_zip):

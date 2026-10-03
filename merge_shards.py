@@ -29,10 +29,40 @@ def _norm(s):
     return re.sub(r"[^A-Z0-9]", "", s)
 
 
+# A reference that is globally unique on its own, versus one that is only
+# unique within its own post. '19CA1026Q0002' is the first kind. '001' is the
+# second, and dozens of posts issue an RFQ-001 every year.
+_WEAK_REF = re.compile(r"^\d{1,6}$")
+_REF_TYPE = re.compile(r"^(RFQ|RFP|ITB|IFB|SOL)\b", re.I)
+
+
 def key_of(r):
     """Normalised identity: '#19CA1026Q0002', '19CA1026Q0002' and 'RFQ 19CA1026Q0002'
-    are the SAME solicitation and must never become two rows."""
-    return _norm(r.get("sol")) or (r.get("link") or "")
+    are the SAME solicitation and must never become two rows.
+
+    AND TWO DIFFERENT SOLICITATIONS MUST NEVER BECOME ONE ROW. _norm strips the
+    RFQ/RFP/ITB prefix and all punctuation, which turned Kathmandu's 'RFQ-001'
+    (office chairs, closing 20 October) and Dhaka's 'RFP-001' (janitorial,
+    closing 30 November) into the same key '001'. The fleet merge then kept one
+    and the other was gone from the register -- not archived, not counted as
+    dropped, no note anywhere. A silent delete is the worst failure this
+    pipeline has, because nothing on the page shows that it happened.
+
+    So a short or purely numeric reference is qualified by the post that issued
+    it and by its own RFQ/RFP type. A long distinctive reference is left exactly
+    as it was, which is what keeps the de-duplication above working.
+    """
+    sol = (r.get("sol") or "").strip()
+    base = _norm(sol)
+    if not base:
+        return r.get("link") or ""
+    if len(base) >= 7 and not _WEAK_REF.match(base):
+        return base
+    m = _REF_TYPE.match(sol)
+    kind = (m.group(1).upper() if m else "")
+    scope = _norm(r.get("post") or "") or _norm(r.get("country") or "") \
+        or _norm(r.get("platform") or "")
+    return ":".join(x for x in (scope, kind, base) if x)
 
 
 def prev_key_of(r):
@@ -125,9 +155,15 @@ def clean_sol(r):
     sol = (r.get("sol") or "").strip()
     if not sol:
         return r
-    if len(sol) > 30 or (" " in sol and not _SOL_OK.match(sol.replace(" ", ""))):
+    squashed = sol.replace(" ", "")
+    if len(sol) > 30 or not _SOL_OK.match(squashed):
         r["sol"] = ""
-    elif not _SOL_OK.match(sol.replace(" ", "")):
+    elif not any(c.isdigit() for c in squashed):
+        # A REFERENCE NUMBER HAS A NUMBER IN IT. _SOL_OK's character class
+        # accepts letters, so a title shoved into this field by an earlier pass
+        # sailed through: the UN path passes the title as a fallback hint, and
+        # "Supply of laptops" became the record's IDENTITY. Two UN notices with
+        # that title then merged into one row and one of them was deleted.
         r["sol"] = ""
     return r
 
@@ -140,6 +176,18 @@ def is_junk(r):
     title = (r.get("title") or "").strip()
     sol = (r.get("sol") or "").strip()
     has_real_sol = bool(sol) and sol.lower() not in ("none", "n/a", "-")
+
+    # A RECORD DELIBERATELY KEPT IS NEVER JUNK.
+    #
+    # When a notice is read but no deadline can be proven in it, the crawler
+    # writes a row on purpose -- "recorded so it is never silently lost" -- and
+    # hands it to a human with a note saying what it needs. Those rows have no
+    # deadline by definition, and their title comes from the first readable line
+    # of the page, which on an embassy site is often "Skip to main content".
+    # Both of the clauses below then matched, and the safety record was deleted
+    # in the fleet merge: the exact silent loss it existed to prevent.
+    if r.get("needs") or r.get("noDate") or (r.get("datesSeen") or []):
+        return False
 
     # the link IS the procurement index page itself, with nothing identifying a notice
     for p in _INDEX_PATHS:

@@ -79,11 +79,22 @@ def _first_title(text, limit=140):
     """A usable title straight out of the text, so an expired notice can still be
     archived and documented without spending a single AI call on it."""
     import re as _re
+    import analyzer as _a
+    # SKIP THE FURNITURE. This took the first line of 12 characters or more,
+    # which on an embassy page is "Skip to main content" or "U.S. Embassy in
+    # Zambia" every time. That nav text then became the record's title, and the
+    # junk filter downstream deletes records whose title is nav text -- so a
+    # notice that was read successfully got thrown away because of its heading.
     for line in (text or "").splitlines():
         s = line.strip(" \t:-—·|")
-        if 12 <= len(s) <= limit and not s.lower().startswith(("http", "[document")):
-            if _re.search(r"[a-zA-Z]{4}", s):
-                return s[:limit]
+        if not (12 <= len(s) <= limit):
+            continue
+        if s.lower().startswith(("http", "[document")):
+            continue
+        if _a.is_chrome_line(s):
+            continue
+        if _re.search(r"[a-zA-Z]{4}", s):
+            return s[:limit]
     return ""
 
 
@@ -222,9 +233,31 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         if atext:
             text += f"\n\n[DOCUMENT: {url}]\n{atext}"
             report["read_ok"] += 1
+            # A PARTIAL READ IS NOT A CLEAN READ. The readers cap work for cost:
+            # OCR stops at 12 pages, the text layer at 80, a workbook at 12
+            # sheets. A 15-page scan whose submission section is on page 14 came
+            # back with text and no complaint, so read_fail stayed at zero and
+            # the record was eligible for VERIFIED on a document two thirds
+            # unread. Now it is recorded, and it blocks VERIFIED like any other
+            # unread file, while the text we did get is still used.
+            if note:
+                report["failures"].append({"file": url, "why": note})
         else:
             report["read_fail"] += 1
             report["failures"].append({"file": url, "why": note or "unreadable"})
+
+    # A DROPPED ATTACHMENT MUST LEAVE A MARK. pick_attachments keeps 12 of N and
+    # the count was recorded here and then never used again: not passed on, not
+    # in the verification notes, not on the row. A notice with 20 files where
+    # "Amendment 2 - deadline extended" ranked 13th was published VERIFIED on
+    # the superseded date, with nothing to show a file had been skipped.
+    if report["attachments_skipped"]:
+        n = report["attachments_skipped"]
+        report["failures"].append({
+            "file": f"{n} attachment(s) not opened",
+            "why": (f"this notice has {len(unit.get('attachments') or [])} attachments and the "
+                    f"{len(chosen)} most likely to matter were read; an amendment or a revised "
+                    f"deadline could be in the {n} that were not")})
 
     if len(text.strip()) < 180:
         report["stage"] = "abandoned: nothing readable"

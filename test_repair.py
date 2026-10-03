@@ -172,7 +172,7 @@ def stub(mode="good"):
         "names": lambda s: ["stub"], "diag": lambda s: {"ok": {"stub": AI_N["n"]}, "errors": {}},
         "providers": []})(), good_ai)
     crawler.chase_solicitation = lambda u, **k: (
-        (GOOD_TEXT, [], 1, 0, "") if mode == "good" else ("", [], 0, 1, ""))
+        (GOOD_TEXT, [], 1, 0, "", []) if mode == "good" else ("", [], 0, 1, "", []))
     crawler.fetcher.read_attachment_full = lambda u, retries=1: (
         ("", "scanned PDF (OCR libraries unavailable)") if mode != "good" else (GOOD_TEXT, ""))
     crawler.sam_search = lambda cfg: []

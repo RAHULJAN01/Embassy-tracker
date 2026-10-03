@@ -61,7 +61,10 @@ jobs:
           python test_nobid.py
           python test_page.py
           python test_dates.py
+          python test_static.py
           python test_fetcher.py
+          python test_datetraps.py
+          python test_pipelinetraps.py
           python test_dategate.py
       - id: m
         run: |
@@ -123,8 +126,20 @@ jobs:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           SAM_API_KEY:        ${{ secrets.SAM_API_KEY }}
           FORCE_SAM:          ${{ (github.event.inputs.force_sam == 'true') && '1' || '0' }}
+          # Every UN portal the engine knows how to sign in to. The page tells
+          # Rahul to create these secrets; if they are not exported here the
+          # crawler cannot see them and following those instructions does
+          # nothing. un_sources.credential_names() is the matching list.
           UNGM_USER:          ${{ secrets.UNGM_USER }}
           UNGM_PASS:          ${{ secrets.UNGM_PASS }}
+          UNDP_USER:          ${{ secrets.UNDP_USER }}
+          UNDP_PASS:          ${{ secrets.UNDP_PASS }}
+          IOM_USER:           ${{ secrets.IOM_USER }}
+          IOM_PASS:           ${{ secrets.IOM_PASS }}
+          ILO_USER:           ${{ secrets.ILO_USER }}
+          ILO_PASS:           ${{ secrets.ILO_PASS }}
+          UNICEF_USER:        ${{ secrets.UNICEF_USER }}
+          UNICEF_PASS:        ${{ secrets.UNICEF_PASS }}
           DEEP_SOL:           ${{ github.event.inputs.sol }}
           SHARD:              ${{ matrix.shard }}
           SHARDS:             "4"

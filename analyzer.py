@@ -184,6 +184,24 @@ _CHROME_PHRASES = re.compile(
     r"|commercial opportunit(?:y|ies)\s+economic opportunit(?:y|ies))\b", re.I)
 
 
+def is_chrome_line(line):
+    """Is this single line website furniture rather than content?
+
+    Shared so that the title picker and the text cleaner cannot disagree about
+    what counts as navigation. They used to: the cleaner stripped "Skip to main
+    content", the title picker happily made it the record's title, and the junk
+    filter then deleted the record for having a navigation title.
+    """
+    s = (line or "").strip()
+    if not s:
+        return True
+    if _CHROME_LINES.match(s) or _CHROME_PHRASES.search(s):
+        return True
+    # a post's own name is a banner, not a notice title
+    return bool(re.match(r"^(?:u\.?s\.?\s*)?(?:embassy|consulate|mission)\b"
+                         r"[^\n]{0,40}$", s, re.I))
+
+
 def clean_source_text(text):
     """Strip website furniture so only the notice itself is adjudicated."""
     if not text:
@@ -251,19 +269,18 @@ _MON3 = [m[:3] for m in _MONTHS]
 _DATE_PATTERNS = [
     # 2026-10-20 / 2026/10/20
     (re.compile(r"\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b"), "ymd"),
-    # 20-10-2026 / 20/10/2026  (day first — common outside the US)
-    (re.compile(r"\b(\d{1,2})[-/](\d{1,2})[-/](20\d{2})\b"), "dmy"),
     # 20 October 2026  /  20 Oct 2026
     (re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(20\d{2})\b"), "dMy"),
     # October 20, 2026 / Oct 20 2026
     (re.compile(r"\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(20\d{2})\b"), "Mdy"),
     # 18-Aug-25 / 18 Aug 25   (two-digit year)
     (re.compile(r"\b(\d{1,2})[-\s]([A-Za-z]{3,9})\.?[-\s](\d{2})\b(?!\d)"), "dMyy"),
-    # 20.10.2026  (dotted, common in EU/UN docs)
-    (re.compile(r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b"), "dmy"),
     # 2026.10.20
     (re.compile(r"\b(20\d{2})\.(\d{1,2})\.(\d{1,2})\b"), "ymd"),
 ]
+
+# 10/12/2026 — and this one is a TRAP, so it gets its own handling below.
+_NUMERIC_DATE = re.compile(r"\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b")
 
 
 def _mk(y, m, d):
@@ -285,16 +302,51 @@ def _month_num(name):
     return 0
 
 
-def find_dates(text):
-    """Return every parseable date in the text as ISO strings, in order of appearance."""
+def scan_dates(text):
+    """[(start, end, iso, ambiguous)] — every date in the text, document order.
+
+    THE 10/12/2026 PROBLEM. These are US government notices, where 10/12/2026
+    means 12 October. The parser was hardcoded day-first and read it as 10
+    December — two months late. Then the grounding layer made it worse: when the
+    model correctly answered "2026-10-12", that date was not in this function's
+    output, so the model's right answer was thrown out as "unprovable" and the
+    wrong one was re-inserted with an evidence line attached to it. A date
+    nobody could have proved ended up looking proven.
+
+    Guessing the other way is no better: plenty of these notices come from posts
+    that write 12/10/2026 for the same day, and a UN document may use either.
+    There is no convention to pick.
+
+    So an all-numeric date whose first two numbers are BOTH 12 or less is
+    reported as what it is: two possible dates, each marked ambiguous. Callers
+    then behave accordingly — the proving path accepts either reading, so the
+    model's answer stands whichever convention the post used, and the free
+    phrase-matching path refuses to publish one at all and hands the notice to
+    the model instead. A date that could be either is never silently chosen.
+    """
     out = []
+    for m in _NUMERIC_DATE.finditer(text or ""):
+        a, b, y = int(m.group(1)), int(m.group(2)), m.group(3)
+        day_first, month_first = _mk(y, b, a), _mk(y, a, b)
+        if a > 12 and month_first == "":
+            if day_first:                                  # 20/10/2026 — only one reading
+                out.append((m.start(), m.end(), day_first, False))
+        elif b > 12 and day_first == "":
+            if month_first:                                # 10/20/2026 — only one reading
+                out.append((m.start(), m.end(), month_first, False))
+        elif day_first and month_first and day_first != month_first:
+            out.append((m.start(), m.end(), day_first, True))
+            out.append((m.start(), m.end(), month_first, True))
+        else:
+            for iso in (day_first or month_first,):        # e.g. 05/05/2026
+                if iso:
+                    out.append((m.start(), m.end(), iso, False))
+
     for rx, kind in _DATE_PATTERNS:
         for m in rx.finditer(text or ""):
             a, b, c = m.group(1), m.group(2), m.group(3)
             if kind == "ymd":
                 iso = _mk(a, b, c)
-            elif kind == "dmy":
-                iso = _mk(c, b, a)
             elif kind == "dMy":
                 iso = _mk(c, _month_num(b), a)
             elif kind == "dMyy":
@@ -303,9 +355,22 @@ def find_dates(text):
             else:  # Mdy
                 iso = _mk(c, _month_num(a), b)
             if iso:
-                out.append((m.start(), iso))
-    out.sort()
-    return [iso for _, iso in out]
+                out.append((m.start(), m.end(), iso, False))
+    out.sort(key=lambda t: (t[0], t[2]))
+    return out
+
+
+def ambiguous_at(text):
+    """The ISO dates in this text that came from an all-numeric form which could
+    be read two ways. Used to refuse a free, unread guess at a deadline."""
+    return {iso for _, _, iso, amb in scan_dates(text) if amb}
+
+
+def find_dates(text):
+    """Return every parseable date in the text as ISO strings, in order of appearance.
+    An ambiguous numeric date contributes BOTH of its readings, so a correct
+    answer from the model is never rejected for using the other convention."""
+    return [iso for _, _, iso, _ in scan_dates(text)]
 
 
 
@@ -319,22 +384,13 @@ def date_in_text(iso, text):
     """
     if not iso or not text:
         return False, ""
-    if iso not in set(find_dates(text)):
-        return False, ""
     # pull the sentence it sits in, so a human can check it in one glance
-    for rx, kind in _DATE_PATTERNS:
-        for m in rx.finditer(text):
-            a, b, c = m.group(1), m.group(2), m.group(3)
-            got = (_mk(a, b, c) if kind == "ymd" else
-                   _mk(c, b, a) if kind == "dmy" else
-                   _mk(c, _month_num(b), a) if kind == "dMy" else
-                   (_mk("20" + c, _month_num(b), a) if _month_num(b) else "") if kind == "dMyy" else
-                   _mk(c, _month_num(a), b))
-            if got == iso:
-                lo = max(0, m.start() - 110)
-                hi = min(len(text), m.end() + 70)
-                return True, re.sub(r"\s+", " ", text[lo:hi]).strip()
-    return True, ""
+    for start, end, got, _amb in scan_dates(text):
+        if got == iso:
+            lo = max(0, start - 110)
+            hi = min(len(text), end + 70)
+            return True, re.sub(r"\s+", " ", text[lo:hi]).strip()
+    return False, ""
 
 
 def cue_anchored(iso, text, cues, window=200):
@@ -435,10 +491,13 @@ def date_windows(text, span=260, cap=7000):
     """
     if not text:
         return ""
+    # scan_dates, not _DATE_PATTERNS: the all-numeric forms are handled
+    # separately now, and iterating the pattern list alone made every document
+    # whose dates are written 10/12/2026 look dateless. The model was then never
+    # asked about exactly the notices where it is needed most.
     spans = []
-    for rx, _kind in _DATE_PATTERNS:
-        for m in rx.finditer(text):
-            spans.append((max(0, m.start() - span), min(len(text), m.end() + span)))
+    for start, end, _iso, _amb in scan_dates(text):
+        spans.append((max(0, start - span), min(len(text), end + span)))
     if not spans:
         return ""
     spans.sort()
@@ -679,27 +738,69 @@ _DEADLINE_CUES = (
     "no bids will be accepted", "no proposals will be accepted",
     "accepted after", "received after", "submitted after",
     "response date", "response due", "last date", "latest date",
-    "expiration", "expires", "valid until", "open until", "closes at",
-    "cob ", "cot ",
+    "closes at", "cob ", "cot ",
 )
+
+# REMOVED, and they must not come back: "expiration", "expires", "valid until",
+# "open until". Every one of them appears in these notices attached to something
+# that is NOT the deadline -- "prices quoted shall remain valid until 30 June
+# 2027", "a licence that expires before 01 January 2025 will not be considered".
+#
+# They did two kinds of damage. On the free phrase path they published the
+# validity date as the deadline, eight months late, with an evidence line and no
+# AI call to disagree. And in the pre-flight gate, which uses this same list to
+# decide a notice is already closed, a licence-expiry clause made a LIVE
+# solicitation look expired: it was archived, its hash was added to the "never
+# look at this again" ledger, and it vanished with no record and no cost.
+#
+# The prompts tell the model never to use a validity or warranty expiry. The
+# phrase path never asks the model, so it has to know this itself.
+_BANNED_CUES = ("expiration", "expires", "valid until", "open until")
 
 _QA_CUES = ("questions are due", "q&a", "questions due", "clarification", "inquiries")
 _POSTED_CUES = ("posted", "issue date", "issued on", "date of issue", "published", "release date")
 
 
 def harvest_date(text, cues, window=180):
-    """Find the date nearest to any of these cue phrases. Returns ISO or ''."""
+    """The date a cue phrase actually points at, or '' when nothing is certain.
+
+    Three faults lived in the old four lines, and all three published a wrong
+    deadline for free, with no model involved to disagree:
+
+    1. It took the FIRST date in the window after a cue, not the nearest one.
+       "Closing date: see Annex B. A pre-bid site visit will be held on 15
+       October 2026. Bids are due 28 November 2026." published 15 October — the
+       site visit. The nearest date to a cue is now the one chosen.
+
+    2. It walked the cue tuple in LIST order, so which cue won was an accident
+       of how the tuple happened to be typed, not of what the document says.
+       Every cue in the document is now considered and the closest match wins.
+
+    3. It accepted an ambiguous numeric date. 10/12/2026 is two different days
+       and this path has no way to tell which; it now declines and leaves the
+       notice for the model to read, which is what the model is for.
+    """
     low = (text or "").lower()
-    best = ""
+    if not low:
+        return ""
+    cue_spots = []
     for cue in cues:
         i = low.find(cue)
         while i != -1:
-            seg = text[i: i + window]
-            ds = find_dates(seg)
-            if ds:
-                best = ds[0]
-                return best
+            cue_spots.append((i, i + len(cue)))
             i = low.find(cue, i + 1)
+    if not cue_spots:
+        return ""
+    best, best_gap = "", 10 ** 9
+    for start, end, iso, amb in scan_dates(text):
+        if amb:
+            continue                      # could be either day — not ours to guess
+        for c_start, c_end in cue_spots:
+            # the date should follow the cue, which is how deadlines are written;
+            # a short reach backwards covers "due: " in a table cell above it
+            gap = start - c_end if start >= c_end else (c_start - end) + 40
+            if 0 <= gap <= window and gap < best_gap:
+                best, best_gap = iso, gap
     return best
 
 
@@ -860,7 +961,19 @@ def adjudicate(text, call_ai, today="", min_conf=0.5, min_chars=180):
     if data.get("_gerr"):
         return {"tier": "REVIEW", "confidence": 0.0, "review_reason": f"AI: {data['_gerr'][:80]}",
                 "restrictions": [], "citation": None, "_evidence": evidence, "sector": ""}
-    rec = _coerce(data)
+    # _coerce ran OUTSIDE this function's guard, so one malformed field from the
+    # model — "confidence":"high" instead of a number, or restrictions returned
+    # as an object — raised straight out of here. In the embassy loop that cost
+    # one record. In the SAM and UN loops there is no per-notice guard, so it
+    # aborted the run: every remaining source skipped, with the budget already
+    # spent. A model typo must never end a run.
+    try:
+        rec = _coerce(data)
+    except Exception as e:
+        return {"tier": "REVIEW", "confidence": 0.0,
+                "review_reason": f"the model's answer was malformed ({type(e).__name__}) — "
+                                 f"it will be asked again",
+                "restrictions": [], "citation": None, "_evidence": evidence, "sector": ""}
     rec["_evidence"] = evidence
     rec["review_reason"] = ""
     strip_registration(rec)           # registration is settled; it never appears
