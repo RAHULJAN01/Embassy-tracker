@@ -7,7 +7,7 @@ disjoint by construction. This merges them and still de-duplicates defensively
 (by solicitation number, then by link) so a solicitation can never appear twice
 even if two bots happened to see it.
 """
-import sys, re, json, pathlib, datetime
+import os, sys, re, json, pathlib, datetime
 
 HERE = pathlib.Path(__file__).parent
 
@@ -273,6 +273,88 @@ def apply_operator(rows):
     return rows
 
 
+# ---------------------------------------------------------------- SPEND LEDGER
+# What a million tokens costs, per model. Set MODEL_RATES_JSON in the workflow
+# to change these without a code change -- e.g.
+#   {"claude-haiku-4-5-20251001": [1.00, 5.00], "claude-sonnet-4-5-20250929": [3.00, 15.00]}
+# The first number is input, the second output, both per million tokens.
+DEFAULT_RATES = {
+    "haiku": (1.00, 5.00),
+    "sonnet": (3.00, 15.00),
+    "opus": (15.00, 75.00),
+}
+
+
+def _rates_for(model_name):
+    try:
+        override = json.loads(os.getenv("MODEL_RATES_JSON", "") or "{}")
+    except Exception:
+        override = {}
+    if model_name in override:
+        r = override[model_name]
+        return float(r[0]), float(r[1])
+    low = (model_name or "").lower()
+    for k, v in DEFAULT_RATES.items():
+        if k in low:
+            return v
+    return DEFAULT_RATES["haiku"]
+
+
+def _cost(by_model):
+    total = 0.0
+    for name, v in (by_model or {}).items():
+        rin, rout = _rates_for(name)
+        total += int(v.get("in") or 0) / 1e6 * rin + int(v.get("out") or 0) / 1e6 * rout
+    return total
+
+
+def _update_spend_ledger(by_model, tin, tout):
+    """Add this run to the running total the portal shows.
+
+    Rahul: "I WOULD ALSO LIKE TO KNOW THE ABOUT THAT IS LEFT FOR THE 40 DOLLERS
+    THAT ARE SPENT... SO I CAN ALWAYS CHECK FROM THERE WHERE AM I IN REAL TIME."
+
+    The token counts here are not estimates -- the API returns them with every
+    answer, so they are exactly what was used. The dollar figure is those tokens
+    priced at the rates above. The deposit is whatever API_DEPOSIT_USD says,
+    defaulting to the 40 dollars Rahul put in.
+    """
+    path = HERE / "spend.json"
+    try:
+        led = json.loads(path.read_text())
+    except Exception:
+        led = {}
+    led.setdefault("depositUSD", float(os.getenv("API_DEPOSIT_USD", "40") or 40))
+    led.setdefault("byModel", {})
+    led.setdefault("runs", [])
+    if not (tin or tout):
+        led["updated"] = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%d %H:%M UTC")
+        path.write_text(json.dumps(led, indent=1))
+        return led
+    for name, v in (by_model or {}).items():
+        slot = led["byModel"].setdefault(name, {"in": 0, "out": 0, "calls": 0})
+        slot["in"] += int(v.get("in") or 0)
+        slot["out"] += int(v.get("out") or 0)
+        slot["calls"] += int(v.get("calls") or 0)
+    if not by_model:                       # older shard with no per-model split
+        slot = led["byModel"].setdefault("unknown", {"in": 0, "out": 0, "calls": 0})
+        slot["in"] += tin
+        slot["out"] += tout
+    led["inputTokens"] = sum(v["in"] for v in led["byModel"].values())
+    led["outputTokens"] = sum(v["out"] for v in led["byModel"].values())
+    led["calls"] = sum(v.get("calls", 0) for v in led["byModel"].values())
+    led["spentUSD"] = round(_cost(led["byModel"]), 4)
+    led["leftUSD"] = round(max(0.0, led["depositUSD"] - led["spentUSD"]), 4)
+    led["rates"] = {m: list(_rates_for(m)) for m in led["byModel"]}
+    led["updated"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    led["runs"] = (led["runs"] + [{
+        "at": led["updated"], "in": tin, "out": tout,
+        "usd": round(_cost(by_model) if by_model else 0.0, 4)}])[-60:]
+    path.write_text(json.dumps(led, indent=1))
+    return led
+
+
 def main(shard_dir):
     base = HERE / "data.json"
     merged = {}
@@ -340,6 +422,7 @@ def main(shard_dir):
     # here; if it were dropped the register could fail silently, which is the one
     # thing a single-provider setup must never do.
     tin = tout = 0
+    by_model = {}
     for s in statuses:
         dg = s.get("aiDiag") or {}
         for k, v in (dg.get("ok") or {}).items():
@@ -353,10 +436,25 @@ def main(shard_dir):
             agg["aiDiag"]["down"] = dg["down"]          # any bot down = alarm
         tin += int(dg.get("inputTokens") or 0)
         tout += int(dg.get("outputTokens") or 0)
+        for mname, mv in (dg.get("byModel") or {}).items():
+            slot = by_model.setdefault(mname, {"in": 0, "out": 0, "calls": 0})
+            slot["in"] += int(mv.get("in") or 0)
+            slot["out"] += int(mv.get("out") or 0)
+            slot["calls"] += int(mv.get("calls") or 0)
     if tin or tout:
         agg["aiDiag"]["inputTokens"] = tin
         agg["aiDiag"]["outputTokens"] = tout
-        agg["aiDiag"]["spendUSD"] = round(tin / 1e6 * 1.00 + tout / 1e6 * 5.00, 4)
+        agg["aiDiag"]["byModel"] = by_model
+        agg["aiDiag"]["spendUSD"] = round(_cost(by_model) if by_model
+                                          else tin / 1e6 * 1.00 + tout / 1e6 * 5.00, 4)
+
+    # ---- THE RUNNING TOTAL. Every run's usage is added to a ledger that
+    # survives the run, so the portal can say what is LEFT of the deposit
+    # rather than what this one crawl happened to cost. The token counts are
+    # exact -- they come back from the API with every answer. The dollar figure
+    # is those tokens priced at the rates in RATES below, which can be set
+    # without touching the code if they ever change.
+    _update_spend_ledger(by_model, tin, tout)
 
     counts = {"active": 0, "bid": 0, "mid": 0, "no": 0, "review": 0, "archived": 0,
               "verified": 0, "unverified": 0, "deleted": 0, "hidden": 0}

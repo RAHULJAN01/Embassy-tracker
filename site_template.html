@@ -50,8 +50,28 @@
   /* .navbar and .subnav are BORDERED boxes, so the border itself has to land on
      the gutter rather than a padding edge, or the nav strip juts out past every
      band under it. */
+  /* ONE SECTION AT A TIME. Rahul: "I DONT LIKE THIS MANNER OF PLACING ALL THE
+     SECTIONS ... ALL ON TOP OF EACH OTHER INSIDE A SINGLE PAGE, I WANT
+     SEPERATE BUTTONS ON TOP FOR B, BNB, NB, FOR HISTORY AS WELL, FOR HIDDEN AS
+     WELL." Equal cells, same red as the title bar, the open one in black. */
+  .pagetabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;
+    padding-top:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .ptab{height:48px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:2px;border:1px solid var(--red);background:var(--red);
+    color:#fff;border-radius:3px;cursor:pointer;font-family:inherit;padding:0 4px;
+    font-size:12.5px;font-weight:800;letter-spacing:.3px;line-height:1.1;text-align:center}
+  .ptab .pc{font-size:15px;font-weight:800;letter-spacing:0}
+  .ptab:hover{background:#8f1b1b;border-color:#8f1b1b}
+  .ptab.on{background:#111;border-color:#111}
+  .ptab.empty{background:#fff;color:var(--red);opacity:.75}
+  .ptab.empty.on{background:#111;border-color:#111;color:#fff;opacity:1}
+  @media(max-width:860px){ .pagetabs{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:430px){ .pagetabs{grid-template-columns:repeat(2,1fr)}
+    .ptab{height:44px;font-size:11px} .ptab .pc{font-size:13px} }
+
   .mastwrap > .navbar,
-  .mastwrap > .subnav{
+  .mastwrap > .subnav,
+  .mastwrap > .pagetabs{
     width:calc(100% - 2 * var(--gutter));
     max-width:calc(var(--content-max) - 2 * var(--gutter));
     margin-left:auto;margin-right:auto;padding-left:0;padding-right:0}
@@ -75,7 +95,7 @@
   .flag{height:var(--flag-h);width:auto;border:1px solid #999;flex:0 0 auto;display:block;margin:0}
   .logo{height:var(--logo-h);width:auto;display:block;flex:0 0 auto;margin:0}
   .brand .bt{border-left:2px solid #111;padding-left:18px;margin-left:6px;min-width:0}
-  .brand .bt .n{font-size:18px;font-weight:700;letter-spacing:.4px;overflow-wrap:anywhere}
+  .brand .bt .n{font-size:25px;font-weight:800;letter-spacing:.4px;overflow-wrap:anywhere;line-height:1.1}
   .brand .bt .s{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-top:3px}
   /* TWO ROWS, ONE PATTERN, AT EVERY WIDTH.
      Row 1: the brand on the left, the register's timestamps on the right --
@@ -88,9 +108,25 @@
   .mmeta{flex:1 1 220px;min-width:0;font-size:11.5px;color:var(--sub);
     line-height:1.45;margin:0;text-align:right}
   .mmeta b{color:#111}
-  .mnav{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;
-    flex:1 1 100%;column-gap:8px;row-gap:8px;min-width:0;margin:0}
-  .mnav .btn{margin:0}
+  /* ONE ROW OF EQUAL RECTANGLES, SPREAD EVENLY ACROSS THE FULL WIDTH.
+     A grid, not a flex row: every cell is exactly the same width whatever the
+     label inside it says, so the row reads as one band instead of a ragged
+     line of differently-sized buttons. Red with white text, which is the
+     colour Rahul picked for the portal. */
+  .mnav{display:grid;grid-template-columns:repeat(7,1fr);align-items:stretch;
+    flex:1 1 100%;gap:10px;min-width:0;margin:0}
+  .mnav .btn{margin:0;height:46px;width:100%;font-size:13.5px;font-weight:800;
+    letter-spacing:.3px;justify-content:center;text-align:center;padding:0 6px;
+    background:var(--red);border-color:var(--red);color:#fff;border-radius:3px}
+  .mnav .btn:hover{background:#8f1b1b;border-color:#8f1b1b}
+  .mnav .btn.on{background:#111;border-color:#111;color:#fff}
+  /* the volume slider lives in the same band and keeps the same height */
+  .mnav .volcell{display:flex;align-items:center;gap:8px;height:46px;padding:0 10px;
+    border:1px solid var(--red);border-radius:3px;background:#fff;min-width:0}
+  body.night .mnav .volcell{background:#fff}
+  .mnav .volcell input[type=range]{flex:1 1 auto;min-width:0;accent-color:var(--red)}
+  .mnav .volcell .vlab{font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--red);
+    white-space:nowrap}
   /* below 1200px there is no honest room for both beside the 90px logo, so the
      button group takes a full row of its own, left-aligned on the same gutter.
      It is never squeezed against the edge of the screen and never clipped. */
@@ -286,18 +322,38 @@
   table.reg td.num{overflow:hidden;text-overflow:ellipsis}
   table.reg td.valcell{white-space:normal;word-break:break-word;line-height:1.25}
   .pop{white-space:normal} .pop .c{color:var(--mute);font-size:12px}
-  .flagw{display:inline-block;margin-right:6px;vertical-align:-2px;line-height:0}
-  .flagimg{width:20px;height:15px;display:block;border:1px solid var(--line2);
-    object-fit:cover;background:var(--alt)}
+  /* EVERY FLAG SITS IN A RED BADGE WITH WHITE TEXT. The country code is always
+     printed, not only when the image fails, so a flag reads the same whether
+     the picture loaded or not — and it stays legible at a glance in a long
+     list, which a 20px picture on its own does not. */
+  .flagw{display:inline-flex;align-items:center;gap:0;margin-right:6px;
+    vertical-align:-3px;line-height:0;background:var(--red);border:1px solid var(--red);
+    border-radius:2px;overflow:hidden}
+  .flagimg{width:22px;height:16px;display:block;object-fit:cover;background:var(--alt)}
+  .flaglab{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.6px;
+    color:#fff;background:var(--red);padding:2px 5px;line-height:1.25;
+    font-family:Arial,Helvetica,sans-serif;white-space:nowrap}
   .flagw.big .flagimg{width:34px;height:25px}
+  .flagw.big .flaglab{font-size:11px;padding:3px 7px}
   /* under the reference number, where Rahul wants it, and properly sized */
-  .flagw.ref{display:block;margin:7px 0 0}
-  .flagw.ref .flagimg{width:40px;height:30px;border-width:1px}
-  .flagw.ref.noimg::after{font-size:11px;padding:2px 6px}
+  .flagw.ref{display:inline-flex;margin:7px 0 0}
+  .flagw.ref .flagimg{width:42px;height:31px}
+  .flagw.ref .flaglab{font-size:12px;padding:4px 8px}
   .flagw.noimg .flagimg{display:none}
-  .flagw.noimg::after{content:attr(data-cc);display:inline-block;font-size:9.5px;
-    font-weight:700;letter-spacing:.5px;border:1px solid var(--line2);color:var(--sub);
-    padding:1px 4px;line-height:1.3;font-family:Arial,Helvetica,sans-serif}
+  .emptypage{color:var(--mute);padding:28px 0;font-size:14px}
+  /* the budget meter inside Mission Control */
+  .budget .bgt-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px}
+  .budget .bgt-left{font-size:22px;font-weight:800;color:var(--green)}
+  .budget .bgt-left.low{color:var(--red)}
+  .budget .bgt-of{font-size:12px;color:var(--mute)}
+  .budget .bgt-sub{font-size:11.5px;color:var(--mute);margin-top:7px;line-height:1.5}
+  .mc-bar.big{height:10px}
+  .mc-bar.big i.low{background:var(--red)}
+  .bgt-tbl{width:100%;border-collapse:collapse;margin-top:9px;font-size:12px}
+  .bgt-tbl th,.bgt-tbl td{border-top:1px solid var(--line);padding:4px 6px;text-align:left}
+  .bgt-tbl th{color:var(--mute);font-weight:700;font-size:10.5px;letter-spacing:.4px;
+    text-transform:uppercase}
+  .bgt-tbl .r{text-align:right}
   .srctag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border:1px solid var(--ink);border-radius:2px;white-space:nowrap}
   .status{font-weight:700;font-size:12px;white-space:nowrap}
   .status.g{color:var(--green)} .status.o{color:var(--orange)} .status.r{color:var(--red)}
@@ -480,10 +536,12 @@
     body{font-size:14px}
     .mast{flex-direction:column;align-items:flex-start;row-gap:10px;
       padding-top:var(--bar-pad);padding-bottom:var(--bar-pad)}
-    .mnav{column-gap:6px;row-gap:6px;width:100%;justify-content:flex-start}
+    .mnav{grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+    .mnav .btn{height:42px;font-size:12px}
+    .mnav .volcell{height:42px}
     .mmeta{width:100%;font-size:11px;text-align:left}
     .brand{gap:10px;width:100%}
-    .brand .bt{padding-left:12px;margin-left:4px} .brand .bt .n{font-size:15px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
+    .brand .bt{padding-left:12px;margin-left:4px} .brand .bt .n{font-size:19px} .brand .bt .s{font-size:9px;letter-spacing:1.2px}
     .toolbar{column-gap:6px;row-gap:6px;padding-top:10px;padding-bottom:10px}
     .toolbar .grp{flex-wrap:wrap;width:100%}
     .toolbar input,.toolbar select,.toolbar .btn{flex:1 1 auto;min-width:0}
@@ -539,7 +597,8 @@
        on the last row -- stretched to the full width while the four above it
        were halves. Growth off keeps every button the same size and the odd one
        simply sits in the left-hand column. */
-    .mnav .btn{flex:0 1 calc(50% - 4px);justify-content:center;min-width:0;padding:0 8px;font-size:12px}
+    .mnav{grid-template-columns:repeat(2,1fr)}
+    .mnav .btn{min-width:0;padding:0 6px;font-size:11.5px}
     .toolbar input{flex:1 1 100%;min-width:0}
     .toolbar .dd,.toolbar .dd .btn{width:100%}
     .dd-menu{min-width:100%;left:0;right:0}
@@ -549,7 +608,7 @@
     table.reg tbody tr.row td::before{flex-basis:44%;max-width:44%}
   }
   @media(max-width:330px){
-    .mnav .btn{flex:1 1 100%}
+    .mnav{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -579,15 +638,24 @@
       <span id="cov"></span>
     </div>
     <div class="mnav">
-      <button class="btn sec" onclick="refreshPage()">↻ Refresh</button>
-      <button class="btn sec" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
-      <button class="btn sec" onclick="toggleCompany()" title="Company Information" id="coBtn">▦ Company Info</button>
-      <button class="btn sec" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
-      <button class="btn sec" onclick="lock()" title="Log out now">🔒 Lock</button>
+      <button class="btn" onclick="refreshPage()">↻ Refresh</button>
+      <button class="btn" onclick="toggleMC()" title="Mission Control" id="mcBtn">◉ Mission Control</button>
+      <button class="btn" onclick="toggleCompany()" title="Company Information" id="coBtn">▦ Company Info</button>
+      <button class="btn" onclick="toggleNight()" title="Night mode" id="nightBtn">◐ Night</button>
+      <button class="btn" onclick="lock()" title="Log out now">🔒 Lock</button>
+      <button class="btn" id="sndBtn" onclick="toggleSound()"
+              title="Beep when a bot finishes a step">🔊 Sound On</button>
+      <div class="volcell" title="How loud the bot beeps are">
+        <span class="vlab">VOL</span>
+        <input id="vol" type="range" min="0" max="100" step="5" value="60"
+               oninput="setVolume(this.value)" aria-label="Beep volume">
+        <span class="vlab" id="volPct">60</span>
+      </div>
     </div>
   </div>
   <div class="navbar" id="navPlatform"></div>
   <div class="subnav" id="navSub"></div>
+  <div class="pagetabs" id="pageTabs"></div>
   <div class="toolbar">
     <div class="grp">
       <div class="dd" id="ddUpdate">
@@ -638,7 +706,7 @@
 <script>
 /*__ENC__*/
 const LOCKED=/*__LOCKED__*/;
-let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false, COMPANY={}, FLAGS={};
+let META={}, SOLICITATIONS=[], STATUS={}, BLOCKED={sites:[]}, PAUSED=false, COMPANY={}, FLAGS={}, SPEND={};
 const REPO="RAHULJAN01/embassy-tracker";
 let CONTROL_URL="";   // set from control.json at build time
 
@@ -696,9 +764,10 @@ function flagOf(country, cls){
   const t=esc(country);
   return `<span class="flagw ${cls||''}" title="${t}" data-cc="${cc.toUpperCase()}">`
        + `<img class="flagimg" alt="${t}" loading="lazy"`
-       + ` src="https://flagcdn.com/w20/${cc}.png"`
-       + ` srcset="https://flagcdn.com/w40/${cc}.png 2x"`
-       + ` onerror="this.parentNode.classList.add('noimg')"></span>`;
+       + ` src="https://flagcdn.com/w40/${cc}.png"`
+       + ` srcset="https://flagcdn.com/w80/${cc}.png 2x"`
+       + ` onerror="this.parentNode.classList.add('noimg')">`
+       + `<span class="flaglab">${cc.toUpperCase()}</span></span>`;
 }
 
 /* ================= EXCEL EXPORT =================
@@ -1373,19 +1442,58 @@ function render(){
     return h+'</tbody></table></div>';
   }
 
-  let html=['BID','MID','NO','REVIEW'].map(tierSection).join('');
+  // ONE PAGE AT A TIME. Every category keeps its own tab, so the register is
+  // never a single scroll with four tables stacked inside it.
+  const PAGES={
+    BID   :{label:'BID',        n:active.filter(({s})=>effTier(s)==='BID').length},
+    MID   :{label:'CONDITIONAL',n:active.filter(({s})=>effTier(s)==='MID').length},
+    NO    :{label:'NON-ELIGIBLE',n:active.filter(({s})=>effTier(s)==='NO').length},
+    REVIEW:{label:'REVIEW',     n:active.filter(({s})=>effTier(s)==='REVIEW').length},
+    HIDDEN:{label:'HIDDEN',     n:hidden.length},
+    HISTORY:{label:'HISTORY',   n:deleted.length+archived.length}
+  };
+  renderPageTabs(PAGES);
 
-  html+=plainSection(hidden,'o','HIDDEN — SET ASIDE BY YOU',
-    'Out of the way until you bring them back. If one expires or is cancelled while hidden it moves to History automatically, documented.',true);
+  let html='';
+  if(PAGE==='HIDDEN'){
+    html=plainSection(hidden,'o','HIDDEN — SET ASIDE BY YOU',
+      'Out of the way until you bring them back. If one expires or is cancelled while hidden it moves to History automatically, documented.',false);
+    if(!html) html='<p class="emptypage"><i>Nothing is hidden. Use the HIDE button on any row to set one aside.</i></p>';
+  } else if(PAGE==='HISTORY'){
+    html=plainSection(deleted,'r','HISTORY — DELETED BY YOU',
+      'Removed from the active register by you. Each one carries the date and time it was deleted and is never shown as active again — but it is kept here, and you can put it back.',false);
+    html+=plainSection(archived,'n','ARCHIVE — CLOSED, EXPIRED &amp; CANCELLED',
+      'Past their deadline or withdrawn. Kept in full, nothing discarded.',false);
+    if(!html) html='<p class="emptypage"><i>Nothing has been deleted, and nothing has closed yet.</i></p>';
+  } else {
+    html=tierSection(PAGE);
+    if(!html) html=`<p class="emptypage"><i>Nothing in ${esc(PAGES[PAGE]?PAGES[PAGE].label:PAGE)} right now.</i></p>`;
+  }
 
-  html+=plainSection(archived,'n','ARCHIVE — CLOSED, EXPIRED &amp; CANCELLED',
-    'Past their deadline or withdrawn. Kept in full, nothing discarded.',true);
+  if(viewSaved&&!list.length) html='<p class="emptypage"><i>No solicitations saved to your shortlist yet. Use the ☆ button on any row.</i></p>';
+  document.getElementById('sections').innerHTML=html||'<p class="emptypage"><i>No solicitations on this platform yet.</i></p>';
+}
 
-  html+=plainSection(deleted,'r','HISTORY — DELETED BY YOU',
-    'Removed from the active register by you. Each one carries the date and time it was deleted and is never shown as active again — but it is kept here, and you can put it back.',true);
+/* which category is open; remembered so a reload lands where you left off */
+let PAGE='BID';
+try{ const _p=localStorage.getItem('mm_page'); if(_p) PAGE=_p; }catch(e){}
 
-  if(viewSaved&&!list.length) html='<p style="color:var(--mute);padding:24px 0"><i>No solicitations saved to your shortlist yet. Use the ☆ button on any row.</i></p>';
-  document.getElementById('sections').innerHTML=html||'<p style="color:var(--mute);padding:24px 0"><i>No solicitations on this platform yet.</i></p>';
+function renderPageTabs(pages){
+  const el=document.getElementById('pageTabs'); if(!el) return;
+  if(!pages[PAGE]) PAGE='BID';
+  el.innerHTML=Object.keys(pages).map(k=>{
+    const p=pages[k];
+    return `<button class="ptab${k===PAGE?' on':''}${p.n?'':' empty'}" onclick="setPage('${k}')"`
+         + ` title="${esc(p.label)} — ${p.n} record${p.n===1?'':'s'}">`
+         + `<span class="pc">${p.n}</span><span>${esc(p.label)}</span></button>`;
+  }).join('');
+}
+
+function setPage(k){
+  PAGE=k;
+  try{ localStorage.setItem('mm_page',k); }catch(e){}
+  render();
+  try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
 }
 
 /* ---------- night mode (masthead never changes) ---------- */
@@ -1551,7 +1659,7 @@ function init(){
   document.getElementById('sl2').textContent=LS().length;
   const cs=[...new Set(SOLICITATIONS.map(s=>s.country))].filter(Boolean).sort(),sel=document.getElementById('fCountry');
   cs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-  applyNight(); renderNav(); renderHelp(); renderMC(); renderAlarm(); syncMastHeight();
+  applyNight(); applySound(); renderNav(); renderHelp(); renderMC(); renderAlarm(); syncMastHeight();
   refreshCounts();render();
 }
 
@@ -1619,8 +1727,92 @@ async function pollLive(){
     LIVE=await r.json(); renderLive();
   }catch(e){}
 }
+/* ================= BOT SOUND =================
+   Rahul: "I WOULD ALSO LOVE A BEEP SOUND WHEN AN BOT HAS FINISHED DOING A TASK
+   NO MATTER WHAT IT IS, WEATHER ITS MANUALL OR AUTOMATIC... SO CAN VISULAIZE
+   THAT THIGS ARE GOING AS EXPECTED."
+
+   Synthesised with the Web Audio API rather than a sound file, so the page
+   stays one self-contained document with nothing to download and nothing that
+   can 404. Three tones carry three meanings without anyone having to look:
+   a short tick each time a bot moves on to the next job, a rising two-note
+   chime when a bot finishes its slice, and a low double beep when something
+   went wrong. Browsers refuse to make sound until the page has been clicked,
+   so the audio context is created on the first interaction and not before. */
+let SND_ON=true, SND_VOL=0.6, _actx=null;
+function _audio(){
+  if(_actx) return _actx;
+  try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=null; }
+  return _actx;
+}
+function beep(kind){
+  if(!SND_ON||!SND_VOL) return;
+  const ac=_audio(); if(!ac) return;
+  try{ if(ac.state==='suspended') ac.resume(); }catch(e){}
+  const tones = kind==='done' ? [[660,0,.10],[990,.11,.17]]
+              : kind==='error'? [[200,0,.16],[160,.20,.22]]
+              : kind==='start'? [[520,0,.07]]
+              :                 [[780,0,.05]];
+  tones.forEach(([hz,at,dur])=>{
+    try{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=hz;
+      const t0=ac.currentTime+at;
+      g.gain.setValueAtTime(0,t0);
+      g.gain.linearRampToValueAtTime(SND_VOL*0.33,t0+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+      o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0+dur+0.02);
+    }catch(e){}
+  });
+}
+function toggleSound(){
+  SND_ON=!SND_ON;
+  try{ localStorage.setItem('mm_snd', SND_ON?'1':'0'); }catch(e){}
+  const b=document.getElementById('sndBtn');
+  if(b) b.textContent = SND_ON?'🔊 Sound On':'🔇 Sound Off';
+  if(SND_ON) beep('tick');
+}
+function setVolume(v){
+  SND_VOL=Math.max(0,Math.min(100,parseInt(v,10)||0))/100;
+  try{ localStorage.setItem('mm_vol', String(Math.round(SND_VOL*100))); }catch(e){}
+  const l=document.getElementById('volPct'); if(l) l.textContent=Math.round(SND_VOL*100);
+  if(SND_ON) beep('tick');
+}
+function applySound(){
+  try{
+    const on=localStorage.getItem('mm_snd'); if(on!==null) SND_ON = on==='1';
+    const v=localStorage.getItem('mm_vol'); if(v!==null) SND_VOL=(parseInt(v,10)||0)/100;
+  }catch(e){}
+  const b=document.getElementById('sndBtn');
+  if(b) b.textContent = SND_ON?'🔊 Sound On':'🔇 Sound Off';
+  const sl=document.getElementById('vol'); if(sl) sl.value=Math.round(SND_VOL*100);
+  const l=document.getElementById('volPct'); if(l) l.textContent=Math.round(SND_VOL*100);
+}
+
+/* What the bots were doing last time we looked, so a change can be heard.
+   Keyed by bot, because four of them report independently. */
+let _lastBotStep={}, _lastBotState={};
+function soundTheBots(bots){
+  (bots||[]).forEach(b=>{
+    const id=String(b.shard);
+    const step=[b.phase,b.post,b.step,b.doing].join('|');
+    const live=b.status==='in_progress';
+    const was=_lastBotState[id];
+    if(was===undefined){ _lastBotState[id]=live; _lastBotStep[id]=step; return; }
+    if(was && !live){                       // this bot has just finished
+      beep(b.conclusion && b.conclusion!=='success' ? 'error' : 'done');
+    } else if(!was && live){
+      beep('start');
+    } else if(live && step!==_lastBotStep[id]){
+      beep('tick');                         // moved on to the next job
+    }
+    _lastBotState[id]=live; _lastBotStep[id]=step;
+  });
+}
+
 function renderLive(){
   const el=document.getElementById('liveBox'); if(!el||!LIVE) return;
+  try{ soundTheBots(LIVE.bots); }catch(e){}
   const PH={embassy:'embassy sites',sam:'SAM.gov',un:'United Nations',
             repair:'finishing records already on the register',done:'finished'};
   if(!LIVE.bots||!LIVE.bots.length){
@@ -1683,10 +1875,50 @@ function renderMC(){
       <div class="mc-cell"><div class="mc-v">${s.stillUnfinished||0}</div><div class="mc-k">Still unfinished</div></div>
       <div class="mc-cell"><div class="mc-v">${(BLOCKED.sites||[]).length}</div><div class="mc-k">Blocked sites</div></div>
      </div>
+     `+budgetPanel()+`
      <div class="mc-job" id="liveBox"><b>Live:</b> <i>connecting…</i></div>
      <div class="mc-job"><b>Current job:</b> ${esc(s.currentJob||'—')} &nbsp;·&nbsp; <b>Heartbeat:</b> ${esc(s.heartbeat||'—')}${s.lastError?' &nbsp;·&nbsp; <b>Last error:</b> '+esc(s.lastError):''}${s.samDiag?'<br><b>SAM.gov:</b> '+esc(s.samDiag):''}${s.samAdvice?'<br><i style="color:var(--orange)">'+esc(s.samAdvice)+'</i>':''}</div>
      `+fleetBar();
 }
+/* ================= WHAT IS LEFT OF THE DEPOSIT =================
+   Rahul: "I WOULD ALSO LIKE TO KNOW THE ABOUT THAT IS LEFT FOR THE 40 DOLLERS
+   THAT ARE SPENT... SO I CAN ALWAYS CHECK FROM THERE WHERE AM I IN REAL TIME."
+
+   The token counts are not estimates: the API returns them with every answer,
+   the bots add them up, and the total survives between runs. The dollars are
+   those tokens at the configured rates. It refreshes with the rest of Mission
+   Control, so it moves while a crawl is running. */
+function budgetPanel(){
+  const sp=SPEND||{};
+  const dep=Number(sp.depositUSD||0), spent=Number(sp.spentUSD||0);
+  if(!dep && !spent)
+    return `<div class="mc-job"><b>API budget:</b> <i>nothing spent yet — the meter starts `
+         + `with the first crawl after this update.</i></div>`;
+  const left=Math.max(0, dep-spent);
+  const pct=dep?Math.min(100, (spent/dep)*100):0;
+  const low = left < dep*0.15;
+  const rows=Object.keys(sp.byModel||{}).map(m=>{
+    const v=sp.byModel[m]||{};
+    return `<tr><td>${esc(m.replace(/^claude-/,''))}</td><td class="r">${(v.calls||0).toLocaleString()}</td>`
+         + `<td class="r">${((v.in||0)/1000).toFixed(0)}k</td>`
+         + `<td class="r">${((v.out||0)/1000).toFixed(1)}k</td></tr>`;
+  }).join('');
+  return `<div class="mc-job budget">
+     <div class="bgt-top">
+       <b>API budget</b>
+       <span class="bgt-left${low?' low':''}">$${left.toFixed(2)} left</span>
+       <span class="bgt-of">of $${dep.toFixed(2)} &middot; $${spent.toFixed(2)} spent</span>
+     </div>
+     <div class="mc-bar big"><i class="${low?'low':''}" style="width:${pct.toFixed(1)}%"></i></div>
+     <div class="bgt-sub">${(sp.inputTokens||0).toLocaleString()} tokens in &middot;
+       ${(sp.outputTokens||0).toLocaleString()} out &middot;
+       ${(sp.calls||0).toLocaleString()} calls &middot;
+       counted from what the API reported, updated ${esc(sp.updated||'—')}</div>
+     ${rows?`<table class="bgt-tbl"><thead><tr><th>Model</th><th class="r">Calls</th>
+        <th class="r">In</th><th class="r">Out</th></tr></thead><tbody>${rows}</tbody></table>`:''}
+   </div>`;
+}
+
 function fleetBar(){
   const srv=controlServer();
   const link=srv?`<b style="color:var(--green)">connected</b> <span style="color:var(--mute)">${esc(srv.replace(/^https?:\/\//,''))}</span>`
@@ -1844,6 +2076,7 @@ async function unlock(pwArg){
     OPERATOR=Object.assign({deleted:{},hidden:{},switched:{}}, payload.operator||{});
     COMPANY=payload.company||{};
     FLAGS=payload.flags||{};
+    SPEND=payload.spend||{};
     pruneLocalOps();
     if(LOCKED){ try{ sessionStorage.setItem('mm_pw', pw); }catch(e){} }
     _touch();

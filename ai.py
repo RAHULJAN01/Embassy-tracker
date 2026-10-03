@@ -149,6 +149,10 @@ class Claude:
         self.calls = 0
         self.input_tokens = 0
         self.output_tokens = 0
+        # per model, because Haiku and Sonnet do not cost the same and the
+        # register uses both: the cheap one for the first pass, the strong one
+        # for a no-bid second opinion and for Deep Scan.
+        self.by_model = {}
         self.ok = {}
         self.errors = {}
         self.down_reason = ""          # non-empty => the portal raises the alarm
@@ -165,7 +169,8 @@ class Claude:
         d = {"ok": dict(self.ok), "errors": dict(self.errors),
              "model": self.model, "keyVar": self.key_var or "(none found)",
              "calls": self.calls,
-             "inputTokens": self.input_tokens, "outputTokens": self.output_tokens}
+             "inputTokens": self.input_tokens, "outputTokens": self.output_tokens,
+             "byModel": {k: dict(v) for k, v in self.by_model.items()}}
         if self.down_reason:
             d["down"] = self.down_reason
         if self.input_tokens or self.output_tokens:
@@ -214,8 +219,14 @@ class Claude:
                 except Exception:
                     return {"_gerr": "Claude returned a malformed response"}
                 u = data.get("usage") or {}
-                self.input_tokens += int(u.get("input_tokens") or 0)
-                self.output_tokens += int(u.get("output_tokens") or 0)
+                _in = int(u.get("input_tokens") or 0)
+                _out = int(u.get("output_tokens") or 0)
+                self.input_tokens += _in
+                self.output_tokens += _out
+                slot = self.by_model.setdefault(use, {"in": 0, "out": 0, "calls": 0})
+                slot["in"] += _in
+                slot["out"] += _out
+                slot["calls"] += 1
                 self.calls += 1
                 key = "claude-review" if model else "claude"
                 self.ok[key] = self.ok.get(key, 0) + 1

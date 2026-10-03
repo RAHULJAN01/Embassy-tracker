@@ -50,6 +50,9 @@ def main():
         "operator": _opt("operator.json", {"deleted": {}, "hidden": {}, "switched": {}}),
         "company": _opt("company.json", {}),
         "flags": _opt("flags.json", {}),
+        # the running API spend, so Mission Control can show what is left of
+        # the deposit instead of only what this one run cost
+        "spend": _opt("spend.json", {}),
     }
     data = json.dumps(payload, ensure_ascii=False)
     template = (HERE / "site_template.html").read_text(encoding="utf-8")

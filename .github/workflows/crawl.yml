@@ -204,7 +204,7 @@ jobs:
         run: |
           git config user.name  "mm-crawler"
           git config user.email "crawler@users.noreply.github.com"
-          git add data.json status.json blocked.json state.json
+          git add data.json status.json blocked.json state.json spend.json
           if git diff --cached --quiet; then
             echo "no changes"
           else

@@ -53,7 +53,8 @@ else:
 # ---------------------------------------------------------------- no duplicates
 # A function defined twice means an edit landed on top of itself; the second
 # definition silently wins and the first one's callers get the wrong behaviour.
-CRITICAL = ["proven", "render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
+CRITICAL = ["proven", "budgetPanel", "renderPageTabs", "setPage", "beep",
+            "toggleSound", "setVolume", "soundTheBots", "render", "rowHTML", "dossier", "renderNav", "renderMC", "renderLive",
             "renderAlarm", "renderCompany", "downloadExcel", "buildWorkbook",
             "flagOf", "isoOf", "esc", "reviewNeeded", "needsBox", "collapseAll",
             "opAction", "effTier", "init", "unlock", "_sheetXML"]
@@ -116,6 +117,37 @@ ok("and they start on the same gutter, not the screen edge",
 ok("the old right-hand stack is gone", "mhead-right" not in html)
 ok("the control bar's spacer no longer steals width from the search controls",
    ".toolbar .spacer{display:none}" in html)
+
+# ------------------------------------------------- one section per page
+# The register used to be four tables stacked in one scroll. Each category now
+# has its own tab and only one is drawn at a time.
+ok("there is a tab strip", 'id="pageTabs"' in html)
+ok("every category has a tab",
+   all(k in html for k in ("'HIDDEN'", "'HISTORY'", "'REVIEW'", "'BID'", "'MID'", "'NO'")))
+ok("only the open page is rendered", "html=tierSection(PAGE)" in js.replace(" ", ""))
+ok("the open page is remembered between visits", "localStorage.setItem('mm_page'" in html)
+
+# ------------------------------------------------- the look Rahul asked for
+ok("the title bar buttons are equal cells in one row",
+   ".mnav{display:grid" in html and "grid-template-columns:repeat(7,1fr)" in html)
+ok("they are red with white text", "background:var(--red);border-color:var(--red);color:#fff" in html)
+ok("the LLC name is larger", ".brand .bt .n{font-size:25px" in html)
+ok("every country flag sits in a red badge with white text",
+   ".flaglab{" in html and "color:#fff;background:var(--red)" in html)
+ok("the country code is always printed, not only when the image fails",
+   '<span class="flaglab">' in html)
+
+# ------------------------------------------------- sound and budget
+ok("a beep is made in the page, with no file to download",
+   "AudioContext" in js and "createOscillator" in js)
+ok("the beep follows what the bots are doing", "soundTheBots" in js)
+ok("sound can be switched off", "function toggleSound(" in js)
+ok("and has a volume control", "function setVolume(" in js and 'id="vol"' in html)
+ok("both settings survive a reload",
+   "localStorage.setItem('mm_snd'" in html and "localStorage.setItem('mm_vol'" in html)
+ok("Mission Control shows what is left of the deposit", "function budgetPanel(" in js)
+ok("and it is built from reported tokens, not a guess",
+   "counted from what the API reported" in html)
 
 # --------------------------------------------- DEEP SCAN is one record, not all
 # Pressing DEEP SCAN on a solicitation used to dispatch a whole-fleet re-crawl,
