@@ -105,17 +105,44 @@ if rec:
     ok("and the record can be VERIFIED", v == "VERIFIED", v + " " + "; ".join(why)[:70])
 ok("the stronger model was not needed", spy.models("date") == [None], str(spy.models("date")))
 
-# ====================================== A PHRASE THAT WORKS COSTS NOTHING TO READ
-print("\n=== when phrase-matching works, no date call is made at all ===")
+# ================================== EVEN AN EASY ONE IS READ, NOT PATTERN-MATCHED
+print("\n=== a phrase match is not allowed to settle the deadline ===")
+# Phrase-matching used to decide this for free whenever a cue matched. A field
+# test on real embassy notices measured what free was worth: of six notices it
+# resolved, two right and four wrong -- including the cutoff for QUESTIONS on a
+# New Delhi notice whose closing date was printed one line below it, and a 2023
+# date lifted out of set-aside boilerplate on an Ottawa page, which would have
+# archived a live procurement and retired it to the never-look-again ledger.
+# A cue proves a deadline is DISCUSSED nearby; it cannot say which date is the
+# one. That is reading comprehension, and it goes to the model.
 PLAIN = ("Request for Quotations: Gate Spare Parts. Quotations are due by 12 October 2026 "
          "at 1600 hours local time. Items: control modules, drive wheels. ") * 4
-spy2 = Spy()
+spy2 = Spy(date_answer={"closing": "2026-10-12",
+                        "closing_quote": "Quotations are due by 12 October 2026 at 1600 "
+                                         "hours local time.",
+                        "why": "it is the stated submission deadline"})
 rec2, rep2 = run(PLAIN, spy2)
-ok("the deadline is found for free", rep2.get("closing_found") == "2026-10-12",
+ok("the deadline is still resolved", rep2.get("closing_found") == "2026-10-12",
    str(rep2.get("closing_found")))
-ok("no date call was made", "date" not in spy2.kinds(), str(spy2.kinds()))
-ok("it is marked as phrase-matched", rep2.get("closing_how") == "phrase",
-   str(rep2.get("closing_how")))
+ok("the model is the one that read it", "date" in spy2.kinds(), str(spy2.kinds()))
+ok("and it carries the line it came from", bool(rep2.get("closing_evidence")),
+   str(rep2.get("closing_evidence"))[:60])
+
+print("  -- the real notices the phrase matcher got wrong --")
+import analyzer as _A
+DELHI = ("U.S. Embassy New Delhi. Questions received after 5 p.m. on August 21, 2026, will not "
+         "be answered. BID CLOSING DATE Quotations are due no later than 5 p.m. (India Time) "
+         "on September 1, 2026. All quotations must be submitted electronically. ") * 3
+ok("the phrase matcher alone still picks the WRONG date on New Delhi",
+   _A.harvest_date(DELHI, _A._DEADLINE_CUES) == "2026-08-21",
+   "it no longer decides, which is the point")
+spy3 = Spy(date_answer={"closing": "2026-09-01",
+                        "closing_quote": "Quotations are due no later than 5 p.m. (India Time) "
+                                         "on September 1, 2026.",
+                        "why": "the line headed BID CLOSING DATE"})
+rec3, rep3 = run(DELHI, spy3)
+ok("but the reader gets it right", rep3.get("closing_found") == "2026-09-01",
+   str(rep3.get("closing_found")))
 
 # ============================================== NO DATES PRINTED = FREE REJECTION
 print("\n=== a notice with no dates printed costs nothing ===")

@@ -75,11 +75,20 @@ check("short text -> REVIEW", r["tier"]=="REVIEW")
 check("verify real quote true", A.verify_citation("perform all work on-site at the Embassy compound", CONSTRUCTION_TEXT))
 check("verify fake quote false", not A.verify_citation("must hold a facility clearance issued in Belgium", CONSTRUCTION_TEXT))
 
-# 9. DATE HARVESTING — model returned no dates, code must back-fill from the text
+# 9. DATES — the model answering "no closing date" is an ANSWER, not a gap.
+# This used to back-fill the deadline by phrase-matching the text whenever the
+# model left it blank. A field test on real notices showed what that produces:
+# the cutoff for QUESTIONS on a New Delhi notice whose closing date was printed
+# one line below it, and a 2023 date lifted out of set-aside boilerplate on an
+# Ottawa page. A blank deadline is honest; a guessed one cannot be told apart
+# from a real one. The posted and Q&A dates are still back-filled -- getting
+# those slightly wrong is untidy, not dangerous.
 r = A.adjudicate(CONSTRUCTION_TEXT,
   fake({"title":"Perimeter wall","sol":"19ET1026C0003","tier":"MID","confidence":0.8,
         "sector":"CONSTRUCTION","posted":"","closing":"","qa_due":""}))
-check("closing date harvested from text", r["closing"]=="2026-11-20")
+check("a blank deadline is NOT back-filled by phrase-matching", r["closing"]=="")
+check("and the record says a deadline is missing",
+      any("closing date" in w for w in r.get("date_warnings", [])))
 check("posted date harvested from text", r["posted"]=="2026-09-15")
 
 # 10. date parser formats

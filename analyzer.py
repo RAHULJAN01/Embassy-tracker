@@ -693,6 +693,18 @@ def ground_dates(rec, text):
             rec[field] = ""
 
         # Nothing from the model at all — last chance on cue phrases alone.
+        #
+        # NOT FOR THE CLOSING DATE. When the reader is asked and answers "no
+        # deadline is stated", that is an answer, and overriding it with a
+        # phrase match replaces a correct blank with a wrong date. The field
+        # test showed what the phrase matcher produces when left to itself:
+        # the cutoff for QUESTIONS on a New Delhi notice whose closing date was
+        # printed one line below it, and a 2023 date out of set-aside
+        # boilerplate on an Ottawa page. A posted date or a Q&A date guessed
+        # slightly wrong is untidy; a deadline guessed wrong is the whole
+        # problem this register exists to avoid.
+        if field == "closing":
+            continue
         h = harvest_date(text, cues)
         if h:
             found, ev3 = (cue_anchored(h, text, cues) if field == "closing"
@@ -796,10 +808,16 @@ def harvest_date(text, cues, window=180):
         if amb:
             continue                      # could be either day — not ours to guess
         for c_start, c_end in cue_spots:
-            # the date should follow the cue, which is how deadlines are written;
-            # a short reach backwards covers "due: " in a table cell above it
-            gap = start - c_end if start >= c_end else (c_start - end) + 40
-            if 0 <= gap <= window and gap < best_gap:
+            # FORWARD ONLY. A deadline is written after the words that announce
+            # it: "Closing date: 12 October 2026", never the reverse. Allowing a
+            # short reach backwards let a date sitting just BEFORE a cue win, and
+            # on a real New Delhi notice that is how "questions after 5 p.m. on
+            # August 21 will not be answered. BID CLOSING DATE ..." handed back
+            # 21 August instead of the 1 September printed one line later.
+            if start < c_end:
+                continue
+            gap = start - c_end
+            if gap <= window and gap < best_gap:
                 best, best_gap = iso, gap
     return best
 

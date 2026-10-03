@@ -131,12 +131,20 @@ def triage(text, today, known_live=None, sol_hint=""):
     if m:
         return "dead", f"the notice says it is over: “{m.group(0)[:70]}”"
 
-    # a stated closing date already in the past
-    try:
-        import analyzer as _a
-        closing = _a.harvest_date(t, _a._DEADLINE_CUES)
-    except Exception:
-        closing = ""
+    # A DATE FOUND BY PHRASE-MATCHING MAY NOT KILL A NOTICE.
+    #
+    # This gate archives a solicitation and adds its hash to the ledger that
+    # means "never look at this again". On the field test it would have done
+    # that to a live Ottawa procurement page, because the page carries the
+    # standard set-aside text "...submitted a complete application for
+    # certification to SBA on or before December 31, 2023" and the phrase
+    # matcher happily called that the closing date.
+    #
+    # Killing a record is irreversible in practice, so it now needs a date the
+    # MODEL read and quoted, which happens a few steps later and re-checks this
+    # exact condition. What survives here is the free, unambiguous kill: a
+    # notice that says in words that it is over, which _DEAD_RX above catches.
+    closing = ""
     if closing and closing < today:
         return "expired", closing
 
@@ -263,23 +271,31 @@ def process_one(unit, *, call_ai, analyzer, estimator, budget, today,
         report["stage"] = "abandoned: nothing readable"
         return None, report
 
-    # ---- THE DATE GATE. Free first, then the reader, then a stronger reader.
+    # ---- THE DATE GATE. The MODEL reads the deadline. Phrases only gate cost.
     #
-    # This gate used to be phrase-matching alone, and that was the whole bug:
-    # a notice saying "nothing submitted past 12/10/2026 shall be entertained"
-    # matched no phrase, so it was filed as having no date and never adjudicated
-    # at all. The phrase list now only gets the FIRST attempt, because when it
-    # works it is free. When it fails the model reads the dates itself, which is
-    # what it is good at, on a compact excerpt rather than the whole document.
+    # Phrase-matching used to be allowed to settle the deadline whenever a cue
+    # matched, because that was free. A field test on real embassy notices
+    # showed what free was buying: of six notices it resolved, it got two right
+    # and four wrong, and the wrong ones were not near misses.
+    #
+    #   New Delhi:  "...after 5 p.m. on August 21, 2026, will not be answered.
+    #               BID CLOSING DATE Quotations are due no later than 5 p.m. on
+    #               September 1, 2026."
+    #               -> it took 21 August, the cutoff for QUESTIONS, and missed
+    #                  the closing date printed one line later.
+    #   Ottawa:     "...submitted a complete application for certification to
+    #               SBA on or before December 31, 2023."
+    #               -> it took 31 December 2023 off a page of set-aside
+    #                  boilerplate, a date three years past, which would archive
+    #                  the page and retire it to the never-look-again ledger.
+    #
+    # A cue phrase proves a deadline is DISCUSSED nearby. It cannot tell which
+    # of the dates around it is the one, and no list of phrases ever will --
+    # that is a reading-comprehension problem, and we are paying for a model
+    # that is good at exactly that. So the phrase pass now only decides whether
+    # it is worth spending a call: no dates printed at all costs nothing and
+    # stops here, and anything else goes to the reader on a compact excerpt.
     closing, closing_ev, how = "", "", ""
-    try:
-        h = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
-        if h:
-            found, ev = analyzer.cue_anchored(h, text, analyzer._DEADLINE_CUES)
-            if found:
-                closing, closing_ev, how = h, ev, "phrase"
-    except Exception:
-        pass
 
     date_rec = {}
     if not closing:

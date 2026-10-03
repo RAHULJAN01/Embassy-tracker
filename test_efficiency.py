@@ -137,7 +137,16 @@ import pipeline as _P
 _T = "2026-10-02"
 _body = " The U.S. Embassy requires cleaning services for the chancery compound. " * 8
 for _label, _txt, _want in [
-        ("past closing date", _body + " Quotations are due by 14 September 2026.", "expired"),
+        # A PAST DATE FOUND BY PHRASE-MATCHING NO LONGER KILLS A NOTICE HERE.
+        # This gate archives the record and adds its hash to the never-look-
+        # again ledger, and on the field test it would have done that to a live
+        # Ottawa procurement page carrying the standard line "...submitted a
+        # complete application for certification to SBA on or before December
+        # 31, 2023". Killing a record is irreversible in practice, so it now
+        # needs a date the model read and quoted -- which happens a few steps
+        # later, in process_one, and re-checks exactly this condition.
+        ("past closing date (now the reader's call, not a phrase's)",
+         _body + " Quotations are due by 14 September 2026.", ""),
         ("cancelled", _body + " This solicitation has been cancelled.", "dead"),
         ("withdrawn", _body + " This RFQ was withdrawn by the contracting officer.", "dead"),
         ("already awarded", _body + " Notice of award: contract awarded to Acme Ltd.", "dead"),
