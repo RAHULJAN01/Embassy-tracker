@@ -1598,13 +1598,22 @@ def probe_dates(posts=10, per_post=3):
                        "title": pipeline._first_title(text, 90),
                        "all_dates_printed": sorted(set(analyzer.find_dates(text)))[:12]}
 
-                # exactly the gate the live crawl uses, in the same order
-                h = analyzer.harvest_date(text, analyzer._DEADLINE_CUES)
+                # THE GATE AS IT SHIPS. This block used to be a hand-copied
+                # imitation of the live gate, and when the live gate changed it
+                # did not -- so the field test went on reporting results from
+                # code that was no longer running anywhere. A diagnostic that
+                # measures something other than production is worse than none,
+                # because it is believed. What the probe still does on its own
+                # is record the audit trail: the line each date came from, and
+                # every other date printed that was not chosen.
+                #
+                # The phrase pass is kept here only to SHOW what it would have
+                # answered, next to what the reader actually answered. On real
+                # notices those disagree often, and the disagreement is the
+                # most useful column in this report.
                 got, how, ev = "", "", ""
-                if h:
-                    found, ev2 = analyzer.cue_anchored(h, text, analyzer._DEADLINE_CUES)
-                    if found:
-                        got, how, ev = h, "free (phrase)", ev2
+                row["phrase_would_have_said"] = analyzer.harvest_date(
+                    text, analyzer._DEADLINE_CUES) or ""
                 if not got:
                     for stage, model in (("read (haiku)", None),
                                          ("read (sonnet)", ai.REVIEW_MODEL)):
@@ -1631,7 +1640,12 @@ def probe_dates(posts=10, per_post=3):
                 row["deadline"] = got
                 row["how"] = how or "none"
                 row["line_it_came_from"] = ev
+                pw = row.get("phrase_would_have_said") or ""
+                row["phrase_agrees"] = (None if not (pw and got) else pw == got)
                 row["still_open"] = (got >= today()) if got else None
+                if pw and got and pw != got:
+                    stats["phrase_would_have_been_wrong"] = \
+                        stats.get("phrase_would_have_been_wrong", 0) + 1
                 if how.startswith("free"):
                     stats["free"] += 1
                 elif "haiku" in how:
