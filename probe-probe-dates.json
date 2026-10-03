@@ -1,12 +1,12 @@
 {
  "mode": "probe-dates",
- "startedAt": "2026-10-03 11:11 UTC",
- "heartbeat": "2026-10-03 11:11 UTC",
+ "startedAt": "2026-10-03 11:21 UTC",
+ "heartbeat": "2026-10-03 11:21 UTC",
  "currentJob": "date accuracy field test",
  "running": false,
  "summary": {
-  "notices": 7,
-  "free": 6,
+  "notices": 6,
+  "free": 5,
   "read": 0,
   "sonnet": 0,
   "no_date_printed": 0,
@@ -14,7 +14,7 @@
   "unreadable": 0,
   "blocked": 0,
   "ai_calls": 1,
-  "resolved_pct": 85.7
+  "resolved_pct": 83.3
  },
  "notices": [
   {
@@ -89,49 +89,6 @@
    "still_open": false
   },
   {
-   "post": "U.S. Embassy Laos",
-   "country": "Laos",
-   "link": "https://la.usembassy.gov/procurement-and-business-opportunities/",
-   "files": 1,
-   "title": "Procurement and Business Opportunities - U.S. Embassy in Laos",
-   "all_dates_printed": [
-    "2019-08-13",
-    "2020-08-13",
-    "2026-04-09",
-    "2026-09-04",
-    "2026-09-14"
-   ],
-   "deadline": "2026-09-14",
-   "how": "free (phrase)",
-   "line_it_came_from": "tion Deadline for Quote Submission Solicitation Deadline for Quote Submission Solicitation No. 19LA9026Q0014 – Supply Battery Backup Power System for U.S Embassy Vientiane. September 14, 2026 Cookie Settings",
-   "still_open": false
-  },
-  {
-   "post": "U.S. Embassy Canada",
-   "country": "Canada",
-   "link": "https://ca.usembassy.gov/business/",
-   "files": 7,
-   "title": "An official website of the United States government",
-   "all_dates_printed": [
-    "2018-10-17",
-    "2019-08-13",
-    "2020-08-13",
-    "2023-12-31",
-    "2024-01-01",
-    "2024-03-01",
-    "2024-10-17",
-    "2025-07-17",
-    "2025-07-31",
-    "2025-09-22",
-    "2026-01-20",
-    "2026-02-03"
-   ],
-   "deadline": "2026-03-20",
-   "how": "free (phrase)",
-   "line_it_came_from": ": RPP-CM-26-01 (Domestic Processing of Critical Minerals) • Deadline: March 20, 2026, at 5:00 PM ET • Submission Format: Quad Charts (via Company Submission Intake Form) • Target Commodities: * Must include at least one: Arsenic, Bismuth, Gadolinium, Germanium",
-   "still_open": false
-  },
-  {
    "post": "U.S. Embassy Canada",
    "country": "Canada",
    "link": "https://ca.usembassy.gov/procurement/",
@@ -162,6 +119,31 @@
    "link": "https://ca.usembassy.gov/preventive-maintenance-and-facilities-services-19ca4526q0002-montreal/",
    "files": 4,
    "title": "An official website of the United States government",
+   "all_dates_printed": [
+    "2019-08-13",
+    "2020-08-13",
+    "2023-12-31",
+    "2024-01-01",
+    "2024-03-01",
+    "2024-10-17",
+    "2025-07-31",
+    "2025-09-22",
+    "2026-03-02",
+    "2026-04-09",
+    "2026-04-10",
+    "2026-04-15"
+   ],
+   "deadline": "2023-12-31",
+   "how": "free (phrase)",
+   "line_it_came_from": "d submitted a complete application for certification to SBA on or before December 31, 2023. Service-disabled veteran-owned small business (SDVOSB) Program means a program that authorizes contracting officers to limit competition, including award on a sole-sour",
+   "still_open": false
+  },
+  {
+   "post": "U.S. Embassy Canada",
+   "country": "Canada",
+   "link": "https://ca.usembassy.gov/tag/procurement-solicitations/",
+   "files": 3,
+   "title": "Procurement Solicitations Archives - U.S. Embassy & Consulates in Canada",
    "all_dates_printed": [
     "2019-08-13",
     "2020-08-13",
