@@ -1670,7 +1670,7 @@ def probe_dates(posts=10, per_post=3):
                         if budget.left < 1:
                             break
                         try:
-                            dr, note = analyzer.read_dates(text, call, model=model)
+                            dr, note = analyzer.read_triage(text, call, model=model)
                         except Exception as e:
                             row["reader_error"] = str(e)[:60]
                             break
@@ -1683,6 +1683,20 @@ def probe_dates(posts=10, per_post=3):
                             {"stage": stage, "why": note,
                              "closing": dr.get("closing", ""),
                              "warnings": dr.get("date_warnings", [])})
+                        # the first pass answers three questions, not one, so
+                        # the field test records all three: a probe that only
+                        # measured the date half would again be measuring
+                        # something other than what ships.
+                        row["is_solicitation"] = dr.get("is_solicitation", True)
+                        row["what_it_is"] = dr.get("what_it_is", "")
+                        row["open_or_closed"] = dr.get("status", "")
+                        row["closed_because"] = dr.get("status_quote", "")
+                        if not dr.get("is_solicitation", True):
+                            stats["not_a_solicitation"] = stats.get("not_a_solicitation", 0) + 1
+                            break
+                        if dr.get("status") == "closed":
+                            stats["said_closed"] = stats.get("said_closed", 0) + 1
+                            break
                         if dr.get("closing"):
                             got, how = dr["closing"], stage
                             ev = (dr.get("date_evidence") or {}).get("closing", "")
